@@ -13,7 +13,7 @@ import math
 
 class species(object):
 
-    def __init__(self, UUID = "", exponential = False, abundance = 1, meta_abundance = 1, colonization_time = 0):
+    def __init__(self, UUID = "", exponential = False, abundance = 1, meta_abundance = 1, colonization_time = 0, migration_rate=0):
         self.name = names.names().get_name()
         self.uuid = UUID
         self.abundance = abundance
@@ -21,6 +21,7 @@ class species(object):
         self.local_Ne = self.abundance * self.alpha
         self.meta_abundance = meta_abundance * 1000
         #self.colonization_time = np.log(colonization_time)
+        self.migration_rate = migration_rate
         self.colonization_time = colonization_time
         self.Ne = self.meta_abundance
         self.mutation_rate = 0.000000022
@@ -50,8 +51,8 @@ class species(object):
         self.tajD = 0
 
     def __str__(self):
-        return "<species {}/coltime {}/local Ne {}/meta Ne {}/pi_island {}/pi_meta {}/dxy {}/S_island {}/S_meta {}>".format(self.name, self.colonization_time,\
-                            self.local_Ne, self.Ne, self.pi_island, self.pi_meta, self.dxy, self.S_island, self.S_meta)
+        return "<species {}/coltime {}/local Ne {}/meta Ne {}/migrate {}/pi_island {}/pi_meta {}/dxy {}/S_island {}/S_meta {}>".format(self.name, self.colonization_time,\
+                            self.local_Ne, self.Ne, self.migration_rate, self.pi_island, self.pi_meta, self.dxy, self.S_island, self.S_meta)
 
     def __repr__(self):
         return self.__str__()
