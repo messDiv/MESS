@@ -61,6 +61,9 @@ class species(object):
         ## This is hackish
         if self.Ne <= 0:
             self.Ne = 100
+
+        migmat = [[0, self.migration_rate],
+                    [0, 0]]
         
         island_pop = msprime.PopulationConfiguration(sample_size=self.island_sample_size,\
                                                     initial_size=self.local_Ne,
@@ -81,17 +84,20 @@ class species(object):
                                                                         initial_size=0,\
                                                                         population_id=0)
 
+        migrate_change = msprime.MigrationRateChange(time=self.colonization_time-1, rate=0)
         ## Useful for debugging demographic events. Mass migration and exponetial growth are both working.
         #print(self.name, self.colonization_time)
         debug = msprime.DemographyDebugger(population_configurations=[island_pop, meta_pop],\
-                                           demographic_events=[island_rate_change_event, split_event])
-        #debug.print_history()
+                                            migration_matrix=migmat,
+                                           demographic_events=[island_rate_change_event, migrate_change, split_event])
+        debug.print_history()
 
         self.tree_sequence = msprime.simulate(length=self.sequence_length,\
                                                 Ne=self.local_Ne,\
                                                 mutation_rate=self.mutation_rate, \
                                                 population_configurations=[island_pop, meta_pop],\
-                                                demographic_events=[island_size_change_event, island_rate_change_event, split_event])
+                                                migration_matrix=migmat,
+                                                demographic_events=[island_size_change_event, island_rate_change_event, migrate_change, split_event])
 
         #self.tree_sequence = msprime.simulate(sample_size=10, Ne=self.Ne, length=self.sequence_length, mutation_rate=self.mutation_rate)
 
