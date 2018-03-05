@@ -78,6 +78,10 @@ class implicit_BI(object):
         ## in neutral processes.
         ###########################################################
 
+        ## Fundamental parameters of the metacommunity tree
+        self.metcommunity_tree_height = 0
+        self.trait_evolution_rate_parameter = 0
+
         ## An ID by trait value dictionary
         self.species_trait_values = {}
 
