@@ -139,7 +139,7 @@ class implicit_BI(object):
         self.immigration_probabilities = [float(self.abundances[i])/self.total_inds for i in range(len(self.abundances))]
 
         self.maxabundance = np.amax(self.immigration_probabilities)
-        
+
 
     def __str__(self):
         return "<implicit_BI {}>".format(self.name)
@@ -174,6 +174,9 @@ class implicit_BI(object):
                 self.local_community.append((None,True))
             self.divergence_times[new_species] = 1
 
+        ## Init post colonization migrants counters
+        self.post_colonization_migrants = {x[0]:0 for x in self.species}
+
     def death_step(self, invasion_time, invasiveness):
         ## Select the individual to die
         victim = random.choice(self.local_community)
@@ -195,7 +198,7 @@ class implicit_BI(object):
             if True:
                 self.extinctions += 1
                 try:
-                    ## reset 
+                    ## reset post colonization migrant count for this species
                     self.post_colonization_migrants[victim[0]] = 0
                     self.extinction_times.append(self.current_time - self.divergence_times[victim])
                 except:
@@ -256,6 +259,7 @@ class implicit_BI(object):
         else:
             ## This is a new migrant so init the post-colonization count
             self.post_colonization_migrants[new_species[0]] = 0
+            #print("New immigrant {}\t{}".format(new_species[0], self.post_colonization_migrants))
 
         return new_species, init_col
 
@@ -394,7 +398,8 @@ class implicit_BI(object):
                 #print(self.local_community)
                 self.species_objects.append(species(UUID=UUID, colonization_time=self.current_time - tdiv,\
                                         exponential=self.exponential, abundance=abundance,\
-                                        meta_abundance=meta_abundance))
+                                        meta_abundance=meta_abundance,
+                                        migration_rate=self.post_colonization_migrants[UUID[0]]/float(tdiv)))
 
         for s in self.species_objects:
             s.simulate_seqs()
