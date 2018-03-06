@@ -92,6 +92,7 @@ class implicit_BI(object):
         self.environmental_filtering = True
         self.environmental_optimum = 0
         self.species_death_probability = {}
+        self.individual_death_probabilites = []
         self.environmental_strength = 0
 
 
@@ -210,27 +211,18 @@ class implicit_BI(object):
         ## Select the individual to die
         """
         if self.environmental_filtering:
-            #environmental optimum is a random value between (-rate of BM * tree depth, rate of BM * tree depth)
-            self.environmental_optimum = np.random.uniform(-float(4 * self.rate * self.treeDepth), float(4 * self.rate * self.treeDepth))
+            species_inLocal = [x[0] for x in data.local_community if x[0] != None]
 
-            self.environmental_strength = float(np.random.uniform(0.1,100))
-            self.weight = self.rate * self.treeDepth * (self.environmental_strength ** 2)
-            self.species_death_probability = []
+            for i in range(len(species_inLocal)):
+                self.individual_death_probabilites.append(data.species_death_probability[species_inLocal[i]])
 
-            for i in range(len(self.species)):
-                self.deathProb = 1 - exp(-((self.species_trait_values[i] - self.environmental_optimum) ** 2)/self.weight)
-                self.species_death_probability.append(self.deathProb)
-
-            self.SpasInd_death_probability = []
-            for i in range(len(self.local_community)):
-                for k in range(0, self.abundances[i]): ##
-                    self.SpasInd_death_probability.append(self.species_death_probability[i])
-
-            self.normalize_probabilities = sum(self.SpasInd_death_probability)
-            self.Individual_death_probabilites = self.SpasInd_death_probability / self.normalize_probabilities
-            self.victim_index = np.random.multinomial(1, self.Individual_death_probabilites)
+            self.normalize_probabilities = sum(self.individual_death_probabilites)
+            self.individual_death_probabilites = self.individual_death_probabilites / self.normalize_probabilities
+            victim = np.random.multinomial(1, self.individual_death_probabilites)
+            print(victim)
         """
         victim = random.choice(self.local_community)
+        print(victim)
         ## If no invasive hasn't invaded then just do the normal sampling
         if self.invasive == -1:
             self.local_community.remove(victim)
@@ -276,7 +268,8 @@ class implicit_BI(object):
             #print("Immigrant - {}".format(self.species[np.where(migrant_draw == 1)[1][0]]))
             new_species = self.species[np.where(migrant_draw == 1)[1][0]]
             ##TODO: Should set a flag to guard whether or not to allow multiple colonizations
-            if new_species[0] not in [x[0] for x in self.local_community]:
+            #print(new_species)
+            if new_species not in [x[0] for x in self.local_community]:
                 ## Got a species not in the local community
                 unique = 1
             else:
@@ -301,7 +294,7 @@ class implicit_BI(object):
         init_col = True
         migrant_draw = np.random.multinomial(1, self.immigration_probabilities, size=1)
         new_species = self.species[np.where(migrant_draw == 1)[1][0]]
-        if new_species[0] in [x[0] for x in self.local_community]:
+        if new_species in [x[0] for x in self.local_community]:
             #print("Multiple colonization: sp id {}".format(new_species[0]))
             ## This is a post-colonization migrant so record the event and tell downstream
             ## not to update the colonization time.
@@ -346,7 +339,7 @@ class implicit_BI(object):
                         self.invasion_time = self.current_time
 
                 ## Add the colonizer to the local community, record the colonization time
-                self.local_community.append((new_species[0], False))
+                self.local_community.append((new_species, False))
                 self.colonizations += 1
             else:
                 ## Sample from the local community, including empty demes
@@ -467,27 +460,34 @@ class implicit_BI(object):
 
 
 if __name__ == "__main__":
-    data = implicit_BI()
+    data = implicit_BI(allow_multiple_colonizations=True)
     #data.set_metacommunity("uniform")
     data.set_metacommunity("SpInfo.txt")
     data.EF_death_probabilities()
 
-    data.prepopulate(mode="landbridge")
-    print(data.local_community)
-
-    """
-    print(len(data.local_community))
+    data.prepopulate(mode="volcanic")
+    #print(data.local_community)
 
     for i in range(100000):
-        if not i % 10000:
+        if not i % 1000:
             print("Done {}".format(i))
             #print(i, len(data.local_community), len(set(data.local_community)))
             #print(data.local_community)
         data.step()
-    abundance_distribution = data.get_abundances(octaves=False)
+    #abundance_distribution = data.get_abundances(octaves=False)
+    species_inLocal = [x[0] for x in data.local_community if x[0] != None]
+    print(species_inLocal)
 
+    """
+    Individual_death_probabilites = []
+    species_inLocal = [x[0] for x in data.local_community if x[0] != None]
+    for i in range(len(species_inLocal)):
+        Individual_death_probabilites.append(data.species_death_probability[species_inLocal[i]])
+    print(Individual_death_probabilites)
+    print(len(Individual_death_probabilites))
+    print(len(species_inLocal))
 
-
+    
     print("Species abundance distribution:\n{}".format(abundance_distribution))
     #print("Colonization times per species:\n{}".format(data.divergence_times))
     #plt.bar(abundance_distribution.keys(), abundance_distribution.values())
