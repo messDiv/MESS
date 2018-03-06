@@ -1,9 +1,9 @@
 #!/usr/bin/env python2.7
 """ Sample object """
 
-import matplotlib.pyplot as plt
-from ascii_graph import Pyasciigraph
-from scipy.stats import logser
+#import matplotlib.pyplot as plt
+#from ascii_graph import Pyasciigraph
+#from scipy.stats import logser
 import collections
 import numpy as np
 import itertools
@@ -11,7 +11,7 @@ import random
 import sys
 import os
 
-from species import species
+#from species import species
 
 # pylint: disable=C0103
 # pylint: disable=R0903
@@ -22,7 +22,7 @@ MAX_DUPLICATE_REDRAWS_FROM_METACOMMUNITY = 1500
 
 class implicit_BI(object):
     """ ipyrad Sample object. Links to files associated
-    with an individual sample, used to combine samples 
+    with an individual sample, used to combine samples
     into Assembly objects."""
 
     def __init__(self, K=5000, colrate=0.01, exponential=False, quiet=False):
@@ -60,7 +60,7 @@ class implicit_BI(object):
         self.extinctions = 0
         self.colonizations = 0
         self.current_time = 0
-        
+
         ## Vector for tracking lifetimes of excinct species
         ## We can plot this and average it to figure out how long
         ## species hang around in the local community
@@ -89,8 +89,10 @@ class implicit_BI(object):
         self.competitive_exclusion = False
 
         ## Toggle environmental filtering
-        self.environmental_filtering = False
+        self.environmental_filtering = True
         self.environmental_optimum = 0
+        self.species_death_probability = {}
+        self.environmental_strength = 0
 
 
     def set_metacommunity(self, infile, random=False):
@@ -120,21 +122,32 @@ class implicit_BI(object):
             else:
                 self.species_trait_values = {x:y for x,y in enumerate(np.zeros(len(self.abundances)))}
         else:
+            #infile="SpInfo.txt"
             if os.path.isfile(infile):
                 with open(infile, 'r') as inf:
-                    self.abundances = [int(line.split()[0]) for line in inf]
-                    ## Try fetching traits as well. If there are no traits then assume we're not doing trait based
-                    try:
-                        inf.seek()
-                        self.species_trait_values = {x:y for x,y in enumerate([float(line.split()[1]) for line in inf])}
-                    except:
-                        self.species_trait_values = {x:y for x,y in enumerate(np.zeros(len(self.abundances)))}
+                    lines = inf.readlines()
+                    self.metcommunity_tree_height = float(lines[0].split()[0])
+                    self.trait_evolution_rate_parameter = float(lines[1].split()[0])
+
+                    for i in range(2,len(lines)):
+                        info = lines[i].split()
+                        self.species.append(info[0])
+                        self.species_trait_values[info[0]] = (float(info[1]))
+                        self.abundances.append(int(info[2]))
+
+                    ### Try fetching traits as well. If there are no traits then assume we're not doing trait based
+                    #try:
+                    #    inf.seek()
+                    #    self.species_trait_values = {x:y for x,y in enumerate([float(line.split()[1]) for line in inf])}
+                    #except:
+                    #    self.species_trait_values = {x:y for x,y in enumerate(np.zeros(len(self.abundances)))}
             else:
                 raise Exception("Bad metacommunity input - ".format(infile))
 
+
         ## Actually using uuid is v slow
         #self.species = [uuid.uuid4() for _ in enumerate(self.abundances)]
-        self.species = [x for x in enumerate(self.abundances)]
+        #self.species = [x for x in enumerate(self.abundances)]
         self.total_inds = sum(self.abundances)
         self.immigration_probabilities = [float(self.abundances[i])/self.total_inds for i in range(len(self.abundances))]
 
@@ -144,15 +157,31 @@ class implicit_BI(object):
     def __str__(self):
         return "<implicit_BI {}>".format(self.name)
 
+    def EF_death_probabilities(self):
+        if self.environmental_filtering:
+            #environmental optimum is a random value between (-rate of BM * tree depth, rate of BM * tree depth)
+            self.environmental_optimum = np.random.uniform(-float(4 * self.trait_evolution_rate_parameter * self.metcommunity_tree_height), float(4 * self.trait_evolution_rate_parameter * self.metcommunity_tree_height))
+
+            #determine strength of environment
+            self.environmental_strength = float(np.random.uniform(0.1,100))
+            self.weight = self.trait_evolution_rate_parameter * self.metcommunity_tree_height * (self.environmental_strength ** 2)
+
+            for i in range(len(self.species)):
+
+                #print(self.species_trait_values[self.species[i]])
+                self.deathProb = 1 - (np.exp(-((self.species_trait_values[self.species[i]] - self.environmental_optimum) ** 2)/self.weight))
+                self.species_death_probability[self.species[i]] = self.deathProb
+                #self.species_death_probability.append(self.deathProb)
+
 
     def prepopulate(self, mode="landbridge"):
         if mode == "landbridge":
             ## prepopulate the island w/ total_inds individuals sampled from the metacommunity
-            init_community = np.random.multinomial(self.local_inds, self.immigration_probabilities, size=1)        
+            init_community = np.random.multinomial(self.local_inds, self.immigration_probabilities, size=1)
             print("Initializing local community:")
             for i, x in enumerate(init_community[0]):
                 if x:
-                    self.local_community.extend([self.species[i][0]] * x)
+                    self.local_community.extend([self.species[i]] * x)
                     ## Set founder flag
             self.local_community = [tuple([x, True]) for x in self.local_community]
             print("N species = {}".format(len(set([x[0] for x in self.local_community]))))
@@ -168,7 +197,7 @@ class implicit_BI(object):
             ## This is the old way that acts weird
             #self.local_community = [0] * self.local_inds
             #self.local_community = [((x,0), True) for x in self.local_community]
-            new_species = (self.species[self.immigration_probabilities.index(self.maxabundance)][0], True)
+            new_species = (self.species[self.immigration_probabilities.index(self.maxabundance)], True)
             self.local_community.append(new_species)
             for i in range(1,self.local_inds):
                 self.local_community.append((None,True))
@@ -179,6 +208,28 @@ class implicit_BI(object):
 
     def death_step(self, invasion_time, invasiveness):
         ## Select the individual to die
+        """
+        if self.environmental_filtering:
+            #environmental optimum is a random value between (-rate of BM * tree depth, rate of BM * tree depth)
+            self.environmental_optimum = np.random.uniform(-float(4 * self.rate * self.treeDepth), float(4 * self.rate * self.treeDepth))
+
+            self.environmental_strength = float(np.random.uniform(0.1,100))
+            self.weight = self.rate * self.treeDepth * (self.environmental_strength ** 2)
+            self.species_death_probability = []
+
+            for i in range(len(self.species)):
+                self.deathProb = 1 - exp(-((self.species_trait_values[i] - self.environmental_optimum) ** 2)/self.weight)
+                self.species_death_probability.append(self.deathProb)
+
+            self.SpasInd_death_probability = []
+            for i in range(len(self.local_community)):
+                for k in range(0, self.abundances[i]): ##
+                    self.SpasInd_death_probability.append(self.species_death_probability[i])
+
+            self.normalize_probabilities = sum(self.SpasInd_death_probability)
+            self.Individual_death_probabilites = self.SpasInd_death_probability / self.normalize_probabilities
+            self.victim_index = np.random.multinomial(1, self.Individual_death_probabilites)
+        """
         victim = random.choice(self.local_community)
         ## If no invasive hasn't invaded then just do the normal sampling
         if self.invasive == -1:
@@ -211,7 +262,7 @@ class implicit_BI(object):
 
     def migrate_no_dupes_step(self):
         ## Loop until you draw species unique in the local community
-        ## The flag to tell 'while when we're done, set when you successfully 
+        ## The flag to tell 'while when we're done, set when you successfully
         ## draw a non-local-doop from the metacommunity
         unique = 0
 
@@ -282,7 +333,7 @@ class implicit_BI(object):
                 else:
                     new_species = self.migrate_no_dupes_step()
 
-                ## Only record coltime if this is the first time this species enters the local community 
+                ## Only record coltime if this is the first time this species enters the local community
                 if init_colonization:
                     self.divergence_times[(new_species[0], False)] = self.current_time
 
@@ -304,13 +355,13 @@ class implicit_BI(object):
                 ## This all was only true before i implemented the full rosindell/harmon model,
                 ## There are no more empty demes in the current config
                 self.local_community.append(random.choice(self.local_community))
-    
+
                 ## Sample only from available extant species (early pops grow quickly in the volcanic model)
                 ## If you do this, the original colonizer just overwhelms everything else
                 ## This is more similar to the Rosindell and Harmon model, in which they simply
                 ## prepopulate the island entirely with one species. This is effectively the same
                 #self.local_community.append(random.choice([x for x in self.local_community if not x[0] == 0]))
-    
+
             ## update current time
             self.current_time += 1
 
@@ -418,9 +469,15 @@ class implicit_BI(object):
 if __name__ == "__main__":
     data = implicit_BI()
     #data.set_metacommunity("uniform")
-    data.set_metacommunity("metacommunity_LS4.txt")
-    #data.prepopulate(mode="landbridge")
-    data.prepopulate(mode="volcanic")
+    data.set_metacommunity("SpInfo.txt")
+    data.EF_death_probabilities()
+
+    data.prepopulate(mode="landbridge")
+    print(data.local_community)
+
+    """
+    print(len(data.local_community))
+
     for i in range(100000):
         if not i % 10000:
             print("Done {}".format(i))
@@ -428,6 +485,9 @@ if __name__ == "__main__":
             #print(data.local_community)
         data.step()
     abundance_distribution = data.get_abundances(octaves=False)
+
+
+
     print("Species abundance distribution:\n{}".format(abundance_distribution))
     #print("Colonization times per species:\n{}".format(data.divergence_times))
     #plt.bar(abundance_distribution.keys(), abundance_distribution.values())
@@ -435,3 +495,4 @@ if __name__ == "__main__":
     print("Species:\n{}".format(data.get_species()))
     print("Extinction rate - {}".format(data.extinctions/float(data.current_time)))
     print("Colonization rate - {}".format(data.colonizations/float(data.current_time)))
+    """
