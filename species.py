@@ -17,9 +17,9 @@ class species(object):
         self.name = names.names().get_name()
         self.uuid = UUID
         self.abundance = abundance
-        self.alpha = 100000
+        self.alpha = 1000
         self.local_Ne = self.abundance * self.alpha
-        self.meta_abundance = meta_abundance * 1000
+        self.meta_abundance = meta_abundance * 10000
         #self.colonization_time = np.log(colonization_time)
         self.migration_rate = migration_rate
         self.colonization_time = colonization_time
@@ -28,8 +28,8 @@ class species(object):
 #        self.mutation_rate = 0.00000007
         self.sequence_length = 570
         self.tree_sequence = []
-        self.island_sample_size = 10
-        self.meta_sample_size = 10
+        self.island_sample_size = 100
+        self.meta_sample_size = 100
 
         ## Need to calculate the growth rate
         #self.r_island = -np.log(100./self.local_Ne)/self.colonization_time
@@ -89,7 +89,7 @@ class species(object):
         #print(self.name, self.colonization_time)
         debug = msprime.DemographyDebugger(population_configurations=[island_pop, meta_pop],\
                                             migration_matrix=migmat,
-                                           demographic_events=[island_rate_change_event, migrate_change, split_event])
+                                           demographic_events=[island_rate_change_event, island_size_change_event, migrate_change, split_event])
         debug.print_history()
 
         self.tree_sequence = msprime.simulate(length=self.sequence_length,\
@@ -97,7 +97,8 @@ class species(object):
                                                 mutation_rate=self.mutation_rate, \
                                                 population_configurations=[island_pop, meta_pop],\
                                                 migration_matrix=migmat,
-                                                demographic_events=[island_size_change_event, island_rate_change_event, migrate_change, split_event])
+                                                demographic_events=[island_size_change_event, island_rate_change_event, island_size_change_event,\
+                                                                    migrate_change, split_event])
 
         #self.tree_sequence = msprime.simulate(sample_size=10, Ne=self.Ne, length=self.sequence_length, mutation_rate=self.mutation_rate)
 

@@ -1009,6 +1009,9 @@ def parse_command_line():
         default=0,
         help="Length of timeslice between samples for logging")
 
+    parser.add_argument("--allow_multiple_colonizations", action="store_true",
+        help="Allow repeated colonization of species extant in the local community (post-divergence migration)")
+
     parser.add_argument('-i', metavar='invasion_time', dest="invasion_time", type=int,
         default=-1,
         help="Timestep of invasion of invasive species")
@@ -1081,7 +1084,8 @@ if __name__ == "__main__":
         data = implicit_CI.implicit_CI(K=args.K, colrate=args.colrate, mig_clust_size=args.colonizers, quiet=args.quiet)
     else:
         ## Implicit space, one colonizer per event
-        data = implicit_BI.implicit_BI(K=args.K, colrate=args.colrate, exponential=args.exponential, quiet=args.quiet)
+        data = implicit_BI.implicit_BI(K=args.K, colrate=args.colrate, allow_multiple_colonizations=args.allow_multiple_colonizations,\
+                                        exponential=args.exponential, quiet=args.quiet)
 
     ## Set model parameters
     data.set_metacommunity(args.meta)

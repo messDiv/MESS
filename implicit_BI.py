@@ -25,7 +25,7 @@ class implicit_BI(object):
     with an individual sample, used to combine samples
     into Assembly objects."""
 
-    def __init__(self, K=5000, colrate=0.01, exponential=False, quiet=False):
+    def __init__(self, K=5000, colrate=0.01, allow_multiple_colonizations=False, exponential=False, quiet=False):
         self.quiet = quiet
 
         ## List for storing species objects that have had sequence
@@ -35,7 +35,7 @@ class implicit_BI(object):
 
         ## Settings specific to the uniform metacommunity
         ## This is individuals per species
-        self.uniform_inds = 10000000
+        self.uniform_inds = 1000000
         self.uniform_species = 1000
 
         ## Variables associated with the metacommunity (these are poorly named)
@@ -48,7 +48,7 @@ class implicit_BI(object):
 
         self.maxabundance = 0
         self.colonization_rate = colrate
-        self.allow_multiple_colonizations = False
+        self.allow_multiple_colonizations = allow_multiple_colonizations
 
         ## Variables for tracking the local community
         self.local_community = []
@@ -153,6 +153,8 @@ class implicit_BI(object):
 
         self.maxabundance = np.amax(self.immigration_probabilities)
 
+        ## Init post colonization migrants counters
+        self.post_colonization_migrants = {x[0]:0 for x in self.species}
 
     def __str__(self):
         return "<implicit_BI {}>".format(self.name)
@@ -203,8 +205,6 @@ class implicit_BI(object):
                 self.local_community.append((None,True))
             self.divergence_times[new_species] = 1
 
-        ## Init post colonization migrants counters
-        self.post_colonization_migrants = {x[0]:0 for x in self.species}
 
     def death_step(self, invasion_time, invasiveness):
         ## Select the individual to die
