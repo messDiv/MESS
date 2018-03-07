@@ -90,7 +90,7 @@ class species(object):
         debug = msprime.DemographyDebugger(population_configurations=[island_pop, meta_pop],\
                                             migration_matrix=migmat,
                                            demographic_events=[island_rate_change_event, island_size_change_event, migrate_change, split_event])
-        debug.print_history()
+        #debug.print_history()
 
         self.tree_sequence = msprime.simulate(length=self.sequence_length,\
                                                 Ne=self.local_Ne,\

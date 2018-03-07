@@ -3,7 +3,7 @@
 
 #import matplotlib.pyplot as plt
 #from ascii_graph import Pyasciigraph
-#from scipy.stats import logser
+from scipy.stats import logser
 import collections
 import numpy as np
 import itertools
@@ -11,7 +11,7 @@ import random
 import sys
 import os
 
-#from species import species
+from species import species
 
 # pylint: disable=C0103
 # pylint: disable=R0903
@@ -89,7 +89,7 @@ class implicit_BI(object):
         self.competitive_exclusion = False
 
         ## Toggle environmental filtering
-        self.environmental_filtering = True
+        self.environmental_filtering = False
         self.environmental_optimum = 0
         self.species_death_probability = {}
         self.individual_death_probabilites = []
@@ -148,7 +148,7 @@ class implicit_BI(object):
 
         ## Actually using uuid is v slow
         #self.species = [uuid.uuid4() for _ in enumerate(self.abundances)]
-        #self.species = [x for x in enumerate(self.abundances)]
+        self.species = [x for x in enumerate(self.abundances)]
         self.total_inds = sum(self.abundances)
         self.immigration_probabilities = [float(self.abundances[i])/self.total_inds for i in range(len(self.abundances))]
 
@@ -201,7 +201,10 @@ class implicit_BI(object):
             ## This is the old way that acts weird
             #self.local_community = [0] * self.local_inds
             #self.local_community = [((x,0), True) for x in self.local_community]
-            new_species = (self.species[self.immigration_probabilities.index(self.maxabundance)], True)
+            #print(self.maxabundance)
+            #print(len(self.immigration_probabilities))
+            #print(len(self.species))
+            new_species = (self.species[self.immigration_probabilities.index(self.maxabundance)][0], True)
             self.local_community.append(new_species)
             for i in range(1,self.local_inds):
                 self.local_community.append((None,True))
@@ -314,7 +317,7 @@ class implicit_BI(object):
         else:
             ## This is a new migrant so init the post-colonization count
             self.post_colonization_migrants[new_species[0]] = 0
-            #print("New immigrant {}\t{}".format(new_species[0], self.post_colonization_migrants))
+            #print("New immigrant {}\t{}".format(new_species, self.post_colonization_migrants))
 
         return new_species, init_col
 
