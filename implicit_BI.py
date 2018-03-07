@@ -249,7 +249,13 @@ class implicit_BI(object):
                 self.survived_invasives += 1
                 victim = random.choice(self.local_community)
             self.local_community.remove(victim)
-        self.local_community.remove(victim)
+
+        try:
+            self.local_community.remove(victim)
+        except Exception as inst:
+            print(victim)
+            print(self.local_community)
+            raise
 
         ## Record local extinction events
         if not victim in self.local_community:
@@ -495,7 +501,7 @@ if __name__ == "__main__":
             #print(i, len(data.local_community), len(set(data.local_community)))
             #print(data.local_community)
         data.step()
-    
+
 
     """
     abundance_distribution = data.get_abundances(octaves=False)
