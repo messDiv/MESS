@@ -3,7 +3,7 @@
 
 #import matplotlib.pyplot as plt
 #from ascii_graph import Pyasciigraph
-#from scipy.stats import logser
+from scipy.stats import logser
 import collections
 import numpy as np
 import itertools
@@ -229,16 +229,10 @@ class implicit_BI(object):
             #print(sample)
             #self.local_community[victim_index==1]
             victim_index = int(np.arange(0,len(self.individual_death_probabilites),1)[sample==1])
-            #print(victim_index)
-            #print(self.local_community[victim_index])
+            print(victim_index)
+            print(self.local_community[victim_index])
             victim = self.local_community[victim_index]
-<<<<<<< HEAD
-        else:
-            #if not environmental filtering then select victim at random
-            victim = random.choice(self.local_community)
-
-        ## If no invasive hasn't invaded then just do the normal sampling
-=======
+            print(victim)
         elif self.competitive_exclusion:
             ## Stand-in for real competitive exclusion victim selection
             victim = random.choice(self.local_community)
@@ -246,7 +240,6 @@ class implicit_BI(object):
             ## If not trait based just select one individual randomly (neutral0
             victim = random.choice(self.local_community)
         ## If no invasive has invaded then just do the normal sampling
->>>>>>> 0e0a0415ced952800ae22e0a30c91d986bebfac0
         if self.invasive == -1:
             self.local_community.remove(victim)
         else:
@@ -492,6 +485,8 @@ if __name__ == "__main__":
     data.EF_death_probabilities()
 
     data.prepopulate(mode="landbridge")
+    #data.step()
+    #print(data.local_community)
 
 
     for i in range(10000):
@@ -500,12 +495,14 @@ if __name__ == "__main__":
             #print(i, len(data.local_community), len(set(data.local_community)))
             #print(data.local_community)
         data.step()
+    
 
+    """
     abundance_distribution = data.get_abundances(octaves=False)
     print(abundance_distribution)
     print(data.local_community)
 
-    """
+
     print(data.local_community)
     print(data.individual_death_probabilites)
     print(len(data.local_community))
