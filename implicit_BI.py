@@ -232,11 +232,21 @@ class implicit_BI(object):
             #print(victim_index)
             #print(self.local_community[victim_index])
             victim = self.local_community[victim_index]
+<<<<<<< HEAD
         else:
             #if not environmental filtering then select victim at random
             victim = random.choice(self.local_community)
 
         ## If no invasive hasn't invaded then just do the normal sampling
+=======
+        elif self.competitive_exclusion:
+            ## Stand-in for real competitive exclusion victim selection
+            victim = random.choice(self.local_community)
+        else:
+            ## If not trait based just select one individual randomly (neutral0
+            victim = random.choice(self.local_community)
+        ## If no invasive has invaded then just do the normal sampling
+>>>>>>> 0e0a0415ced952800ae22e0a30c91d986bebfac0
         if self.invasive == -1:
             self.local_community.remove(victim)
         else:
@@ -246,6 +256,8 @@ class implicit_BI(object):
                 self.survived_invasives += 1
                 victim = random.choice(self.local_community)
             self.local_community.remove(victim)
+        self.local_community.remove(victim)
+
         ## Record local extinction events
         if not victim in self.local_community:
             ## This was supposed to not record "extinctions" of empty deme space
