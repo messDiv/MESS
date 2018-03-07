@@ -3,7 +3,7 @@
 
 #import matplotlib.pyplot as plt
 #from ascii_graph import Pyasciigraph
-from scipy.stats import logser
+#from scipy.stats import logser
 import collections
 import numpy as np
 import itertools
@@ -11,7 +11,7 @@ import random
 import sys
 import os
 
-from species import species
+#from species import species
 
 # pylint: disable=C0103
 # pylint: disable=R0903
@@ -148,7 +148,7 @@ class implicit_BI(object):
 
         ## Actually using uuid is v slow
         #self.species = [uuid.uuid4() for _ in enumerate(self.abundances)]
-        self.species = [x for x in enumerate(self.abundances)]
+        #self.species = [x for x in enumerate(self.abundances)]
         self.total_inds = sum(self.abundances)
         self.immigration_probabilities = [float(self.abundances[i])/self.total_inds for i in range(len(self.abundances))]
 
@@ -171,11 +171,8 @@ class implicit_BI(object):
             self.weight = self.trait_evolution_rate_parameter * self.metcommunity_tree_height * (self.environmental_strength ** 2)
 
             for i in range(len(self.species)):
-
-                #print(self.species_trait_values[self.species[i]])
                 self.deathProb = 1 - (np.exp(-((self.species_trait_values[self.species[i]] - self.environmental_optimum) ** 2)/self.weight))
                 self.species_death_probability[self.species[i]] = self.deathProb
-                #self.species_death_probability.append(self.deathProb)
 
 
     def prepopulate(self, mode="landbridge"):
@@ -235,6 +232,13 @@ class implicit_BI(object):
             #print(victim_index)
             #print(self.local_community[victim_index])
             victim = self.local_community[victim_index]
+<<<<<<< HEAD
+        else:
+            #if not environmental filtering then select victim at random
+            victim = random.choice(self.local_community)
+
+        ## If no invasive hasn't invaded then just do the normal sampling
+=======
         elif self.competitive_exclusion:
             ## Stand-in for real competitive exclusion victim selection
             victim = random.choice(self.local_community)
@@ -242,6 +246,7 @@ class implicit_BI(object):
             ## If not trait based just select one individual randomly (neutral0
             victim = random.choice(self.local_community)
         ## If no invasive has invaded then just do the normal sampling
+>>>>>>> 0e0a0415ced952800ae22e0a30c91d986bebfac0
         if self.invasive == -1:
             self.local_community.remove(victim)
         else:
@@ -489,10 +494,11 @@ if __name__ == "__main__":
     data = implicit_BI(K=1000,allow_multiple_colonizations=True)
     #data.set_metacommunity("uniform")
     data.set_metacommunity("SpInfo.txt")
+    data.environmental_filtering = True
     data.EF_death_probabilities()
 
     data.prepopulate(mode="landbridge")
-    #print(data.local_community)
+
 
     for i in range(10000):
         if not i % 1000:
@@ -500,6 +506,7 @@ if __name__ == "__main__":
             #print(i, len(data.local_community), len(set(data.local_community)))
             #print(data.local_community)
         data.step()
+
     abundance_distribution = data.get_abundances(octaves=False)
     print(abundance_distribution)
     print(data.local_community)
