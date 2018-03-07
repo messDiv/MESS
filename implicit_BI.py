@@ -163,7 +163,8 @@ class implicit_BI(object):
     def EF_death_probabilities(self):
         if self.environmental_filtering:
             #environmental optimum is a random value between (-rate of BM * tree depth, rate of BM * tree depth)
-            self.environmental_optimum = np.random.uniform(-float(4 * self.trait_evolution_rate_parameter * self.metcommunity_tree_height), float(4 * self.trait_evolution_rate_parameter * self.metcommunity_tree_height))
+            scale = float(4 * self.trait_evolution_rate_parameter * self.metcommunity_tree_height)
+            self.environmental_optimum = np.random.uniform(-scale, scale)
 
             #determine strength of environment
             self.environmental_strength = float(np.random.uniform(0.1,100))
@@ -209,20 +210,30 @@ class implicit_BI(object):
 
     def death_step(self, invasion_time, invasiveness):
         ## Select the individual to die
-        """
+
+        ##currently this will fail under volcanic model because the entire local community will go extinct
         if self.environmental_filtering:
             species_inLocal = [x[0] for x in data.local_community if x[0] != None]
-
+            #wont need if statement after volcanic model changed
+            #print(species_inLocal)
+            death_probabilites = []
             for i in range(len(species_inLocal)):
-                self.individual_death_probabilites.append(data.species_death_probability[species_inLocal[i]])
+                death_probabilites.append(self.species_death_probability[species_inLocal[i]])
+            #print(death_probabilites)
 
-            self.normalize_probabilities = sum(self.individual_death_probabilites)
-            self.individual_death_probabilites = self.individual_death_probabilites / self.normalize_probabilities
-            victim = np.random.multinomial(1, self.individual_death_probabilites)
-            print(victim)
-        """
-        victim = random.choice(self.local_community)
-        print(victim)
+            self.individual_death_probabilites = death_probabilites / sum(death_probabilites)
+            #print(self.individual_death_probabilites)
+            #print(sum(self.individual_death_probabilites))
+            #index = np.arange(0,len(self.individual_death_probabilites),1)
+            sample = np.random.multinomial(1, self.individual_death_probabilites)
+            #print(sample)
+            #self.local_community[victim_index==1]
+            victim_index = int(np.arange(0,len(self.individual_death_probabilites),1)[sample==1])
+            #print(victim_index)
+            #print(self.local_community[victim_index])
+            victim = self.local_community[victim_index]
+
+        #victim = random.choice(self.local_community)
         ## If no invasive hasn't invaded then just do the normal sampling
         if self.invasive == -1:
             self.local_community.remove(victim)
@@ -460,34 +471,32 @@ class implicit_BI(object):
 
 
 if __name__ == "__main__":
-    data = implicit_BI(allow_multiple_colonizations=True)
+    data = implicit_BI(K=1000,allow_multiple_colonizations=True)
     #data.set_metacommunity("uniform")
     data.set_metacommunity("SpInfo.txt")
     data.EF_death_probabilities()
 
-    data.prepopulate(mode="volcanic")
+    data.prepopulate(mode="landbridge")
     #print(data.local_community)
 
-    for i in range(100000):
+    for i in range(10000):
         if not i % 1000:
             print("Done {}".format(i))
             #print(i, len(data.local_community), len(set(data.local_community)))
             #print(data.local_community)
         data.step()
-    #abundance_distribution = data.get_abundances(octaves=False)
-    species_inLocal = [x[0] for x in data.local_community if x[0] != None]
-    print(species_inLocal)
+    abundance_distribution = data.get_abundances(octaves=False)
+    print(abundance_distribution)
+    print(data.local_community)
 
     """
-    Individual_death_probabilites = []
-    species_inLocal = [x[0] for x in data.local_community if x[0] != None]
-    for i in range(len(species_inLocal)):
-        Individual_death_probabilites.append(data.species_death_probability[species_inLocal[i]])
-    print(Individual_death_probabilites)
-    print(len(Individual_death_probabilites))
-    print(len(species_inLocal))
+    print(data.local_community)
+    print(data.individual_death_probabilites)
+    print(len(data.local_community))
+    print(len(data.individual_death_probabilites))
 
-    
+
+
     print("Species abundance distribution:\n{}".format(abundance_distribution))
     #print("Colonization times per species:\n{}".format(data.divergence_times))
     #plt.bar(abundance_distribution.keys(), abundance_distribution.values())
