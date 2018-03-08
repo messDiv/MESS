@@ -240,7 +240,7 @@ class implicit_BI(object):
 
         ##currently this will fail under volcanic model because the entire local community will go extinct
         if self.environmental_filtering:
-            species_inLocal = [x[0] for x in data.local_community if x[0] != None]
+            species_inLocal = [x[0] for x in self.local_community if x[0] != None]
             #wont need if statement after volcanic model changed
             #print(species_inLocal)
             death_probabilites = []
@@ -261,7 +261,7 @@ class implicit_BI(object):
             victim = self.local_community[victim_index]
 
         elif self.competitive_exclusion:
-            species_inLocal = [x[0] for x in data.local_community if x[0] != None]
+            species_inLocal = [x[0] for x in self.local_community if x[0] != None]
 
             local_traits = []
             for i in range(len(species_inLocal)):
