@@ -93,13 +93,19 @@ class implicit_BI(object):
 
         ## Toggle competitive exclusion
         self.competitive_exclusion = False
+        self.competitive_strength = 0
 
         ## Toggle environmental filtering
         self.environmental_filtering = False
         self.environmental_optimum = 0
-        self.species_death_probability = {}
-        self.individual_death_probabilites = []
         self.environmental_strength = 0
+
+        ## Toggle params for holeing species death probabilities
+        self.species_death_probability = {}
+        #species death probability will be an unchanging dictionary for enviormental environmental_filtering
+        #but will have to be updated for competitive exlcusion models
+        self.individual_death_probabilites = []
+
 
 
     def set_metacommunity(self, infile, random=False):
@@ -167,7 +173,7 @@ class implicit_BI(object):
     def __str__(self):
         return "<implicit_BI {}>".format(self.name)
 
-    def EF_death_probabilities(self):
+    def calculate_death_probabilities(self):
         if self.environmental_filtering:
             #environmental optimum is a random value between (-rate of BM * tree depth, rate of BM * tree depth)
             scale = float(4 * self.trait_evolution_rate_parameter * self.metcommunity_tree_height)
@@ -178,8 +184,14 @@ class implicit_BI(object):
             self.weight = self.trait_evolution_rate_parameter * self.metcommunity_tree_height * (self.environmental_strength ** 2)
 
             for i in range(len(self.species)):
-                self.deathProb = 1 - (np.exp(-((self.species_trait_values[self.species[i]] - self.environmental_optimum) ** 2)/self.weight))
-                self.species_death_probability[self.species[i]] = self.deathProb
+                deathProb = 1 - (np.exp(-((self.species_trait_values[self.species[i]] - self.environmental_optimum) ** 2)/self.weight))
+                self.species_death_probability[self.species[i]] = deathProb
+
+        if self.competitive_exclusion:
+            #determine strength of competition
+            #self.competitive_strength = float(np.random.uniform(0.1,100))
+            self.competitive_strength = .5
+            self.weight = self.trait_evolution_rate_parameter * self.metcommunity_tree_height * (self.competitive_strength ** 2)
 
 
     def prepopulate(self, mode="landbridge"):
@@ -242,13 +254,37 @@ class implicit_BI(object):
             #print(sample)
             #self.local_community[victim_index==1]
             victim_index = int(np.arange(0,len(self.individual_death_probabilites),1)[sample==1])
-            print(victim_index)
-            print(self.local_community[victim_index])
+            #print(victim_index)
+            #print(self.local_community[victim_index])
             victim = self.local_community[victim_index]
-            print(victim)
+
         elif self.competitive_exclusion:
-            ## Stand-in for real competitive exclusion victim selection
-            victim = random.choice(self.local_community)
+            species_inLocal = [x[0] for x in data.local_community if x[0] != None]
+
+            local_traits = []
+            for i in range(len(species_inLocal)):
+                local_traits.append(self.species_trait_values[species_inLocal[i]])
+            mean_local_trait = np.mean(local_traits)
+
+            for i in range(len(self.species)):
+                deathProb = (np.exp(-((self.species_trait_values[self.species[i]] - mean_local_trait) ** 2)/self.weight))
+                self.species_death_probability[self.species[i]] = deathProb
+            #print(species_inLocal)
+            #print(self.species_death_probability)
+
+            death_probabilites = []
+            for i in range(len(species_inLocal)):
+                death_probabilites.append(self.species_death_probability[species_inLocal[i]])
+
+            self.individual_death_probabilites = death_probabilites / sum(death_probabilites)
+            #print(np.sum(self.individual_death_probabilites))
+            sample = np.random.multinomial(1, self.individual_death_probabilites)
+            #print(sample)
+            victim_index = int(np.arange(0,len(self.individual_death_probabilites),1)[sample==1])
+            #print(victim_index)
+            #print(self.local_community[victim_index])
+            victim = self.local_community[victim_index]
+
         else:
             ## If not trait based just select one individual randomly (neutral0
             victim = random.choice(self.local_community)
@@ -506,33 +542,21 @@ if __name__ == "__main__":
     data = implicit_BI(K=1000,allow_multiple_colonizations=True)
     #data.set_metacommunity("uniform")
     data.set_metacommunity("SpInfo.txt")
-    data.environmental_filtering = True
-    data.EF_death_probabilities()
+    #data.environmental_filtering = True
+    data.competitive_exclusion = True
 
+    data.calculate_death_probabilities()
     data.prepopulate(mode="landbridge")
-    #data.step()
-    #print(data.local_community)
 
-
-    for i in range(10000):
+    for i in range(100000):
         if not i % 1000:
             print("Done {}".format(i))
             #print(i, len(data.local_community), len(set(data.local_community)))
             #print(data.local_community)
         data.step()
 
-
-    """
     abundance_distribution = data.get_abundances(octaves=False)
     print(abundance_distribution)
-    print(data.local_community)
-
-
-    print(data.local_community)
-    print(data.individual_death_probabilites)
-    print(len(data.local_community))
-    print(len(data.individual_death_probabilites))
-
 
 
     print("Species abundance distribution:\n{}".format(abundance_distribution))
