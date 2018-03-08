@@ -14,14 +14,7 @@ import random
 import sys
 import os
 
-<<<<<<< HEAD
 #from species import species
-=======
-try:
-    from species import species
-except:
-    print("Species module failed to load, things probably won't work right.")
->>>>>>> 2ff92cf082ade80fe079ee14ab4d0ce134d0a500
 
 # pylint: disable=C0103
 # pylint: disable=R0903
@@ -163,7 +156,6 @@ class implicit_BI(object):
             else:
                 raise Exception("Bad metacommunity input - ".format(infile))
 
-
         ## Actually using uuid is v slow
         #self.species = [uuid.uuid4() for _ in enumerate(self.abundances)]
         self.total_inds = sum(self.abundances)
@@ -173,6 +165,10 @@ class implicit_BI(object):
 
         ## Init post colonization migrants counters
         self.post_colonization_migrants = {x:0 for x in self.species}
+
+        if data.environmental_filtering | data.competitive_exclusion:
+            data.calculate_death_probabilities()
+
 
     def __str__(self):
         return "<implicit_BI {}>".format(self.name)
@@ -377,11 +373,11 @@ class implicit_BI(object):
             #print("Multiple colonization: sp id {}".format(new_species[0]))
             ## This is a post-colonization migrant so record the event and tell downstream
             ## not to update the colonization time.
-            self.post_colonization_migrants[new_species[0]] += 1
+            self.post_colonization_migrants[new_species] += 1
             init_col = False
         else:
             ## This is a new migrant so init the post-colonization count
-            self.post_colonization_migrants[new_species[0]] = 0
+            self.post_colonization_migrants[new_species] = 0
             #print("New immigrant {}\t{}".format(new_species, self.post_colonization_migrants))
 
         return new_species, init_col
@@ -544,12 +540,10 @@ class implicit_BI(object):
 if __name__ == "__main__":
     data = implicit_BI(K=1000,allow_multiple_colonizations=True)
     #data.set_metacommunity("uniform")
-    data.set_metacommunity("SpInfo.txt")
     #data.environmental_filtering = True
-    #data.competitive_exclusion = True
+    data.competitive_exclusion = True
+    data.set_metacommunity("SpInfo.txt")
 
-    if data.environmental_filtering | data.competitive_exclusion:
-        data.calculate_death_probabilities()
     data.prepopulate(mode="landbridge")
 
     for i in range(10000):
@@ -558,13 +552,9 @@ if __name__ == "__main__":
             #print(i, len(data.local_community), len(set(data.local_community)))
             #print(data.local_community)
         data.step()
-
-    print(data.local_community)
     abundance_distribution = data.get_abundances(octaves=False)
-    print(abundance_distribution)
 
 
-    """
     print("Species abundance distribution:\n{}".format(abundance_distribution))
     #print("Colonization times per species:\n{}".format(data.divergence_times))
     #plt.bar(abundance_distribution.keys(), abundance_distribution.values())
