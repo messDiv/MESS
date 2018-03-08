@@ -81,7 +81,7 @@ class species(object):
                                                                         population_id=0)
 
         island_size_change_event = msprime.PopulationParametersChange(time=self.colonization_time-1,\
-                                                                        initial_size=0,\
+                                                                        initial_size=1,\
                                                                         population_id=0)
 
         migrate_change = msprime.MigrationRateChange(time=self.colonization_time-1, rate=0)
@@ -243,7 +243,7 @@ if __name__ == "__main__":
     import implicit_BI
 
     data = implicit_BI.implicit_BI()
-    data.set_metacommunity("metacommunity_LS4.txt")
+    data.set_metacommunity("logser")
     data.prepopulate(mode="volcanic")
     for i in range(50000):
         if not i % 10000:
