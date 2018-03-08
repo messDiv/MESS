@@ -189,8 +189,7 @@ class implicit_BI(object):
 
         if self.competitive_exclusion:
             #determine strength of competition
-            #self.competitive_strength = float(np.random.uniform(0.1,100))
-            self.competitive_strength = .5
+            self.competitive_strength = float(np.random.uniform(0.1,100))
             self.weight = self.trait_evolution_rate_parameter * self.metcommunity_tree_height * (self.competitive_strength ** 2)
 
 
@@ -543,22 +542,25 @@ if __name__ == "__main__":
     #data.set_metacommunity("uniform")
     data.set_metacommunity("SpInfo.txt")
     #data.environmental_filtering = True
-    data.competitive_exclusion = True
+    #data.competitive_exclusion = True
 
-    data.calculate_death_probabilities()
+    if data.environmental_filtering | data.competitive_exclusion:
+        data.calculate_death_probabilities()
     data.prepopulate(mode="landbridge")
 
-    for i in range(100000):
-        if not i % 1000:
+    for i in range(10000):
+        if not i % 100:
             print("Done {}".format(i))
             #print(i, len(data.local_community), len(set(data.local_community)))
             #print(data.local_community)
         data.step()
 
+    print(data.local_community)
     abundance_distribution = data.get_abundances(octaves=False)
     print(abundance_distribution)
 
 
+    """
     print("Species abundance distribution:\n{}".format(abundance_distribution))
     #print("Colonization times per species:\n{}".format(data.divergence_times))
     #plt.bar(abundance_distribution.keys(), abundance_distribution.values())
