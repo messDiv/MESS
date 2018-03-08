@@ -1,9 +1,9 @@
 #!/usr/bin/env python2.7
 """ Sample object """
 
-#import matplotlib.pyplot as plt
-#from ascii_graph import Pyasciigraph
-#from scipy.stats import logser
+import matplotlib.pyplot as plt
+from ascii_graph import Pyasciigraph
+from scipy.stats import logser
 import collections
 import numpy as np
 import itertools
@@ -70,7 +70,7 @@ class implicit_BI(object):
         self.invasive = -1
         ## Track how many invasives differentially survived
         self.survived_invasives = 0
-        self.invasion_time = 0
+        self.invasion_time = -1
 
         ###########################################################
         ## Variables for non-neutral assembly processes
@@ -110,6 +110,7 @@ class implicit_BI(object):
             ## Parameter of the logseries distribution
             p = .98
             self.abundances = logser.rvs(p, size=self.local_inds)
+            self.species = ["t"+str(x) for x in range(0, len(self.abundances))]
             if random:
                 self.species_trait_values = {x:y for x,y in enumerate(np.random.rand(self.uniform_species))}
             else:
@@ -118,6 +119,7 @@ class implicit_BI(object):
         elif infile == "uniform":
             #for i in range(self.uniform_inds):
             self.abundances = [self.uniform_inds] * self.uniform_species
+            self.species = ["t"+str(x) for x in range(0, len(self.abundances))]
             if random:
                 self.species_trait_values = {x:y for x,y in enumerate(np.random.rand(self.uniform_species))}
             else:
@@ -148,7 +150,6 @@ class implicit_BI(object):
 
         ## Actually using uuid is v slow
         #self.species = [uuid.uuid4() for _ in enumerate(self.abundances)]
-        #self.species = [x for x in enumerate(self.abundances)]
         self.total_inds = sum(self.abundances)
         self.immigration_probabilities = [float(self.abundances[i])/self.total_inds for i in range(len(self.abundances))]
 
@@ -201,10 +202,16 @@ class implicit_BI(object):
             #print(self.maxabundance)
             #print(len(self.immigration_probabilities))
             #print(len(self.species))
-            new_species = (self.species[self.immigration_probabilities.index(self.maxabundance)][0], True)
+            new_species = (self.species[self.immigration_probabilities.index(self.maxabundance)], True)
             self.local_community.append(new_species)
-            for i in range(1,self.local_inds):
-                self.local_community.append((None,True))
+            ## prepopulate volcanic either with all the most abundant species in the metacommunity
+            ## or with one sample of this species and a bunch of "emtpy deme space". The empty
+            ## demes screw up competition/environmental filtering models
+            if True:
+               self.local_community.extend([new_species] * (self.local_inds - 1))
+            else:
+                for i in range(1,self.local_inds):
+                    self.local_community.append((None,True))
             self.divergence_times[new_species] = 1
 
 
@@ -240,16 +247,17 @@ class implicit_BI(object):
             victim = random.choice(self.local_community)
         ## If no invasive has invaded then just do the normal sampling
         if self.invasive == -1:
-            self.local_community.remove(victim)
+            ## If no invasive species yet just go on
+            pass
         else:
             ## If invasiveness is less than the random value remove the invasive individual
             ## else choose a new individual
             if victim == self.invasive and np.random.rand() < invasiveness:
                 self.survived_invasives += 1
                 victim = random.choice(self.local_community)
-            self.local_community.remove(victim)
 
         try:
+            #print(victim)
             self.local_community.remove(victim)
         except Exception as inst:
             print(victim)
