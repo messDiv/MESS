@@ -14,7 +14,14 @@ import random
 import sys
 import os
 
+<<<<<<< HEAD
 #from species import species
+=======
+try:
+    from species import species
+except:
+    print("Species module failed to load, things probably won't work right.")
+>>>>>>> b2d46b62c6d222773a670ddac97ec9caa9a8875f
 
 # pylint: disable=C0103
 # pylint: disable=R0903
