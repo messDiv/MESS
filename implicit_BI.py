@@ -535,7 +535,6 @@ class implicit_BI(object):
 
     def set_species(self, species_objects):
         self.species_objects = species_objects
-        print(self.species_objects)
 
     def get_species(self):
         return(self.species_objects)
