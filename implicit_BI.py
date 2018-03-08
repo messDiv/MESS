@@ -531,6 +531,7 @@ class implicit_BI(object):
 
     def set_species(self, species_objects):
         self.species_objects = species_objects
+        print(self.species_objects)
 
     def get_species(self):
         return(self.species_objects)
@@ -540,9 +541,8 @@ if __name__ == "__main__":
     data = implicit_BI(allow_multiple_colonizations=True)
     #data.set_metacommunity("uniform")
     #data.environmental_filtering = True
-    data.competitive_exclusion = True
-    data.set_metacommunity("SpInfo.txt")
-
+    #data.competitive_exclusion = True
+    data.set_metacommunity("uniform")
     data.prepopulate(mode="landbridge")
 
     for i in range(10000):
