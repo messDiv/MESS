@@ -118,24 +118,20 @@ class implicit_BI(object):
 
         random=True will set random trait values in the range [0-1]
         """
-        if infile == "logser":
-            ## Parameter of the logseries distribution
-            p = .98
-            self.abundances = logser.rvs(p, size=self.local_inds)
-            self.species = ["t"+str(x) for x in range(0, len(self.abundances))]
-            if random:
-                self.species_trait_values = {x:y for x,y in enumerate(np.random.rand(self.uniform_species))}
+        if infile in ["logser", "uniform"]:
+            if infile == "logser":
+                ## Parameter of the logseries distribution
+                p = .98
+                self.abundances = logser.rvs(p, size=self.local_inds)
             else:
-                self.species_trait_values = {x:y for x,y in enumerate(np.zeros(len(self.abundances)))}
+                self.abundances = [self.uniform_inds] * self.uniform_species
 
-        elif infile == "uniform":
-            #for i in range(self.uniform_inds):
-            self.abundances = [self.uniform_inds] * self.uniform_species
             self.species = ["t"+str(x) for x in range(0, len(self.abundances))]
+
             if random:
-                self.species_trait_values = {x:y for x,y in enumerate(np.random.rand(self.uniform_species))}
+                self.species_trait_values = {x:y for x,y in zip(self.species, np.random.rand(len(self.species)))}
             else:
-                self.species_trait_values = {x:y for x,y in enumerate(np.zeros(len(self.abundances)))}
+                self.species_trait_values = {x:y for x,y in zip(self.species, np.random.rand(len(self.species)))}
         else:
             #infile="SpInfo.txt"
             if os.path.isfile(infile):
