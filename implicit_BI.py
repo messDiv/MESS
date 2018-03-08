@@ -566,4 +566,3 @@ if __name__ == "__main__":
     print("Species:\n{}".format(data.get_species()))
     print("Extinction rate - {}".format(data.extinctions/float(data.current_time)))
     print("Colonization rate - {}".format(data.colonizations/float(data.current_time)))
-    """
