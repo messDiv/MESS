@@ -1,8 +1,11 @@
 #!/usr/bin/env python2.7
 """ Sample object """
 
-import matplotlib.pyplot as plt
-from ascii_graph import Pyasciigraph
+try:
+    import matplotlib.pyplot as plt
+    from ascii_graph import Pyasciigraph
+except:
+    print("matplotlib and/or ascii_graph not installed, so plotting is disabled.")
 from scipy.stats import logser
 import collections
 import numpy as np
@@ -236,9 +239,10 @@ class implicit_BI(object):
             #print(sample)
             #self.local_community[victim_index==1]
             victim_index = int(np.arange(0,len(self.individual_death_probabilites),1)[sample==1])
-            #print(victim_index)
-            #print(self.local_community[victim_index])
+            print(victim_index)
+            print(self.local_community[victim_index])
             victim = self.local_community[victim_index]
+            print(victim)
         elif self.competitive_exclusion:
             ## Stand-in for real competitive exclusion victim selection
             victim = random.choice(self.local_community)
@@ -498,6 +502,8 @@ if __name__ == "__main__":
     data.EF_death_probabilities()
 
     data.prepopulate(mode="landbridge")
+    #data.step()
+    #print(data.local_community)
 
 
     for i in range(10000):
@@ -507,11 +513,13 @@ if __name__ == "__main__":
             #print(data.local_community)
         data.step()
 
+
+    """
     abundance_distribution = data.get_abundances(octaves=False)
     print(abundance_distribution)
     print(data.local_community)
 
-    """
+
     print(data.local_community)
     print(data.individual_death_probabilites)
     print(len(data.local_community))
