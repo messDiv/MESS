@@ -14,7 +14,14 @@ import random
 import sys
 import os
 
+<<<<<<< HEAD
 #from species import species
+=======
+try:
+    from species import species
+except:
+    print("Species module failed to load, things probably won't work right.")
+>>>>>>> 2ff92cf082ade80fe079ee14ab4d0ce134d0a500
 
 # pylint: disable=C0103
 # pylint: disable=R0903
@@ -165,7 +172,7 @@ class implicit_BI(object):
         self.maxabundance = np.amax(self.immigration_probabilities)
 
         ## Init post colonization migrants counters
-        self.post_colonization_migrants = {x[0]:0 for x in self.species}
+        self.post_colonization_migrants = {x:0 for x in self.species}
 
     def __str__(self):
         return "<implicit_BI {}>".format(self.name)
@@ -312,8 +319,10 @@ class implicit_BI(object):
                 self.extinctions += 1
                 try:
                     ## reset post colonization migrant count for this species
+                    ## Record the lifetime of this species and remove their record from divergence_times
                     self.post_colonization_migrants[victim[0]] = 0
                     self.extinction_times.append(self.current_time - self.divergence_times[victim])
+                    del self.divergence_times[victim]
                 except:
                     ## The empty deme will make this freak
                     pass
@@ -398,13 +407,13 @@ class implicit_BI(object):
 
                 ## Only record coltime if this is the first time this species enters the local community
                 if init_colonization:
-                    self.divergence_times[(new_species[0], False)] = self.current_time
+                    self.divergence_times[(new_species, False)] = self.current_time
 
                 ## Only set the invasive species once at the time of next migration post invasion time
                 ## If invasion time is < 0 this means "Don't do invasive"
                 if not invasion_time < 0:
                     if self.invasive == -1 and time >= invasion_time:
-                        self.invasive = (new_species[0], False)
+                        self.invasive = (new_species, False)
                         print("setting invasive species {} at time {}".format(self.invasive, self.current_time))
                         self.invasion_time = self.current_time
 
@@ -500,21 +509,24 @@ class implicit_BI(object):
         ## The old way of doing this is `self.current_time - tdiv`
         #self.species_objects = [species(UUID=UUID, colonization_time=1/float(tdiv), abundance=self.local_community.count(UUID),\
         for UUID, tdiv in self.divergence_times.items():
-            #print(self.local_community)
             if UUID in self.local_community:
                 meta_abundance = -1
-                for x, y in self.species:
+                for x in self.species:
                     if UUID[0] == x:
-                        meta_abundance = y
+                        meta_abundance = self.abundances[int(x[1:])]
                 #meta_abundance = [x[1] for x in self.abundances if x[0] == UUID[0]]
                 #meta_abundance = self.abundances[self.species.index(UUID[0])]
                 abundance = self.local_community.count(UUID)
                 #print(self.local_community)
-                self.species_objects.append(species(UUID=UUID, colonization_time=self.current_time - tdiv,\
+                try:
+                    self.species_objects.append(species(UUID=UUID, colonization_time=self.current_time - tdiv,\
                                         exponential=self.exponential, abundance=abundance,\
                                         meta_abundance=meta_abundance,
                                         migration_rate=self.post_colonization_migrants[UUID[0]]/float(tdiv)))
-
+                except:
+                    print(UUID)
+                    print(self.post_colonization_migrants)
+                    raise
         for s in self.species_objects:
             s.simulate_seqs()
             s.get_sumstats()
@@ -560,4 +572,3 @@ if __name__ == "__main__":
     print("Species:\n{}".format(data.get_species()))
     print("Extinction rate - {}".format(data.extinctions/float(data.current_time)))
     print("Colonization rate - {}".format(data.colonizations/float(data.current_time)))
-    """
