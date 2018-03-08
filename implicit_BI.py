@@ -14,14 +14,10 @@ import random
 import sys
 import os
 
-<<<<<<< HEAD
-#from species import species
-=======
 try:
     from species import species
 except:
     print("Species module failed to load, things probably won't work right.")
->>>>>>> b2d46b62c6d222773a670ddac97ec9caa9a8875f
 
 # pylint: disable=C0103
 # pylint: disable=R0903
@@ -545,7 +541,7 @@ class implicit_BI(object):
 
 
 if __name__ == "__main__":
-    data = implicit_BI(K=1000,allow_multiple_colonizations=True)
+    data = implicit_BI(allow_multiple_colonizations=True)
     #data.set_metacommunity("uniform")
     #data.environmental_filtering = True
     data.competitive_exclusion = True
