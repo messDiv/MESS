@@ -169,8 +169,8 @@ class implicit_BI(object):
         ## Init post colonization migrants counters
         self.post_colonization_migrants = {x:0 for x in self.species}
 
-        if data.environmental_filtering | data.competitive_exclusion:
-            data.calculate_death_probabilities()
+        if self.environmental_filtering | self.competitive_exclusion:
+            self.calculate_death_probabilities()
 
 
     def __str__(self):
@@ -544,9 +544,8 @@ if __name__ == "__main__":
     data = implicit_BI(allow_multiple_colonizations=True)
     #data.set_metacommunity("uniform")
     #data.environmental_filtering = True
-    data.competitive_exclusion = True
+    #data.competitive_exclusion = True
     data.set_metacommunity("SpInfo.txt")
-
     data.prepopulate(mode="landbridge")
 
     for i in range(10000):
