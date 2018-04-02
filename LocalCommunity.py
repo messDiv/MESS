@@ -1,5 +1,4 @@
 #!/usr/bin/env python2.7
-""" Sample object """
 
 try:
     import matplotlib.pyplot as plt
@@ -19,19 +18,14 @@ try:
 except:
     print("Species module failed to load, things probably won't work right.")
 
-# pylint: disable=C0103
-# pylint: disable=R0903
-
 ## Limit on the number of redraws in the event of disallowed
 ## multiple migration, error out and warn if exceeded
 MAX_DUPLICATE_REDRAWS_FROM_METACOMMUNITY = 1500
 
-class implicit_BI(object):
-    """ ipyrad Sample object. Links to files associated
-    with an individual sample, used to combine samples
-    into Assembly objects."""
+class LocalCommunity(object):
 
-    def __init__(self, K=5000, colrate=0.01, allow_multiple_colonizations=False, exponential=False, quiet=False):
+    def __init__(self, K=5000, colrate=0.01, allow_multiple_colonizations=False, \
+                mig_clust_size=1, exponential=False, quiet=False):
         self.quiet = quiet
 
         ## List for storing species objects that have had sequence
@@ -55,6 +49,7 @@ class implicit_BI(object):
         self.maxabundance = 0
         self.colonization_rate = colrate
         self.allow_multiple_colonizations = allow_multiple_colonizations
+        self.mig_clust_size = mig_clust_size
 
         ## Variables for tracking the local community
         self.local_community = []
@@ -74,6 +69,7 @@ class implicit_BI(object):
 
         ## The invasive species identity
         self.invasive = -1
+        self.invasiveness = 0
         ## Track how many invasives differentially survived
         self.survived_invasives = 0
         self.invasion_time = -1
@@ -106,6 +102,9 @@ class implicit_BI(object):
         #but will have to be updated for competitive exlcusion models
         self.individual_death_probabilites = []
 
+        ## Set the default metacommunity and prepopulate the island
+        self.set_metacommunity("logser")
+        self.prepopulate()
 
 
     def set_metacommunity(self, infile, random=False):
@@ -231,7 +230,7 @@ class implicit_BI(object):
             self.divergence_times[new_species] = 1
 
 
-    def death_step(self, invasion_time, invasiveness):
+    def death_step(self):
         ## Select the individual to die
 
         ##currently this will fail under volcanic model because the entire local community will go extinct
@@ -293,7 +292,7 @@ class implicit_BI(object):
         else:
             ## If invasiveness is less than the random value remove the invasive individual
             ## else choose a new individual
-            if victim == self.invasive and np.random.rand() < invasiveness:
+            if victim == self.invasive and np.random.rand() < self.invasiveness:
                 self.survived_invasives += 1
                 victim = random.choice(self.local_community)
 
@@ -366,8 +365,8 @@ class implicit_BI(object):
         for migration rate calculation."""
 
         init_col = True
-        migrant_draw = np.random.multinomial(1, self.immigration_probabilities, size=1)
-        new_species = self.species[np.where(migrant_draw == 1)[1][0]]
+        migrant_draw = np.random.multinomial(1, self.immigration_probabilities, size=1).argmax()
+        new_species = self.species[migrant_draw]
         if new_species in [x[0] for x in self.local_community]:
             #print("Multiple colonization: sp id {}".format(new_species[0]))
             ## This is a post-colonization migrant so record the event and tell downstream
@@ -382,16 +381,20 @@ class implicit_BI(object):
         return new_species, init_col
 
 
-    def step(self, nsteps=1, time=0, invasion_time=100000, invasiveness=0.1):
+    def step(self, nsteps=1):
         for step in range(nsteps):
             ## If there are any members of the local community
             if self.local_community:
                 ## Do the magic to remove one individual from the local community
                 ## After this function returns K = K - 1
-                self.death_step(invasion_time, invasiveness)
+                self.death_step()
 
             ## Check probability of an immigration event
             if np.random.random_sample() < self.colonization_rate:
+                ## If clustered migration remove the necessary number of additional individuals
+                if self.mig_clust_size > 1:
+                    for _ in range(self.mig_clust_size - 1):
+                        self.death_step()
 
                 ## Grab the new colonizing species
                 init_colonization = True
@@ -406,14 +409,14 @@ class implicit_BI(object):
 
                 ## Only set the invasive species once at the time of next migration post invasion time
                 ## If invasion time is < 0 this means "Don't do invasive"
-                if not invasion_time < 0:
-                    if self.invasive == -1 and time >= invasion_time:
+                if not self.invasion_time < 0:
+                    if self.invasive == -1 and self.current_time >= self.invasion_time:
                         self.invasive = (new_species, False)
                         print("setting invasive species {} at time {}".format(self.invasive, self.current_time))
                         self.invasion_time = self.current_time
 
                 ## Add the colonizer to the local community, record the colonization time
-                self.local_community.append((new_species, False))
+                self.local_community.extend([(new_species, False)] * self.mig_clust_size)
                 self.colonizations += 1
             else:
                 ## Sample from the local community, including empty demes
@@ -421,6 +424,9 @@ class implicit_BI(object):
                 ## Also, lots of early turnover
                 ## This all was only true before i implemented the full rosindell/harmon model,
                 ## There are no more empty demes in the current config
+                #chx = np.random.randint(0, len(self.local_community))
+                #self.local_community.append(self.local_community[chx])
+                ## Much faster than random.choice
                 self.local_community.append(random.choice(self.local_community))
 
                 ## Sample only from available extant species (early pops grow quickly in the volcanic model)
@@ -503,7 +509,7 @@ class implicit_BI(object):
         ## Setting colonization_time as a scaling factor rather than as a raw tdiv
         ## The old way of doing this is `self.current_time - tdiv`
         #self.species_objects = [species(UUID=UUID, colonization_time=1/float(tdiv), abundance=self.local_community.count(UUID),\
-        for UUID, tdiv in self.divergence_times.items():
+        for UUID, tcol in self.divergence_times.items():
             if UUID in self.local_community:
                 meta_abundance = -1
                 for x in self.species:
@@ -514,7 +520,8 @@ class implicit_BI(object):
                 abundance = self.local_community.count(UUID)
                 #print(self.local_community)
                 try:
-                    self.species_objects.append(species(UUID=UUID, colonization_time=self.current_time - tdiv,\
+                    tdiv = self.current_time - tcol
+                    self.species_objects.append(species(UUID=UUID, colonization_time=tdiv,\
                                         exponential=self.exponential, abundance=abundance,\
                                         meta_abundance=meta_abundance,
                                         migration_rate=self.post_colonization_migrants[UUID[0]]/float(tdiv)))
@@ -538,7 +545,7 @@ class implicit_BI(object):
 
 
 if __name__ == "__main__":
-    data = implicit_BI(allow_multiple_colonizations=True)
+    data = LocalCommunity(allow_multiple_colonizations=True)
     #data.set_metacommunity("uniform")
     #data.environmental_filtering = True
     #data.competitive_exclusion = True

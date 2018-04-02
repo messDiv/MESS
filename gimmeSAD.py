@@ -20,8 +20,7 @@ import os
 
 plt.switch_backend('agg')
 
-import implicit_BI
-import implicit_CI
+import LocalCommunity
 
 # pylint: disable=C0103
 # pylint: disable=R0903
@@ -1079,13 +1078,12 @@ if __name__ == "__main__":
     if args.verbose:
         print(args)
 
-    if args.colonizers:
-        ## Implicit space and clustered immigration
-        data = implicit_CI.implicit_CI(K=args.K, colrate=args.colrate, mig_clust_size=args.colonizers, quiet=args.quiet)
-    else:
-        ## Implicit space, one colonizer per event
-        data = implicit_BI.implicit_BI(K=args.K, colrate=args.colrate, allow_multiple_colonizations=args.allow_multiple_colonizations,\
-                                        exponential=args.exponential, quiet=args.quiet)
+    ## Implicit space, one colonizer per event
+    data = LocalCommunity.LocalCommunity(K=args.K, colrate=args.colrate, allow_multiple_colonizations=args.allow_multiple_colonizations,\
+                                        mig_clust_size=args.colonizers, exponential=args.exponential, quiet=args.quiet)
+
+    data.invasion_time = args.invasion_time
+    data.invasiveness = args.invasiveness
 
     ## Set model parameters
     data.set_metacommunity(args.meta)
@@ -1158,7 +1156,7 @@ if __name__ == "__main__":
         if i == args.nsims:
             break
         i += 1
-        data.step(time=i, invasion_time=args.invasion_time, invasiveness=args.invasiveness)
+        data.step()
 
         ## Print the progress bar every once in a while
         ## Set a flag for equilibrium. If you've reached it, flip all the
