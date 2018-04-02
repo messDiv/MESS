@@ -8,3 +8,4 @@ output
 build
 dist
 mess_log.txt
+*.egg-info
