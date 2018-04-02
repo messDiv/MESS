@@ -19,7 +19,7 @@ class species(object):
         self.abundance = abundance
         self.alpha = 1000
         self.local_Ne = self.abundance * self.alpha
-        self.meta_abundance = meta_abundance * 10000
+        self.meta_abundance = meta_abundance * 1000
         #self.colonization_time = np.log(colonization_time)
         self.migration_rate = migration_rate
         self.colonization_time = colonization_time

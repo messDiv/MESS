@@ -3,12 +3,14 @@
 
 from __future__ import print_function, division  # Requires Python 2.7+
 
+import pkg_resources
 import argparse
 import logging
 import atexit
 import time
 import sys
 import os
+import MESS as mess
 
 def parse_params(args):
     """ Parse the params file args, create and return Assembly object."""
@@ -327,12 +329,9 @@ def parse_command_line():
     MESS -p params-data.txt -f         ## run MESS, overwrite existing data.
     """)
 
-    #* Preview mode (subsamples data)
-    #  ipyrad -p params-data.txt -s --preview  
-
     ## add arguments 
-    #parser.add_argument('-v', '--version', action='version', 
-    #    version=str(pkg_resources.get_distribution('ipyrad')))
+    parser.add_argument('-v', '--version', action='version', 
+        version=str(pkg_resources.get_distribution('mess')))
 
     parser.add_argument('-f', "--force", action='store_true',
         help="force overwrite of existing data")
@@ -433,11 +432,12 @@ def main():
 
     ## Log the current version. End run around the LOGGER
     ## so it'll always print regardless of log level.
-    with open(ip.__debugfile__, 'a') as logfile:
+    with open(mess.__debugfile__, 'a') as logfile:
         logfile.write(header)
         logfile.write("\n  Begin run: {}".format(time.strftime("%Y-%m-%d %H:%M")))
         logfile.write("\n  Using args {}".format(vars(args)))
         logfile.write("\n  Platform info: {}".format(os.uname()))
+    sys.exit()
 
     ## if merging just do the merge and exit
     if args.merge:

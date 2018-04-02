@@ -424,10 +424,10 @@ class LocalCommunity(object):
                 ## Also, lots of early turnover
                 ## This all was only true before i implemented the full rosindell/harmon model,
                 ## There are no more empty demes in the current config
-                #chx = np.random.randint(0, len(self.local_community))
-                #self.local_community.append(self.local_community[chx])
+                chx = np.random.randint(0, len(self.local_community))
+                self.local_community.append(self.local_community[chx])
                 ## Much faster than random.choice
-                self.local_community.append(random.choice(self.local_community))
+                #self.local_community.append(random.choice(self.local_community))
 
                 ## Sample only from available extant species (early pops grow quickly in the volcanic model)
                 ## If you do this, the original colonizer just overwhelms everything else

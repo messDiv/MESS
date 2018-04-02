@@ -18,6 +18,8 @@ import math
 import sys
 import os
 
+from util import *
+
 plt.switch_backend('agg')
 
 import LocalCommunity
@@ -28,22 +30,6 @@ import LocalCommunity
 ## The fuckin profiling function I always forget:
 ## python -m cProfile -s cumtime gimmeSAD.py -n 0 -k 1000 -o /tmp/wat -f > res.txt
 
-class gimmeSAD(object):
-
-    def __init__(self):
-        pass        
-
-    def __str__(self):
-        return "<gimmeSAD {}>".format(self.name)
-
-
-## quicksort stolen from the internet
-def qsort(arr): 
-     if len(arr) <= 1:
-          return arr
-     else:
-          return qsort([x for x in arr[1:] if x.abundance<arr[0].abundance])\
-                    + [arr[0]] + qsort([x for x in arr[1:] if x.abundance>=arr[0].abundance])
 
 def make_outputfile(model, stats):
     """ Make the output file formatted correctly for each model.
@@ -977,7 +963,7 @@ def parse_command_line():
         help="Set colonization rate")
 
     parser.add_argument('-C', metavar='colonizers', dest="colonizers", type=int,
-        default=0,
+        default=1,
         help="Switch mode to clustered colonization and set the # of colonizers per event")
 
     parser.add_argument('-k', metavar='K', dest="K", type=int,
@@ -1059,15 +1045,6 @@ def parse_command_line():
             format(args.mode))
 
     return args
-
-
-def progressbar(nsims, finished, msg=""):
-    """ prints a progress bar """
-    progress = 100*(finished / float(nsims))
-    hashes = '#'*int(progress/5.)
-    nohash = ' '*int(20-len(hashes))
-    print("\r  [{}] {:>3}% {} ".format(hashes+nohash, int(progress), msg), end="")
-    sys.stdout.flush()
 
 
 if __name__ == "__main__":

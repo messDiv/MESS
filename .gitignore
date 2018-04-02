@@ -5,3 +5,6 @@
 .Rhistory
 .RData
 output
+build
+dist
+mess_log.txt
