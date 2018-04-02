@@ -6,13 +6,16 @@ try:
 except:
     print("matplotlib and/or ascii_graph not installed, so plotting is disabled.")
 from scipy.stats import logser
+from collections import OrderedDict
 import collections
 import numpy as np
 import itertools
 import random
 import sys
 import os
+import MESS
 
+from MESS.util import *
 try:
     from species import species
 except:
@@ -24,9 +27,20 @@ MAX_DUPLICATE_REDRAWS_FROM_METACOMMUNITY = 1500
 
 class LocalCommunity(object):
 
-    def __init__(self, K=5000, colrate=0.01, allow_multiple_colonizations=False, \
+    def __init__(self, name=None, K=5000, colrate=0.01, allow_multiple_colonizations=False, \
                 mig_clust_size=1, exponential=False, quiet=False):
         self.quiet = quiet
+
+        if name is None:
+            raise MESSError("LocalCommunity must be named")
+        else:
+            self.name = name
+
+        self.paramsdict = OrderedDict([
+                        ("K", K),
+                        ("c", colrate),
+                        ("age", 1e6),
+        ])
 
         ## List for storing species objects that have had sequence
         ## simulated and sumstats calculated
@@ -106,6 +120,53 @@ class LocalCommunity(object):
         self.set_metacommunity("logser")
         self.prepopulate()
 
+    def write_params(self, outfile=None, append=True):
+        """
+        Write out the parameters for this island to a file.
+        Normally this isn't called directly, but by the main
+        simulation engine.
+
+        append 
+        """
+        if outfile is None:
+            raise MESSError("LocalCommunity.write_params outfile must be specified.")
+
+        ## If not appending then we are overwriting
+        if append:
+            filemode = 'a'
+        else:
+            filemode = 'w'
+
+        with open(outfile, filemode) as paramsfile:
+            ## Only write the full header if not appending
+            if not append:
+                header = "------- MESS params file (v.{})".format(MESS.__version__)
+                header += ("-"*(80-len(header)))
+                paramsfile.write(header)
+            
+            header = "------- LocalCommunity params: {}".format(self.name)
+            header += ("-"*(80-len(header)))
+            paramsfile.write(header)
+
+            for key, val in self.paramsdict.iteritems():
+                ## If multiple elements, write them out comma separated
+                if isinstance(val, list) or isinstance(val, tuple):
+                    paramvalue = ", ".join([str(i) for i in val])
+                else:
+                    paramvalue = str(val)
+
+                padding = (" "*(30-len(paramvalue)))
+                paramkey = self.paramsdict.keys().index(key)
+                paramindex = " ## [{}] ".format(paramkey)
+                LOGGER.debug(key, val, paramindex)
+                #name = "[{}]: ".format(paramname(paramkey))
+                name = "[{}]: ".format(key)
+                #description = paraminfo(paramkey, short=True)
+                description = "wat"
+                paramsfile.write("\n" + paramvalue + padding + \
+                                        paramindex + name + description)
+
+            paramsfile.write("\n")        
 
     def set_metacommunity(self, infile, random=False):
         """
@@ -124,6 +185,7 @@ class LocalCommunity(object):
                 self.abundances = logser.rvs(p, size=self.local_inds)
             else:
                 self.abundances = [self.uniform_inds] * self.uniform_species
+
 
             self.species = ["t"+str(x) for x in range(0, len(self.abundances))]
 

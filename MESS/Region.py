@@ -1,9 +1,14 @@
 from util import *
+from collections import OrderedDict
+import string
+import os
+
+import MESS
 
 import logging
 LOGGER = logging.getLogger(__name__)
 
-class MESS(object):
+class Region(object):
     """ A Massive eco-evolutionary synthesis simulation object.
 
     """
@@ -17,6 +22,34 @@ class MESS(object):
         ## This will raise an error immediately if there are bad chars in name.
         self._check_name(name)
 
+        self._version = MESS.__version__
+
+        ## stores default ipcluster launch info
+        self._ipcluster = {
+            "cluster_id" : "",
+            "profile" : "default",
+            "engines" : "Local",
+            "quiet" : 0,
+            "timeout" : 120,
+            "cores" : 0, #detect_cpus(),
+            "threads" : 2,
+            "pids": {},
+            }
+
+        ## the default params dict
+        self.paramsdict = OrderedDict([
+                       ("simulation_name", name),
+                       ("project_dir", "./"),
+                       ("trim_loci", (0, 0, 0, 0)),
+                       ("output_formats", ['p', 's', 'v']),
+                       ("pop_assign_file", ""),
+        ])
+
+        self.islands = {}
+
+
+    def __str__(self):
+        return "<MESS.Region object {}>".format(self.name)
 
     ## Test assembly name is valid and raise if it contains any special characters
     def _check_name(self, name):
@@ -28,10 +61,10 @@ class MESS(object):
 
     def write_params(self, outfile=None, force=False):
         """ Write out the parameters of this model to a file properly
-        formatted as input for `mess -p <params.txt>`. A good and
+        formatted as input for `MESS -p <params.txt>`. A good and
         simple way to share/archive parameter settings for simulations.
         This is also the function that's used by __main__ to
-        generate default params.txt files for `mess -n`
+        generate default params.txt files for `MESS -n`
         """
         if outfile is None:
             outfile = "params-"+self.name+".txt"
@@ -40,11 +73,11 @@ class MESS(object):
         ## If not forcing, test for file and bail out if it exists
         if not force:
             if os.path.isfile(outfile):
-                raise IPyradWarningExit(PARAMS_EXISTS.format(outfile))
+                raise MESSError(PARAMS_EXISTS.format(outfile))
 
         with open(outfile, 'w') as paramsfile:
             ## Write the header. Format to 80 columns
-            header = "------- mess params file (v.{})".format(MESS.__version__)
+            header = "------- MESS params file (v.{})".format(MESS.__version__)
             header += ("-"*(80-len(header)))
             paramsfile.write(header)
 
@@ -59,18 +92,28 @@ class MESS(object):
                 else:
                     paramvalue = str(val)
 
-                ## skip deprecated params
-                if key in ["edit_cutsites", "trim_overhang"]:
-                    continue
-
                 padding = (" "*(30-len(paramvalue)))
                 paramkey = self.paramsdict.keys().index(key)
                 paramindex = " ## [{}] ".format(paramkey)
                 LOGGER.debug(key, val, paramindex)
-                name = "[{}]: ".format(paramname(paramkey))
-                description = paraminfo(paramkey, short=True)
+                #name = "[{}]: ".format(paramname(paramkey))
+                name = "[{}]: ".format(key)
+                #description = paraminfo(paramkey, short=True)
+                description = "wat"
                 paramsfile.write("\n" + paramvalue + padding + \
                                         paramindex + name + description)
+
+            paramsfile.write("\n")
+
+        for island in self.islands.values():
+            island.write_params(outfile)
+
+
+    def add_local_community(self, name, K, c):
+        loc = MESS.LocalCommunity(name, K, c)
+        ## TODO: Ensure island names aren't dupes
+        self.islands[name] = loc
+
 
 BAD_MESS_NAME = """\
     No spaces or special characters of any kind are allowed in the simulation 
@@ -80,6 +123,11 @@ BAD_MESS_NAME = """\
     
     Here's what you put:
     {}
+    """
+
+PARAMS_EXISTS = """
+    Error: Params file already exists: {}
+    Use force argument to overwrite.
     """
 
 REQUIRE_NAME = """\

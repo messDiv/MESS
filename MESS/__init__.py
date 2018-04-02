@@ -16,13 +16,10 @@ __interactive__ = 1      ## CLI __main__ changes to 0
 import os as _os
 import atexit as _atexit
 
-from ipyrad.core.parallel import get_client as _get_client
-
-
-## bring nested functions to top for API
-from ipyrad.core.assembly import Assembly
-from ipyrad.core.assembly import merge
-from ipyrad.core.sample import Sample
+from .util import *
+from .Region import Region 
+from .LocalCommunity import LocalCommunity
+#from ipyrad.core.parallel import get_client as _get_client
 
 ####################################################################
 ## create logger for debugging
