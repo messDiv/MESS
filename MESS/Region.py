@@ -41,14 +41,18 @@ class Region(object):
         self.paramsdict = OrderedDict([
                        ("simulation_name", name),
                        ("project_dir", "./default_MESS"),
-                       ("trim_loci", (0, 0, 0, 0)),
-                       ("output_formats", ['p', 's', 'v']),
-                       ("pop_assign_file", ""),
+                       ("metacommunity_type", "logser"),
+                       ("data_model", 4),
+                       ("recording_period", 10000),
         ])
 
         self.islands = {}
+        self.colonization_matrix = []
 
 
+    #########################
+    ## Housekeeping functions
+    #########################
     def __str__(self):
         return "<MESS.Region object {}: {}>".format(self.name, self.islands.keys())
 
@@ -75,6 +79,7 @@ class Region(object):
         except Exception as inst:
             ## Do something intelligent here?
             raise
+
 
     def write_params(self, outfile=None, force=False):
         """ Write out the parameters of this model to a file properly
@@ -116,7 +121,7 @@ class Region(object):
                 #name = "[{}]: ".format(paramname(paramkey))
                 name = "[{}]: ".format(key)
                 #description = paraminfo(paramkey, short=True)
-                description = "wat"
+                description = REGION_PARAMS[key]
                 paramsfile.write("\n" + paramvalue + padding + \
                                         paramindex + name + description)
 
@@ -126,11 +131,24 @@ class Region(object):
             island.write_params(outfile)
 
 
+    ########################
+    ## Model functions/API
+    ########################
     def add_local_community(self, name, K, c, quiet):
         loc = MESS.LocalCommunity(name, K, c, quiet)
         ## TODO: Ensure island names aren't dupes
         self.islands[name] = loc
 
+
+    def update_colonization_matrix(self, matrix):
+        """ Set the matrix that describes colonization rate between local communities."""
+        ## TODO: Make sure the matrix is the right shape
+        self.colonization_matrix = matrix
+
+
+    def run(self, steps, force=False, ipyclient=None):
+        """ Do the heavy lifting here"""
+        pass
 
 BAD_MESS_NAME = """\
     No spaces or special characters of any kind are allowed in the simulation 

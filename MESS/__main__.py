@@ -306,7 +306,6 @@ def main():
                     steps=steps, 
                     force=args.force, 
                     preview=args.preview, 
-                    show_cluster=1, 
                     ipyclient=ipyclient)
             except KeyboardInterrupt as inst:
                 print("\n  Keyboard Interrupt by user")

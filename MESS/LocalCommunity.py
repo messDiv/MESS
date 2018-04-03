@@ -16,6 +16,7 @@ import os
 import MESS
 
 from MESS.util import *
+from MESS.stats import shannon
 try:
     from species import species
 except:
@@ -38,8 +39,10 @@ class LocalCommunity(object):
 
         self.paramsdict = OrderedDict([
                         ("name", self.name),
+                        ("mode", "volcanic"),
                         ("K", K),
-                        ("c", colrate),
+                        ("colrate", colrate),
+                        ("mig_clust_size", mig_clust_size),
                         ("age", 1e6),
         ])
 
@@ -119,12 +122,13 @@ class LocalCommunity(object):
 
         ## Set the default metacommunity and prepopulate the island
         self.set_metacommunity("logser")
-        self.prepopulate(quiet=quiet)
+        self.prepopulate(mode=self.paramsdict["mode"], quiet=quiet)
 
 
     def _paramschecker(self, param, newvalue):
         """ Raises exceptions when params are set to values they should not be"""
         ## TODO: This should actually check the values and make sure they make sense
+        ## TODO: Also check here if you're setting the mode parameter you have to rerun prepopulate
         LOGGER.debug("set param {} - {} = {}".format(self, param, newvalue))
         self.paramsdict[param] = newvalue
 
@@ -171,11 +175,12 @@ class LocalCommunity(object):
                 #name = "[{}]: ".format(paramname(paramkey))
                 name = "[{}]: ".format(key)
                 #description = paraminfo(paramkey, short=True)
-                description = "wat"
+                description = LOCAL_PARAMS[key]
                 paramsfile.write("\n" + paramvalue + padding + \
                                         paramindex + name + description)
 
             paramsfile.write("\n")        
+
 
     def set_metacommunity(self, infile, random=False):
         """
@@ -240,7 +245,8 @@ class LocalCommunity(object):
 
 
     def __str__(self):
-        return "<LocalCommunity {}>".format(self.name)
+        return "<LocalCommunity {}: Shannon's Diversity {}>".format(self.name, shannon(self.get_abundances(octaves=False)))
+
 
     def calculate_death_probabilities(self):
         if self.environmental_filtering:
@@ -272,23 +278,13 @@ class LocalCommunity(object):
                     ## Set founder flag
             self.local_community = [tuple([x, True]) for x in self.local_community]
             #self.local_community = list(itertools.chain.from_iterable(self.local_community))
-            if not quiet:
-                print("  Initializing local community:")
-                print("    N species = {}".format(len(set([x[0] for x in self.local_community]))))
-                print("    N individuals = {}".format(len(self.local_community)))
 
             ## All species diverge simultaneously upon creation of the island.
             for taxon in self.local_community:
                 self.divergence_times[taxon] = 1
-        else:
+        elif mode == "volcanic":
             ## If not landbridge then doing volcanic, so sample just the most abundant
             ## from the metacommunity
-            ## This is the old way that acts weird
-            #self.local_community = [0] * self.local_inds
-            #self.local_community = [((x,0), True) for x in self.local_community]
-            #print(self.maxabundance)
-            #print(len(self.immigration_probabilities))
-            #print(len(self.species))
             new_species = (self.species[self.immigration_probabilities.index(self.maxabundance)], True)
             self.local_community.append(new_species)
             ## prepopulate volcanic either with all the most abundant species in the metacommunity
@@ -300,7 +296,14 @@ class LocalCommunity(object):
                 for i in range(1,self.local_inds):
                     self.local_community.append((None,True))
             self.divergence_times[new_species] = 1
+        else:
+            raise MESSError(BAD_MODE_PARAMETER.format(mode))
 
+        if not quiet:
+            print("  Initializing local community:")
+            print("    N species = {}".format(len(set([x[0] for x in self.local_community]))))
+            print("    N individuals = {}".format(len(self.local_community)))
+                            
 
     def death_step(self):
         ## Select the individual to die
@@ -616,22 +619,30 @@ class LocalCommunity(object):
         return(self.species_objects)
 
 
+## Error messages
+BAD_MODE_PARAMETER = """
+    Unrecognized local community mode. Options are 'landbridge' or'volcanic'.
+    You put {}.
+"""
+
+
 if __name__ == "__main__":
-    data = LocalCommunity(allow_multiple_colonizations=True)
+    data = LocalCommunity("tmp", allow_multiple_colonizations=True, quiet=True)
     #data.set_metacommunity("uniform")
     #data.environmental_filtering = True
     #data.competitive_exclusion = True
     data.set_metacommunity("uniform")
-    data.prepopulate(mode="landbridge")
+    data.prepopulate(mode="landbridge", quiet=True)
 
     for i in range(10000):
         if not i % 100:
-            print("Done {}".format(i))
+            print("{} ".format(i)),
             #print(i, len(data.local_community), len(set(data.local_community)))
             #print(data.local_community)
         data.step()
     abundance_distribution = data.get_abundances(octaves=False)
-
+    print("\n")
+    print(data)
 
     print("Species abundance distribution:\n{}".format(abundance_distribution))
     #print("Colonization times per species:\n{}".format(data.divergence_times))

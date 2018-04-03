@@ -94,8 +94,31 @@ def set_params(data, param, newvalue):
     return data
 
 
+#############################
+## Model Parameter Info Dicts
+#############################
+REGION_PARAMS = {
+    "simulation_name" : "The name of this simulation scenario",\
+    "project_dir" : "Where to save files",\
+    "metacommunity_type" : "Specify structure of the metacommunity. Options: uniform/logser/<filename>",\
+    "data_model" : "Structure of data output to reference table (see docs)",\
+    "recording_period" : "Number of forward-time generations for gathering data."\
+}
+
+LOCAL_PARAMS = {
+    "name" : "Local community name",\
+    "mode" : "Local community formation mode (volcanic/landbridge)",\
+    "K" : "Local carrying capacity",\
+    "colrate" : "Colonization rate into local community",\
+    "mig_clust_size" : "# of individuals per colonization event",\
+    "age" : "Local community age"
+}
+
+## Error messages
 BAD_PARAMETER = """\
     Error setting parameter '{}'
     {}
     You entered: {}
     """
+if __name__ == "__main__":
+    print(REGION_PARAMS)
