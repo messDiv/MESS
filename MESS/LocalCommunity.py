@@ -37,6 +37,7 @@ class LocalCommunity(object):
             self.name = name
 
         self.paramsdict = OrderedDict([
+                        ("name", self.name),
                         ("K", K),
                         ("c", colrate),
                         ("age", 1e6),
@@ -118,7 +119,7 @@ class LocalCommunity(object):
 
         ## Set the default metacommunity and prepopulate the island
         self.set_metacommunity("logser")
-        self.prepopulate()
+        self.prepopulate(quiet=quiet)
 
     def write_params(self, outfile=None, append=True):
         """
@@ -253,19 +254,20 @@ class LocalCommunity(object):
             self.weight = self.trait_evolution_rate_parameter * self.metcommunity_tree_height * (self.competitive_strength ** 2)
 
 
-    def prepopulate(self, mode="landbridge"):
+    def prepopulate(self, mode="landbridge", quiet=False):
         if mode == "landbridge":
             ## prepopulate the island w/ total_inds individuals sampled from the metacommunity
             init_community = np.random.multinomial(self.local_inds, self.immigration_probabilities, size=1)
-            print("Initializing local community:")
             for i, x in enumerate(init_community[0]):
                 if x:
                     self.local_community.extend([self.species[i]] * x)
                     ## Set founder flag
             self.local_community = [tuple([x, True]) for x in self.local_community]
-            print("N species = {}".format(len(set([x[0] for x in self.local_community]))))
             #self.local_community = list(itertools.chain.from_iterable(self.local_community))
-            print("N individuals = {}".format(len(self.local_community)))
+            if not quiet:
+                print("  Initializing local community:")
+                print("    N species = {}".format(len(set([x[0] for x in self.local_community]))))
+                print("    N individuals = {}".format(len(self.local_community)))
 
             ## All species diverge simultaneously upon creation of the island.
             for taxon in self.local_community:

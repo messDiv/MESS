@@ -12,26 +12,41 @@ import sys
 import os
 import MESS
 
+LOGGER = logging.getLogger(__name__)
+
 def parse_params(args):
-    """ Parse the params file args, create and return Region object."""
+    """ Parse the params file and return Region params as a dict
+    and a list of dicts for params for each island."""
 
     ## check that params.txt file is correctly formatted.
     try:
         with open(args.params) as paramsin:
-            plines = paramsin.readlines()
+            plines = paramsin.read()
     except IOError as _:
         sys.exit("  No params file found")
 
-    ## make into a dict. Ignore blank lines at the end of file
-    ## Really this will ignore all blank lines
-    items = [i.split("##")[0].strip() for i in plines[1:] if not i.strip() == ""]
+    ## Params file is sectioned off by region and then by n local communities
+    ## do each section independently. The [1:] thing just drops the first result
+    ## from split which is '' anyway.
+    plines = plines.split("------- ")[1:]
 
-    #keys = [i.split("]")[-2][-1] for i in plines[1:]]
-    #keys = range(len(plines)-1)
-    keys = mess.MESS('null', quiet=True).paramsdict.keys()
-    parsedict = {str(i):j for i, j in zip(keys, items)}
-    return parsedict
+    ## Get Region params and make into a dict, ignore all blank lines
+    items = [i.split("##")[0].strip() for i in plines[0].split("\n")[1:] if not i.strip() == ""]
+    keys = MESS.Region('null', quiet=True).paramsdict.keys()
+    region_params = {str(i):j for i, j in zip(keys, items)}
 
+    LOGGER.debug("Region params - {}".format(region_params))
+
+    island_params = []
+    for i, params in enumerate(plines[1:]):
+        items = [i.split("##")[0].strip() for i in params.split("\n")[1:] if not i.strip() == ""]
+        keys = MESS.LocalCommunity('null', quiet=True).paramsdict.keys()
+        island_dict = {str(i):j for i, j in zip(keys, items)}
+        island_params.append(island_dict)
+
+    LOGGER.debug("All island params - {}".format(island_params))
+
+    return region_params, island_params
 
 
 def getassembly(args, parsedict):
@@ -97,30 +112,41 @@ def getassembly(args, parsedict):
 
 def _check_version():
     """ Test if there's a newer version and nag the user to upgrade."""
+
+    ## TODO: This doesn't actually work yet
     import urllib2
     from distutils.version import LooseVersion
-
-    header = \
-    "\n -------------------------------------------------------------"+\
-    "\n  MESS [v.{}]".format(mess.__version__)+\
-    "\n  Massive Eco-Evolutionary Synthesis Simulations"+\
-    "\n -------------------------------------------------------------"
 
     try:
         htmldat = urllib2.urlopen("https://anaconda.org/ipyrad/ipyrad").readlines()
         curversion = next((x for x in htmldat if "subheader" in x), None).split(">")[1].split("<")[0]
-        if LooseVersion(mess.__version__) < LooseVersion(curversion):
+        if LooseVersion(MESS.__version__) < LooseVersion(curversion):
             msg = """
   A new version of ipyrad is available (v.{}). To upgrade run:
 
     conda install -c ipyrad ipyrad\n""".format(curversion)
-            print(header + "\n" + msg)
+            print(MESS_HEADER + "\n" + msg)
         else:
             pass
             #print("You are up to date")
     except Exception as inst:
         ## Always fail silently
         pass
+
+
+def showstats(region_params, island_params):
+    """ This should be used to display anything that might be useful. """
+
+    project_dir = region_params["project_dir"]
+    if not project_dir:
+        project_dir = "./"
+
+    print("\n  Summary stats of Region: {}".format(region_params["simulation_name"]) \
+         +"\n  ------------------------------------------------")
+
+    print("   TODO: Put interesting stuff here.\n")
+    sys.exit()
+
 
 def parse_command_line():
     """ Parse CLI args."""
@@ -142,6 +168,9 @@ def parse_command_line():
     parser.add_argument('-f', "--force", action='store_true',
         help="force overwrite of existing data")
 
+    parser.add_argument('-r', "--results", action='store_true',
+        help="show status of this simulation run")
+
     parser.add_argument('-q', "--quiet", action='store_true',
         help="do not print to stderror or stdout.")
 
@@ -155,6 +184,10 @@ def parse_command_line():
     parser.add_argument('-p', metavar='params', dest="params",
         type=str, default=None,
         help="path to params file simulations: params-{assembly_name}.txt")
+
+    parser.add_argument("-s", metavar="steps", dest="steps",
+        type=int, default=0,
+        help="wat do to")
 
     parser.add_argument("-c", metavar="cores", dest="cores",
         type=int, default=0,
@@ -183,8 +216,21 @@ def parse_command_line():
 
 def main():
     """ main function """
+    print(MESS_HEADER)
+
     ## parse params file input (returns to stdout if --help or --version)
     args = parse_command_line()
+
+    ## Turn the debug output written to mess_log.txt up to 11!
+    ## Clean up the old one first, it's cleaner to do this here than
+    ## at the end (exceptions, etc)
+    if os.path.exists(MESS.__debugflag__):
+        os.remove(MESS.__debugflag__)
+
+    if args.debug:
+        print("\n  ** Enabling debug mode ** ")
+        MESS._debug_on()
+        atexit.register(MESS._debug_off)
 
     ## create new paramsfile if -n
     if args.new:
@@ -205,7 +251,7 @@ def main():
 
     ## if params then must provide action argument with it
     if args.params:
-        if not any([args.branch, args.results, args.steps]):
+        if not any([args.results, args.steps]):
             print("""
     Must provide action argument along with -p argument for params file. 
     e.g., MESS -p params-test.txt -r              ## shows results
@@ -214,46 +260,35 @@ def main():
             sys.exit(2)
 
     if not args.params:
-        if any([args.branch, args.results, args.steps]):
+        if any([args.results, args.steps]):
             print("""
     Must provide params file for doing steps, or getting results.
     e.g., MESS -p params-test.txt -r              ## shows results
     e.g., MESS -p params-test.txt -s 12           ## runs steps 1 & 2
     """)
-
-    ## always print the header when doing steps
-    header = \
-    "\n -------------------------------------------------------------"+\
-    "\n  MESS [v.{}]".format(MESS.__version__)+\
-    "\n  Massive Eco-Evolutionary Synthesis Simulations"+\
-    "\n -------------------------------------------------------------"
+            sys.exit(2)
 
     ## Log the current version. End run around the LOGGER
     ## so it'll always print regardless of log level.
     with open(MESS.__debugfile__, 'a') as logfile:
-        logfile.write(header)
+        logfile.write(MESS_HEADER)
         logfile.write("\n  Begin run: {}".format(time.strftime("%Y-%m-%d %H:%M")))
         logfile.write("\n  Using args {}".format(vars(args)))
-        logfile.write("\n  Platform info: {}".format(os.uname()))
-    sys.exit()
+        logfile.write("\n  Platform info: {}\n".format(os.uname()))
 
 
-    ## create new Region or load existing Region, quit if args.results
+    ## create new Region or load existing Region
     if args.params:
-        parsedict = parse_params(args)
+        region_params, island_params = parse_params(args)
 
-        if args.branch:
-            branch_assembly(args, parsedict)
+        ## Print results and exit immediately
+        if args.results:
+            showstats(region_params, island_params)
 
-        elif args.steps:
-            ## print header
-            print(header)
+        if args.steps:
 
-            ## Only blank the log file if we're actually going to run a new
-            ## assembly. This used to be in __init__, but had the side effect
-            ## of occasionally blanking the log file in an undesirable fashion
-            ## for instance if you run a long assembly and it crashes and
-            ## then you run `-r` and it blanks the log, it's crazymaking.
+            ## Only blank the log file if we're actually going to do real
+            ## work. In practice the log file should never get this big.
             if os.path.exists(MESS.__debugfile__):
                 if os.path.getsize(MESS.__debugfile__) > 50000000:
                     with open(MESS.__debugfile__, 'w') as clear:
@@ -296,12 +331,12 @@ def main():
                 show_cluster=1, 
                 ipyclient=ipyclient)
                      
-        if args.results:
-            showstats(parsedict)
 
-
-__PARAMSFILE_TPL="""## MESS Model v.0.0.1 Parameters file ##"""
-
+MESS_HEADER = \
+"\n -------------------------------------------------------------"+\
+"\n  MESS [v.{}]".format(MESS.__version__)+\
+"\n  Massive Eco-Evolutionary Synthesis Simulations"+\
+"\n -------------------------------------------------------------"
 
 if __name__ == "__main__": 
     main()

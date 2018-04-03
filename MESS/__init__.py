@@ -32,7 +32,7 @@ import logging.config as _lconfig
 if _os.path.exists(__debugflag__):
     __loglevel__ = "DEBUG"
 else:
-    __loglevel__ = "ERROR"#"INFO"
+    __loglevel__ = "ERROR"
 
 ## check that all dependencies exist and are working
 import subprocess as _subprocess
