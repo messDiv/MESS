@@ -42,8 +42,9 @@ class LocalCommunity(object):
                         ("mode", "volcanic"),
                         ("K", K),
                         ("colrate", colrate),
-                        ("mig_clust_size", mig_clust_size),
                         ("age", 1e6),
+                        ("mig_clust_size", mig_clust_size),
+                        ("allow_multiple_colonizations", allow_multiple_colonizations),
         ])
 
         ## List for storing species objects that have had sequence
@@ -269,6 +270,8 @@ class LocalCommunity(object):
 
 
     def prepopulate(self, mode="landbridge", quiet=False):
+        ## Clean up local_community if it already exists
+        self.local_community = []
         if mode == "landbridge":
             ## prepopulate the island w/ total_inds individuals sampled from the metacommunity
             init_community = np.random.multinomial(self.local_inds, self.immigration_probabilities, size=1)
@@ -458,22 +461,16 @@ class LocalCommunity(object):
 
     def step(self, nsteps=1):
         for step in range(nsteps):
-            ## If there are any members of the local community
-            if self.local_community:
-                ## Do the magic to remove one individual from the local community
-                ## After this function returns K = K - 1
-                self.death_step()
-
             ## Check probability of an immigration event
             if np.random.random_sample() < self.colonization_rate:
                 ## If clustered migration remove the necessary number of additional individuals
-                if self.mig_clust_size > 1:
-                    for _ in range(self.mig_clust_size - 1):
-                        self.death_step()
+                for _ in range(self.paramsdict["mig_clust_size"]):
+                    self.death_step()
 
                 ## Grab the new colonizing species
+                ## the init_colonization flag is used to test whether to update the divergence time
                 init_colonization = True
-                if self.allow_multiple_colonizations:
+                if self.paramsdict["allow_multiple_colonizations"]:
                     new_species, init_colonization = self.migrate_step()
                 else:
                     new_species = self.migrate_no_dupes_step()
@@ -487,13 +484,14 @@ class LocalCommunity(object):
                 if not self.invasion_time < 0:
                     if self.invasive == -1 and self.current_time >= self.invasion_time:
                         self.invasive = (new_species, False)
-                        print("setting invasive species {} at time {}".format(self.invasive, self.current_time))
+                        LOGGER.info("setting invasive species {} at time {}".format(self.invasive, self.current_time))
                         self.invasion_time = self.current_time
 
                 ## Add the colonizer to the local community, record the colonization time
                 self.local_community.extend([(new_species, False)] * self.mig_clust_size)
                 self.colonizations += 1
             else:
+                self.death_step()
                 ## Sample from the local community, including empty demes
                 ## Sample all available from local community (community grows slow in volcanic model)
                 ## Also, lots of early turnover
@@ -627,7 +625,7 @@ BAD_MODE_PARAMETER = """
 
 
 if __name__ == "__main__":
-    data = LocalCommunity("tmp", allow_multiple_colonizations=True, quiet=True)
+    data = LocalCommunity("tmp", K=500, allow_multiple_colonizations=True, quiet=True)
     #data.set_metacommunity("uniform")
     #data.environmental_filtering = True
     #data.competitive_exclusion = True

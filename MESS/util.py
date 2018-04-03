@@ -111,7 +111,8 @@ LOCAL_PARAMS = {
     "K" : "Local carrying capacity",\
     "colrate" : "Colonization rate into local community",\
     "mig_clust_size" : "# of individuals per colonization event",\
-    "age" : "Local community age"
+    "age" : "Local community age",\
+    "allow_multiple_colonizations" : "Toggle allowing post colonization migration",
 }
 
 ## Error messages
