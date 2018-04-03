@@ -1,4 +1,6 @@
 from __future__ import print_function
+import subprocess
+import shlex
 import sys
 import os
 
@@ -64,6 +66,8 @@ def _expander(namepath):
 def set_params(data, param, newvalue):
     """
     Set a parameter to a new value. Raises error if newvalue is wrong type.
+    This is used to set parameters on both the Region and LocalCommunity
+    paramsdicts.
 
     Parameters
     ----------

@@ -12,7 +12,8 @@ import sys
 import os
 import MESS
 
-from MESS.util import set_params
+from MESS.util import *
+from MESS.parallel import *
 
 LOGGER = logging.getLogger(__name__)
 
@@ -176,9 +177,9 @@ def parse_command_line():
         type=int, default=0,
         help="number of CPU cores to use (Default=0=All)")
 
-    #parser.add_argument("--ipcluster", metavar="ipcluster", dest="ipcluster",
-    #    type=str, nargs="?", const="default",
-    #    help="connect to ipcluster profile (default: 'default')")
+    parser.add_argument("--ipcluster", metavar="ipcluster", dest="ipcluster",
+        type=str, nargs="?", const="default",
+        help="connect to ipcluster profile (default: 'default')")
 
     ## if no args then return help message
     if len(sys.argv) == 1:
@@ -279,15 +280,15 @@ def main():
 
             ## launch or load Region with custom profile/pid
             data = getregion(args, region_params, island_params)
-            sys.exit("done")
-
-            ## set CLI ipcluster terms
-            data._ipcluster["threads"] = args.threads
+            if not args.quiet:
+                print("\n  {}\n".format(data))
 
             ## if ipyclient is running (and matched profile) then use that one
             if args.ipcluster:
                 ipyclient = ipp.Client(profile=args.ipcluster)
                 data._ipcluster["cores"] = len(ipyclient)
+                if not args.quiet:
+                    print("   Attached to cluster {} w/ {} engines.".format(args.ipcluster, len(ipyclient)))
 
             ## if not then we need to register and launch an ipcluster instance
             else:
@@ -295,25 +296,72 @@ def main():
                 ipyclient = None
                 data._ipcluster["cores"] = args.cores if args.cores else detect_cpus()
                 data._ipcluster["engines"] = "Local"
-                if args.MPI:
-                    data._ipcluster["engines"] = "MPI"
-                    if not args.cores:
-                        raise IPyradWarningExit("must provide -c argument with --MPI")
                 ## register to have a cluster-id with "ip- name"
                 data = register_ipcluster(data)
+                ipyclient = get_client(**data._ipcluster)
+                print(cluster_info(ipyclient))
+            try:
+                ## Do stuff here
+                data.run(
+                    steps=steps, 
+                    force=args.force, 
+                    preview=args.preview, 
+                    show_cluster=1, 
+                    ipyclient=ipyclient)
+            except KeyboardInterrupt as inst:
+                print("\n  Keyboard Interrupt by user")
+                LOGGER.info("assembly interrupted by user.")
+            except MESSError as inst:
+                LOGGER.error("MESSError: %s", inst)
+                print("\n  Encountered an error (see details in ./mess_log.txt)"+\
+                      "\n  Error summary is below -------------------------------"+\
+                      "\n{}".format(inst))
+            except Exception as inst:
+                LOGGER.error(inst)
+                print("\n  Encountered an unexpected error (see ./mess_log.txt)"+\
+                      "\n  Error message is below -------------------------------"+\
+                    "\n{}".format(inst))
+            finally:
+                try:
+                    ## can't close client if it was never open
+                    print("Clean up ipcluster {}".format(ipyclient))
+                    if ipyclient:
+    
+                        ## send SIGINT (2) to all engines
+                        try:
+                            ipyclient.abort()
+                            time.sleep(1)
+                            for engine_id, pid in data._ipcluster["pids"].items():
+                                if ipyclient.queue_status()[engine_id]["tasks"]:
+                                    os.kill(pid, 2)
+                                    LOGGER.info('interrupted engine {} w/ SIGINT to {}'\
+                                            .format(engine_id, pid))
+                            time.sleep(1)
+                        except ipp.NoEnginesRegistered:
+                            pass
+    
+                        ## if CLI, stop jobs and shutdown. Don't use _cli here 
+                        ## because you can have a CLI object but use the --ipcluster
+                        ## flag, in which case we don't want to kill ipcluster.
+                        if 'mess-cli' in data._ipcluster["cluster_id"]:
+                            LOGGER.info("  shutting down engines")
+                            ipyclient.shutdown(hub=True, block=False)
+                            ipyclient.close()
+                            LOGGER.info("  finished shutdown")
+                        else:
+                            if not ipyclient.outstanding:
+                                ipyclient.purge_everything()
+                            else:
+                                ## nanny: kill everything, something bad happened
+                                ipyclient.shutdown(hub=True, block=False)
+                                ipyclient.close()
+                                print("\nwarning: ipcluster shutdown and must be restarted")
+    
+                ## if exception is close and save, print and ignore
+                except Exception as inst2:
+                    print("warning: error during shutdown:\n{}".format(inst2))
+                    LOGGER.error("shutdown warning: %s", inst2)
 
-            ## set to print headers
-            data._headers = 1
-
-            ## run assembly steps
-            steps = list(args.steps)
-            data.run(
-                steps=steps, 
-                force=args.force, 
-                preview=args.preview, 
-                show_cluster=1, 
-                ipyclient=ipyclient)
-                     
 
 MESS_HEADER = \
 "\n -------------------------------------------------------------"+\

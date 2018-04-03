@@ -50,7 +50,7 @@ class Region(object):
 
 
     def __str__(self):
-        return "<MESS.Region object {}>".format(self.name)
+        return "<MESS.Region object {}: {}>".format(self.name, self.islands.keys())
 
     ## Test assembly name is valid and raise if it contains any special characters
     def _check_name(self, name):

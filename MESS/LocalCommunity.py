@@ -240,7 +240,7 @@ class LocalCommunity(object):
 
 
     def __str__(self):
-        return "<implicit_BI {}>".format(self.name)
+        return "<LocalCommunity {}>".format(self.name)
 
     def calculate_death_probabilities(self):
         if self.environmental_filtering:
