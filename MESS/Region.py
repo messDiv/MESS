@@ -21,6 +21,7 @@ class Region(object):
         ## special characters, spaces, or path delimiters. Allow _ and -.
         ## This will raise an error immediately if there are bad chars in name.
         self._check_name(name)
+        self.name = name
 
         self._version = MESS.__version__
 
@@ -39,7 +40,7 @@ class Region(object):
         ## the default params dict
         self.paramsdict = OrderedDict([
                        ("simulation_name", name),
-                       ("project_dir", "./"),
+                       ("project_dir", "./default_MESS"),
                        ("trim_loci", (0, 0, 0, 0)),
                        ("output_formats", ['p', 's', 'v']),
                        ("pop_assign_file", ""),
@@ -58,6 +59,22 @@ class Region(object):
         if any(char in invalid_chars for char in name):
             raise MESSError(BAD_MESS_NAME.format(name))
 
+
+    def _link_local(self, local_community):
+        """ Just link a local community that was created externally.
+        This is primarily used by __main__ during the initialization process."""
+        self.islands[local_community.paramsdict["name"]] = local_community
+
+
+    def _paramschecker(self, param, newvalue):
+        """ Raises exceptions when params are set to values they should not be"""
+        ## TODO: This should actually check the values and make sure they make sense
+        try:
+            LOGGER.debug("set param {} - {} = {}".format(self, param, newvalue))
+            self.paramsdict[param] = newvalue
+        except Exception as inst:
+            ## Do something intelligent here?
+            raise
 
     def write_params(self, outfile=None, force=False):
         """ Write out the parameters of this model to a file properly
@@ -95,7 +112,7 @@ class Region(object):
                 padding = (" "*(30-len(paramvalue)))
                 paramkey = self.paramsdict.keys().index(key)
                 paramindex = " ## [{}] ".format(paramkey)
-                LOGGER.debug(key, val, paramindex)
+                LOGGER.debug("{} {} {}".format(key, val, paramindex))
                 #name = "[{}]: ".format(paramname(paramkey))
                 name = "[{}]: ".format(key)
                 #description = paraminfo(paramkey, short=True)
@@ -109,8 +126,8 @@ class Region(object):
             island.write_params(outfile)
 
 
-    def add_local_community(self, name, K, c):
-        loc = MESS.LocalCommunity(name, K, c)
+    def add_local_community(self, name, K, c, quiet):
+        loc = MESS.LocalCommunity(name, K, c, quiet)
         ## TODO: Ensure island names aren't dupes
         self.islands[name] = loc
 

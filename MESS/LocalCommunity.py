@@ -121,6 +121,14 @@ class LocalCommunity(object):
         self.set_metacommunity("logser")
         self.prepopulate(quiet=quiet)
 
+
+    def _paramschecker(self, param, newvalue):
+        """ Raises exceptions when params are set to values they should not be"""
+        ## TODO: This should actually check the values and make sure they make sense
+        LOGGER.debug("set param {} - {} = {}".format(self, param, newvalue))
+        self.paramsdict[param] = newvalue
+
+
     def write_params(self, outfile=None, append=True):
         """
         Write out the parameters for this island to a file.
@@ -159,7 +167,7 @@ class LocalCommunity(object):
                 padding = (" "*(30-len(paramvalue)))
                 paramkey = self.paramsdict.keys().index(key)
                 paramindex = " ## [{}] ".format(paramkey)
-                LOGGER.debug(key, val, paramindex)
+                LOGGER.debug("{} {} {}".format(key, val, paramindex))
                 #name = "[{}]: ".format(paramname(paramkey))
                 name = "[{}]: ".format(key)
                 #description = paraminfo(paramkey, short=True)

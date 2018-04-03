@@ -12,6 +12,8 @@ import sys
 import os
 import MESS
 
+from MESS.util import set_params
+
 LOGGER = logging.getLogger(__name__)
 
 def parse_params(args):
@@ -49,64 +51,45 @@ def parse_params(args):
     return region_params, island_params
 
 
-def getassembly(args, parsedict):
+def getregion(args, region_params, island_params):
     """ 
-    loads assembly or creates a new one and set its params from 
-    parsedict. Does not launch ipcluster. 
+    loads simulation or creates a new one and set its params as
+    read in from the params file. Does not launch ipcluster. 
     """
 
-    ## Creating an assembly with a full path in the name will "work"
-    ## but it is potentially dangerous, so here we have assembly_name
-    ## and assembly_file, name is used for creating new in cwd, file is
-    ## used for loading existing.
-    ##
-    ## Be nice if the user includes the extension.
-    #assembly_name = parsedict['0']
-    project_dir = ip.core.assembly._expander(parsedict['project_dir'])
-    assembly_name = parsedict['assembly_name']
-    assembly_file = os.path.join(project_dir, assembly_name)
-
-    ## Region creation will handle error checking  on
-    ## the format of the assembly_name
+    project_dir = MESS.util._expander(region_params['project_dir'])
+    LOGGER.debug("project_dir: {}".format(project_dir))
+    sim_name = region_params['simulation_name']
 
     ## make sure the working directory exists.
     if not os.path.exists(project_dir):
         os.mkdir(project_dir)
 
-    try:
-        ## If 1 and force then go ahead and create a new assembly
-        if ('1' in args.steps) and args.force:
-            data = ip.Assembly(assembly_name, cli=True)
-        else:
-            data = ip.load_json(assembly_file, cli=True)
-            data._cli = True
+    data = MESS.Region(sim_name)
 
-    except IPyradWarningExit as _:
-        ## if no assembly is found then go ahead and make one
-        if '1' not in args.steps:
-            raise IPyradWarningExit(\
-                "  Error: You must first run step 1 on the assembly: {}"\
-                .format(assembly_file))
-        else:
-            ## create a new assembly object
-            data = ip.Assembly(assembly_name, cli=True)
+    ## Populate the parameters of the Region
+    for param in region_params:
+        try:
+            data = set_params(data, param, region_params[param])
+        except Exception as inst:
+            print("  Malformed params file: {}".format(args.params))
+            print("  Bad parameter {} - {}".format(param, region_params[param]))
+            print("  {}".format(inst))
+            sys.exit(-1)
 
-    ## for entering some params...
-    for param in parsedict:
-
-        ## trap assignment of assembly_name since it is immutable.
-        if param == "assembly_name":
-            ## Raise error if user tried to change assembly name
-            if parsedict[param] != data.name:
-                data.set_params(param, parsedict[param])
-        else:
-            ## all other params should be handled by set_params
+    ## Populate the islands w/in the region
+    for island in island_params:
+        loc = MESS.LocalCommunity(island["name"], quiet=True)
+        for param in island:
             try:
-                data.set_params(param, parsedict[param])
-            except IndexError as _:
+                loc = set_params(loc, param, island[param])
+            except Exception as inst:
                 print("  Malformed params file: {}".format(args.params))
-                print("  Bad parameter {} - {}".format(param, parsedict[param]))
+                print("  Bad parameter {} - {}".format(param, island[param]))
+                print("  {}".format(inst))
                 sys.exit(-1)
+        data._link_local(loc)
+
     return data
 
 
@@ -237,7 +220,9 @@ def main():
         ## Create a tmp assembly, call write_params to make default params.txt
         try:
             tmpassembly = MESS.Region(args.new, quiet=True, cli=True)
-            tmpassembly.add_local_community("island1", K=1000, c=0.01)
+            tmplocal = MESS.LocalCommunity("island1", quiet=True)
+            tmpassembly._link_local(tmplocal)
+            #tmpassembly.add_local_community("island1", K=1000, c=0.01, quiet=True)
             tmpassembly.write_params("params-{}.txt".format(args.new), 
                                      force=args.force)
         except Exception as inst:
@@ -276,7 +261,6 @@ def main():
         logfile.write("\n  Using args {}".format(vars(args)))
         logfile.write("\n  Platform info: {}\n".format(os.uname()))
 
-
     ## create new Region or load existing Region
     if args.params:
         region_params, island_params = parse_params(args)
@@ -286,7 +270,6 @@ def main():
             showstats(region_params, island_params)
 
         if args.steps:
-
             ## Only blank the log file if we're actually going to do real
             ## work. In practice the log file should never get this big.
             if os.path.exists(MESS.__debugfile__):
@@ -294,9 +277,9 @@ def main():
                     with open(MESS.__debugfile__, 'w') as clear:
                         clear.write("file reset")
 
-            ## run Region steps
-            ## launch or load assembly with custom profile/pid
-            data = getassembly(args, parsedict)
+            ## launch or load Region with custom profile/pid
+            data = getregion(args, region_params, island_params)
+            sys.exit("done")
 
             ## set CLI ipcluster terms
             data._ipcluster["threads"] = args.threads
