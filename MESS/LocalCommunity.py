@@ -15,12 +15,14 @@ import sys
 import os
 import MESS
 
-from MESS.util import *
 from MESS.stats import shannon
 try:
     from species import species
 except:
     print("Species module failed to load, things probably won't work right.")
+
+import logging
+LOGGER = logging.getLogger(__name__)
 
 ## Limit on the number of redraws in the event of disallowed
 ## multiple migration, error out and warn if exceeded
@@ -37,6 +39,11 @@ class LocalCommunity(object):
         else:
             self.name = name
 
+        ## If you add a parameter to this dictionary you need
+        ## to also add a short description to the LOCAL_PARAMS dict
+        ## at the end of this file
+        ##
+        ## Also be sure to add it to _paramschecker so the type gets set correctly
         self.paramsdict = OrderedDict([
                         ("name", self.name),
                         ("mode", "volcanic"),
@@ -126,13 +133,29 @@ class LocalCommunity(object):
         self.prepopulate(mode=self.paramsdict["mode"], quiet=quiet)
 
 
-    def _paramschecker(self, param, newvalue):
+    ## Return fraction of equilibrium obtained by the local community
+    def _lambda(self):
+        founder_flags = [x[1] for x in self.local_community]
+        percent_equil = float(founder_flags.count(False))/len(founder_flags)
+        return percent_equil
+
+    def _paramschecker(self, param, newvalue, quiet=False):
         """ Raises exceptions when params are set to values they should not be"""
         ## TODO: This should actually check the values and make sure they make sense
         ## TODO: Also check here if you're setting the mode parameter you have to rerun prepopulate
-        LOGGER.debug("set param {} - {} = {}".format(self, param, newvalue))
-        self.paramsdict[param] = newvalue
+        try:
+            LOGGER.debug("set param {} - {} = {}".format(self, param, newvalue))
 
+            ## Cast params to correct types
+            if param in ["K", "mig_clust_size", "age"]:
+                self.paramsdict[param] = int(float(newvalue))
+            elif param in ["colrate"]:
+                self.paramsdict[param] = float(newvalue)
+            else:
+                self.paramsdict[param] = newvalue
+        except Exception as inst:
+            ## Do something intelligent here?
+            raise
 
     def write_params(self, outfile=None, append=True):
         """
@@ -169,7 +192,7 @@ class LocalCommunity(object):
                 else:
                     paramvalue = str(val)
 
-                padding = (" "*(30-len(paramvalue)))
+                padding = (" "*(20-len(paramvalue)))
                 paramkey = self.paramsdict.keys().index(key)
                 paramindex = " ## [{}] ".format(paramkey)
                 LOGGER.debug("{} {} {}".format(key, val, paramindex))
@@ -231,8 +254,6 @@ class LocalCommunity(object):
             else:
                 raise Exception("Bad metacommunity input - ".format(infile))
 
-        ## Actually using uuid is v slow
-        #self.species = [uuid.uuid4() for _ in enumerate(self.abundances)]
         self.total_inds = sum(self.abundances)
         self.immigration_probabilities = [float(self.abundances[i])/self.total_inds for i in range(len(self.abundances))]
 
@@ -246,7 +267,7 @@ class LocalCommunity(object):
 
 
     def __str__(self):
-        return "<LocalCommunity {}: Shannon's Diversity {}>".format(self.name, shannon(self.get_abundances(octaves=False)))
+        return "<LocalCommunity {}: Shannon's Entropy {}>".format(self.name, shannon(self.get_abundances(octaves=False)))
 
 
     def calculate_death_probabilities(self):
@@ -617,7 +638,23 @@ class LocalCommunity(object):
         return(self.species_objects)
 
 
+#############################
+## Model Parameter Info Dicts
+#############################
+LOCAL_PARAMS = {
+    "name" : "Local community name",\
+    "mode" : "Local community formation mode (volcanic/landbridge)",\
+    "K" : "Local carrying capacity",\
+    "colrate" : "Colonization rate into local community",\
+    "mig_clust_size" : "# of individuals per colonization event",\
+    "age" : "Local community age",\
+    "allow_multiple_colonizations" : "Toggle allowing post colonization migration",
+}
+
+
+#############################
 ## Error messages
+#############################
 BAD_MODE_PARAMETER = """
     Unrecognized local community mode. Options are 'landbridge' or'volcanic'.
     You put {}.
@@ -638,10 +675,12 @@ if __name__ == "__main__":
             #print(i, len(data.local_community), len(set(data.local_community)))
             #print(data.local_community)
         data.step()
+    print(data.local_community)
     abundance_distribution = data.get_abundances(octaves=False)
     print("\n")
     print(data)
 
+    data.simulate_seqs()
     print("Species abundance distribution:\n{}".format(abundance_distribution))
     #print("Colonization times per species:\n{}".format(data.divergence_times))
     #plt.bar(abundance_distribution.keys(), abundance_distribution.values())

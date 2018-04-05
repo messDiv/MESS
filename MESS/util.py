@@ -63,7 +63,7 @@ def _expander(namepath):
     return namepath
 
 
-def set_params(data, param, newvalue):
+def set_params(data, param, newvalue, quiet=False):
     """
     Set a parameter to a new value. Raises error if newvalue is wrong type.
     This is used to set parameters on both the Region and LocalCommunity
@@ -88,22 +88,11 @@ def set_params(data, param, newvalue):
         raise MESSError("Parameter key not recognized: {}"\
                                 .format(param))
     try:
-        data._paramschecker(param, newvalue)
+        data._paramschecker(param, newvalue, quiet)
     except Exception as inst:
         raise MESSError(BAD_PARAMETER.format(param, inst, newvalue))
     return data
 
-
-#############################
-## Model Parameter Info Dicts
-#############################
-REGION_PARAMS = {
-    "simulation_name" : "The name of this simulation scenario",\
-    "project_dir" : "Where to save files",\
-    "metacommunity_type" : "Specify structure of the metacommunity. Options: uniform/logser/<filename>",\
-    "data_model" : "Structure of data output to reference table (see docs)",\
-    "recording_period" : "Number of forward-time generations for gathering data."\
-}
 
 LOCAL_PARAMS = {
     "name" : "Local community name",\
@@ -118,8 +107,9 @@ LOCAL_PARAMS = {
 ## Error messages
 BAD_PARAMETER = """\
     Error setting parameter '{}'
-    {}
-    You entered: {}
+        {}
+        You entered: {}
     """
+
 if __name__ == "__main__":
     print(REGION_PARAMS)

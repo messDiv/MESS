@@ -71,10 +71,10 @@ def getregion(args, region_params, island_params):
     ## Populate the parameters of the Region
     for param in region_params:
         try:
-            data = set_params(data, param, region_params[param])
+            data = set_params(data, param, region_params[param], quiet=args.quiet)
         except Exception as inst:
-            print("  Malformed params file: {}".format(args.params))
-            print("  Bad parameter {} - {}".format(param, region_params[param]))
+            print("      Malformed params file: {}".format(args.params))
+            print("      Bad parameter {} - {}".format(param, region_params[param]))
             print("  {}".format(inst))
             sys.exit(-1)
 
@@ -83,7 +83,7 @@ def getregion(args, region_params, island_params):
         loc = MESS.LocalCommunity(island["name"], quiet=True)
         for param in island:
             try:
-                loc = set_params(loc, param, island[param])
+                loc = set_params(loc, param, island[param], quiet=args.quiet)
             except Exception as inst:
                 print("  Malformed params file: {}".format(args.params))
                 print("  Bad parameter {} - {}".format(param, island[param]))
@@ -129,7 +129,6 @@ def showstats(region_params, island_params):
          +"\n  ------------------------------------------------")
 
     print("   TODO: Put interesting stuff here.\n")
-    sys.exit()
 
 
 def parse_command_line():
@@ -169,9 +168,9 @@ def parse_command_line():
         type=str, default=None,
         help="path to params file simulations: params-{assembly_name}.txt")
 
-    parser.add_argument("-s", metavar="steps", dest="steps",
+    parser.add_argument("-s", metavar="sims", dest="sims",
         type=int, default=0,
-        help="wat do to")
+        help="Generate specified number of simulations")
 
     parser.add_argument("-c", metavar="cores", dest="cores",
         type=int, default=0,
@@ -198,6 +197,88 @@ def parse_command_line():
     return args
 
 
+def do_sims(data, args):
+    ## if ipyclient is running (and matched profile) then use that one
+    if args.ipcluster:
+        ipyclient = ipp.Client(profile=args.ipcluster)
+        data._ipcluster["cores"] = len(ipyclient)
+        if not args.quiet:
+            print("   Attached to cluster {} w/ {} engines.".format(args.ipcluster, len(ipyclient)))
+
+    ## if not then we need to register and launch an ipcluster instance
+    elif args.cores >= 0:
+        ## set CLI ipcluster terms
+        ipyclient = None
+        data._ipcluster["cores"] = args.cores if args.cores else detect_cpus()
+        data._ipcluster["engines"] = "Local"
+        ## register to have a cluster-id with "ip- name"
+        data = register_ipcluster(data)
+        ipyclient = get_client(**data._ipcluster)
+        print(cluster_info(ipyclient))
+    ## If args.cores is negative then don't use ipcluster
+    else:
+        ipyclient = None
+        print("    Parallelization disabled.")
+    try:
+        ## Do stuff here
+        data.run(
+            sims=args.sims,
+            force=args.force,
+            ipyclient=ipyclient)
+    except KeyboardInterrupt as inst:
+        print("\n  Keyboard Interrupt by user")
+        LOGGER.info("assembly interrupted by user.")
+    except MESSError as inst:
+        LOGGER.error("MESSError: %s", inst)
+        print("\n  Encountered an error (see details in ./mess_log.txt)"+\
+              "\n  Error summary is below -------------------------------"+\
+              "\n{}".format(inst))
+    except Exception as inst:
+        LOGGER.error(inst)
+        print("\n  Encountered an unexpected error (see ./mess_log.txt)"+\
+              "\n  Error message is below -------------------------------"+\
+              "\n{}".format(inst))
+    finally:
+        try:
+            ## can't close client if it was never open
+            if ipyclient:
+                print("Clean up ipcluster {}".format(ipyclient))
+                ## send SIGINT (2) to all engines
+                try:
+                    ipyclient.abort()
+                    time.sleep(1)
+                    for engine_id, pid in data._ipcluster["pids"].items():
+                        if ipyclient.queue_status()[engine_id]["tasks"]:
+                            os.kill(pid, 2)
+                            LOGGER.info('interrupted engine {} w/ SIGINT to {}'\
+                                    .format(engine_id, pid))
+                    time.sleep(1)
+                except ipp.NoEnginesRegistered:
+                    pass
+
+                ## if CLI, stop jobs and shutdown. Don't use _cli here 
+                ## because you can have a CLI object but use the --ipcluster
+                ## flag, in which case we don't want to kill ipcluster.
+                if 'mess-cli' in data._ipcluster["cluster_id"]:
+                    LOGGER.info("  shutting down engines")
+                    ipyclient.shutdown(hub=True, block=False)
+                    ipyclient.close()
+                    LOGGER.info("  finished shutdown")
+                else:
+                    if not ipyclient.outstanding:
+                        ipyclient.purge_everything()
+                    else:
+                        ## nanny: kill everything, something bad happened
+                        ipyclient.shutdown(hub=True, block=False)
+                        ipyclient.close()
+                        print("\nwarning: ipcluster shutdown and must be restarted")
+
+        ## if exception is close and save, print and ignore
+        except Exception as inst2:
+            print("warning: error during shutdown:\n{}".format(inst2))
+            LOGGER.error("shutdown warning: %s", inst2)
+
+
 def main():
     """ main function """
     print(MESS_HEADER)
@@ -212,7 +293,7 @@ def main():
         os.remove(MESS.__debugflag__)
 
     if args.debug:
-        print("\n  ** Enabling debug mode ** ")
+        print("\n  ** Enabling debug mode **\n")
         MESS._debug_on()
         atexit.register(MESS._debug_off)
 
@@ -237,21 +318,13 @@ def main():
 
     ## if params then must provide action argument with it
     if args.params:
-        if not any([args.results, args.steps]):
-            print("""
-    Must provide action argument along with -p argument for params file. 
-    e.g., MESS -p params-test.txt -r              ## shows results
-    e.g., MESS -p params-test.txt -s 12           ## runs steps 1 & 2
-    """)
+        if not any([args.results, args.sims]):
+            print(MESS_USAGE)
             sys.exit(2)
 
     if not args.params:
-        if any([args.results, args.steps]):
-            print("""
-    Must provide params file for doing steps, or getting results.
-    e.g., MESS -p params-test.txt -r              ## shows results
-    e.g., MESS -p params-test.txt -s 12           ## runs steps 1 & 2
-    """)
+        if any([args.results, args.sims]):
+            print(MESS_USAGE)
             sys.exit(2)
 
     ## Log the current version. End run around the LOGGER
@@ -265,12 +338,15 @@ def main():
     ## create new Region or load existing Region
     if args.params:
         region_params, island_params = parse_params(args)
+        LOGGER.debug("region params - {}\nisland params - {}".format(region_params, island_params))
 
         ## Print results and exit immediately
         if args.results:
             showstats(region_params, island_params)
+            sys.exit()
 
-        if args.steps:
+        ## Generate numerous simulations
+        if args.sims:
             ## Only blank the log file if we're actually going to do real
             ## work. In practice the log file should never get this big.
             if os.path.exists(MESS.__debugfile__):
@@ -281,85 +357,12 @@ def main():
             ## launch or load Region with custom profile/pid
             data = getregion(args, region_params, island_params)
             if not args.quiet:
-                print("\n  {}\n".format(data))
+                print("\n    {}".format(data))
 
-            ## if ipyclient is running (and matched profile) then use that one
-            if args.ipcluster:
-                ipyclient = ipp.Client(profile=args.ipcluster)
-                data._ipcluster["cores"] = len(ipyclient)
-                if not args.quiet:
-                    print("   Attached to cluster {} w/ {} engines.".format(args.ipcluster, len(ipyclient)))
-
-            ## if not then we need to register and launch an ipcluster instance
-            else:
-                ## set CLI ipcluster terms
-                ipyclient = None
-                data._ipcluster["cores"] = args.cores if args.cores else detect_cpus()
-                data._ipcluster["engines"] = "Local"
-                ## register to have a cluster-id with "ip- name"
-                data = register_ipcluster(data)
-                ipyclient = get_client(**data._ipcluster)
-                print(cluster_info(ipyclient))
             try:
-                ## Do stuff here
-                data.run(
-                    steps=steps, 
-                    force=args.force, 
-                    preview=args.preview, 
-                    ipyclient=ipyclient)
-            except KeyboardInterrupt as inst:
-                print("\n  Keyboard Interrupt by user")
-                LOGGER.info("assembly interrupted by user.")
-            except MESSError as inst:
-                LOGGER.error("MESSError: %s", inst)
-                print("\n  Encountered an error (see details in ./mess_log.txt)"+\
-                      "\n  Error summary is below -------------------------------"+\
-                      "\n{}".format(inst))
+                do_sims(data, args)
             except Exception as inst:
-                LOGGER.error(inst)
-                print("\n  Encountered an unexpected error (see ./mess_log.txt)"+\
-                      "\n  Error message is below -------------------------------"+\
-                    "\n{}".format(inst))
-            finally:
-                try:
-                    ## can't close client if it was never open
-                    print("Clean up ipcluster {}".format(ipyclient))
-                    if ipyclient:
-    
-                        ## send SIGINT (2) to all engines
-                        try:
-                            ipyclient.abort()
-                            time.sleep(1)
-                            for engine_id, pid in data._ipcluster["pids"].items():
-                                if ipyclient.queue_status()[engine_id]["tasks"]:
-                                    os.kill(pid, 2)
-                                    LOGGER.info('interrupted engine {} w/ SIGINT to {}'\
-                                            .format(engine_id, pid))
-                            time.sleep(1)
-                        except ipp.NoEnginesRegistered:
-                            pass
-    
-                        ## if CLI, stop jobs and shutdown. Don't use _cli here 
-                        ## because you can have a CLI object but use the --ipcluster
-                        ## flag, in which case we don't want to kill ipcluster.
-                        if 'mess-cli' in data._ipcluster["cluster_id"]:
-                            LOGGER.info("  shutting down engines")
-                            ipyclient.shutdown(hub=True, block=False)
-                            ipyclient.close()
-                            LOGGER.info("  finished shutdown")
-                        else:
-                            if not ipyclient.outstanding:
-                                ipyclient.purge_everything()
-                            else:
-                                ## nanny: kill everything, something bad happened
-                                ipyclient.shutdown(hub=True, block=False)
-                                ipyclient.close()
-                                print("\nwarning: ipcluster shutdown and must be restarted")
-    
-                ## if exception is close and save, print and ignore
-                except Exception as inst2:
-                    print("warning: error during shutdown:\n{}".format(inst2))
-                    LOGGER.error("shutdown warning: %s", inst2)
+                print("  Unexpected error - {}".format(inst))
 
 
 MESS_HEADER = \
@@ -367,6 +370,13 @@ MESS_HEADER = \
 "\n  MESS [v.{}]".format(MESS.__version__)+\
 "\n  Massive Eco-Evolutionary Synthesis Simulations"+\
 "\n -------------------------------------------------------------"
+
+
+MESS_USAGE = """
+    Must provide action argument along with -p argument for params file. 
+    e.g., MESS -p params-test.txt -s 10000           ## run 10000 simulations
+    e.g., MESS -p params-test.txt -r                 ## shows results
+    """
 
 if __name__ == "__main__": 
     main()
