@@ -190,7 +190,7 @@ class Region(object):
 
 
     ## Main function for managing cluster parallelized simulations
-    def run(self, sims, force=False, ipyclient=None):
+    def run(self, sims, force=False, ipyclient=None, quiet=False):
         """ Do the heavy lifting here"""
         print("    Generating {} simulations.".format(sims))
         if not ipyclient:
@@ -205,10 +205,11 @@ class Region(object):
                 else:
                     ## If doing lambda we only really care about 3ish signficant figures
                     _lambda = round(np.random.random(), 3)
-                    self.simulate(_lambda=_lambda)
-            progressbar(100, 100, "Finished {} simulations\n".format(sims))
+                    self.simulate(_lambda=_lambda, quiet=quiet)
+            progressbar(100, 100, "\n    Finished {} simulations\n".format(sims))
 
-
+        else:
+            pass
     ## This is the function that will be run inside the cluster engine, so
     ## everything it does needs to be
     ##
@@ -218,7 +219,7 @@ class Region(object):
     ##
     ## TODO: Need to think about how to quantify lambda if there is more
     ## than one island
-    def simulate(self, _lambda=0, nsteps=0):
+    def simulate(self, _lambda=0, nsteps=0, quiet=True):
         LOGGER.debug("Entering simulate(): lambda={}, nsteps={}".format(_lambda, nsteps))
         if _lambda > 0 and nsteps > 0:
             LOGGER.error("simulate accepts only one of either lambda or nsteps args")
@@ -241,6 +242,9 @@ class Region(object):
             done_func = lambda: step >= nsteps
 
         while not done_func():
+            ## This is not ideal functionality, but it at least gives you a sense of progress
+            ##if not quiet:
+            ##    progressbar(100, 100, "{}%".format(self.islands.values()[0]._lambda()))
             for island in self.islands.values():
                 island.step()
             step += 1
@@ -288,13 +292,13 @@ REQUIRE_NAME = """\
 if __name__ == "__main__":
     logging.info("wat")
     data = Region("tmp")
-    data.add_local_community("tmploc", 1000, 0.01)
+    data.add_local_community("tmploc", 500, 0.01)
     #print("Testing step function.")
     #data.simulate(_lambda=0, nsteps=1000)
     #print(data.islands.values()[0])
     #data.simulate(_lambda=0, nsteps=1000)
     #print(data.islands.values()[0])
     print("Testing lambda function.")
-    data.simulate(_lambda=1)
-    #print(data.islands.values()[0])
+    data.simulate(_lambda=.4)
+    print(len(data.islands.values()[0].local_community))
     #data.run(10)

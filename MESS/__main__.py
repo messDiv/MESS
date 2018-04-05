@@ -224,7 +224,8 @@ def do_sims(data, args):
         data.run(
             sims=args.sims,
             force=args.force,
-            ipyclient=ipyclient)
+            ipyclient=ipyclient,
+            quiet=args.quiet)
     except KeyboardInterrupt as inst:
         print("\n  Keyboard Interrupt by user")
         LOGGER.info("assembly interrupted by user.")
@@ -304,7 +305,6 @@ def main():
             tmpassembly = MESS.Region(args.new, quiet=True, cli=True)
             tmplocal = MESS.LocalCommunity("island1", quiet=True)
             tmpassembly._link_local(tmplocal)
-            #tmpassembly.add_local_community("island1", K=1000, c=0.01, quiet=True)
             tmpassembly.write_params("params-{}.txt".format(args.new), 
                                      force=args.force)
         except Exception as inst:

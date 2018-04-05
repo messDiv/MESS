@@ -79,7 +79,6 @@ class LocalCommunity(object):
 
         ## Variables for tracking the local community
         self.local_community = []
-        self.local_inds = K
         self.divergence_times = {}
         ## Track number of secondary colonization events per species
         self.post_colonization_migrants = {}
@@ -147,10 +146,23 @@ class LocalCommunity(object):
             LOGGER.debug("set param {} - {} = {}".format(self, param, newvalue))
 
             ## Cast params to correct types
-            if param in ["K", "mig_clust_size", "age"]:
+            if param == "K":
                 self.paramsdict[param] = int(float(newvalue))
+                self.local_community = []
+                self.prepopulate(mode=self.paramsdict["mode"], quiet=True)
+
+            if param in ["mig_clust_size", "age"]:
+                self.paramsdict[param] = int(float(newvalue))
+
             elif param in ["colrate"]:
                 self.paramsdict[param] = float(newvalue)
+
+            elif param == "mode":
+                ## Must reup the local community if you change the mode
+                self.paramsdict[param] = newvalue
+                self.local_community = []
+                self.prepopulate(mode=self.paramsdict["mode"], quiet=True)
+
             else:
                 self.paramsdict[param] = newvalue
         except Exception as inst:
@@ -220,7 +232,7 @@ class LocalCommunity(object):
             if infile == "logser":
                 ## Parameter of the logseries distribution
                 p = .98
-                self.abundances = logser.rvs(p, size=self.local_inds)
+                self.abundances = logser.rvs(p, size=self.paramsdict["K"])
             else:
                 self.abundances = [self.uniform_inds] * self.uniform_species
 
@@ -295,7 +307,7 @@ class LocalCommunity(object):
         self.local_community = []
         if mode == "landbridge":
             ## prepopulate the island w/ total_inds individuals sampled from the metacommunity
-            init_community = np.random.multinomial(self.local_inds, self.immigration_probabilities, size=1)
+            init_community = np.random.multinomial(self.paramsdict["K"], self.immigration_probabilities, size=1)
             for i, x in enumerate(init_community[0]):
                 if x:
                     self.local_community.extend([self.species[i]] * x)
@@ -315,9 +327,9 @@ class LocalCommunity(object):
             ## or with one sample of this species and a bunch of "emtpy deme space". The empty
             ## demes screw up competition/environmental filtering models
             if True:
-               self.local_community.extend([new_species] * (self.local_inds - 1))
+               self.local_community.extend([new_species] * (self.paramsdict["K"] - 1))
             else:
-                for i in range(1,self.local_inds):
+                for i in range(1,self.paramsdict["K"]):
                     self.local_community.append((None,True))
             self.divergence_times[new_species] = 1
         else:
@@ -581,7 +593,7 @@ class LocalCommunity(object):
     ## How strong is the bottleneck? Strength should be interpreted as percent of local
     ## community to retain
     def bottleneck(self, strength=1):
-        reduction = int(round(self.local_inds * strength))
+        reduction = int(round(self.paramsdict["K"] * strength))
         self.local_community = self.local_community[:reduction]
 
         ## First remove the extinct species from the species list
