@@ -196,12 +196,16 @@ class Region(object):
         if not ipyclient:
             ## Run serially
             for i in xrange(sims):
+                progressbar(sims, i)
                 gens = self.paramsdict["generations"]
                 if type(gens) is tuple:
                     ## Generations is a range so uniform random sample for this sim
                     gens = np.random.randint(gens[0], gens[1])
-                self.simulate(nsteps=gens)
-                progressbar(sims, i)
+                    self.simulate(nsteps=gens)
+                else:
+                    ## If doing lambda we only really care about 3ish signficant figures
+                    _lambda = round(np.random.random(), 3)
+                    self.simulate(_lambda=_lambda)
             progressbar(100, 100, "Finished {} simulations\n".format(sims))
 
 
@@ -290,7 +294,7 @@ if __name__ == "__main__":
     #print(data.islands.values()[0])
     #data.simulate(_lambda=0, nsteps=1000)
     #print(data.islands.values()[0])
-    #print("Testing lambda function.")
-    #data.simulate(_lambda=0.5)
+    print("Testing lambda function.")
+    data.simulate(_lambda=1)
     #print(data.islands.values()[0])
-    data.run(10)
+    #data.run(10)
