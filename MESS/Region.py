@@ -49,7 +49,6 @@ class Region(object):
         self.paramsdict = OrderedDict([
                        ("simulation_name", name),
                        ("project_dir", "./default_MESS"),
-                       ("metacommunity_type", "logser"),
                        ("data_model", 4),
                        ("generations", 0),
                        ("recording_period", 10000),
@@ -57,7 +56,7 @@ class Region(object):
         ])
 
         ## Track local communities in this model and colonization rates among them
-        self.metacommunity = MESS.Metacommunity(self.paramsdict["metacommunity_type"])
+        self.metacommunity = MESS.Metacommunity()
         self.islands = {}
         self.colonization_matrix = []
 
@@ -79,7 +78,14 @@ class Region(object):
     def _link_local(self, local_community):
         """ Just link a local community that was created externally.
         This is primarily used by __main__ during the initialization process."""
+        LOGGER.debug("Linking local community - {}".format(local_community))
         self.islands[local_community.paramsdict["name"]] = local_community
+
+
+    def _link_metacommunity(self, metacommunity):
+        """ Just import a metacommunity object that's been created externally."""
+        LOGGER.debug("Linking metacommunity - {}".format(metacommunity))
+        self.metacommunity = metacommunity
 
 
     def _paramschecker(self, param, newvalue, quiet=False):
@@ -110,11 +116,6 @@ class Region(object):
                     self.paramsdict[param] = tuple([low, high])
                 else:
                     self.paramsdict[param] = int(float(newvalue))
-
-            elif param == "metacommunity_type":
-                ## TODO: Check that the types are ok
-                self.set_metacommunity(newvalue)
-                self.paramsdict[param] = newvalue
 
             elif param == "allow_multiple_colonizations":
                 self.paramsdict[param] = newvalue.lower() in ["true"]
@@ -172,6 +173,10 @@ class Region(object):
 
             paramsfile.write("\n")
 
+        ## Write parameters of the metacommunity
+        self.metacommunity.write_params(outfile)
+
+        ## Write parameters for each island
         for island in self.islands.values():
             island.write_params(outfile)
 
@@ -227,7 +232,6 @@ class Region(object):
                 else:
                     res = self.simulate(_lambda=gens[i], quiet=quiet)
             progressbar(100, 100, " Finished {} simulations\n".format(sims))
-            print(res)
 
         ## Parallelize
         else:
@@ -320,7 +324,6 @@ def simulate(data, time=time, quiet=True):
 REGION_PARAMS = {
     "simulation_name" : "The name of this simulation scenario",\
     "project_dir" : "Where to save files",\
-    "metacommunity_type" : "Options: uniform/logser/<filename>",\
     "data_model" : "Structure of data output to reference table (see docs)",\
     "generations" : "Duration of simulations. Specify int range or 0 for lambda.",\
     "recording_period" : "Number of forward-time generations between samples for logging",\

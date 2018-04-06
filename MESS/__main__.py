@@ -40,8 +40,14 @@ def parse_params(args):
 
     LOGGER.debug("Region params - {}".format(region_params))
 
+    ## Get metacommunity params and make a dict
+    items = [i.split("##")[0].strip() for i in plines[1].split("\n")[1:] if not i.strip() == ""]
+    keys = MESS.Metacommunity(quiet=True).paramsdict.keys()
+    meta_params = {str(i):j for i, j in zip(keys, items)}
+    LOGGER.debug("Metacommunity params - {}".format(meta_params))
+
     island_params = []
-    for i, params in enumerate(plines[1:]):
+    for i, params in enumerate(plines[2:]):
         items = [i.split("##")[0].strip() for i in params.split("\n")[1:] if not i.strip() == ""]
         keys = MESS.LocalCommunity('null', quiet=True).paramsdict.keys()
         island_dict = {str(i):j for i, j in zip(keys, items)}
@@ -49,10 +55,10 @@ def parse_params(args):
 
     LOGGER.debug("All island params - {}".format(island_params))
 
-    return region_params, island_params
+    return region_params, meta_params, island_params
 
 
-def getregion(args, region_params, island_params):
+def getregion(args, region_params, meta_params, island_params):
     """ 
     loads simulation or creates a new one and set its params as
     read in from the params file. Does not launch ipcluster. 
@@ -73,11 +79,18 @@ def getregion(args, region_params, island_params):
         try:
             data = set_params(data, param, region_params[param], quiet=args.quiet)
         except Exception as inst:
-            print("      Malformed params file: {}".format(args.params))
-            print("      Bad parameter {} - {}".format(param, region_params[param]))
-            print("  {}".format(inst))
+            print(inst)
             sys.exit(-1)
 
+    meta = MESS.Metacommunity()
+    for param in meta_params:
+        try:
+            meta = set_params(meta, param, meta_params[param], quiet=args.quiet)
+        except Exception as inst:
+            print(inst)
+            sys.exit(-1)
+    data._link_metacommunity(meta)
+        
     ## Populate the islands w/in the region
     for island in island_params:
         loc = MESS.LocalCommunity(island["name"], quiet=True)
@@ -85,9 +98,7 @@ def getregion(args, region_params, island_params):
             try:
                 loc = set_params(loc, param, island[param], quiet=args.quiet)
             except Exception as inst:
-                print("  Malformed params file: {}".format(args.params))
-                print("  Bad parameter {} - {}".format(param, island[param]))
-                print("  {}".format(inst))
+                print(inst)
                 sys.exit(-1)
         data._link_local(loc)
 
@@ -118,7 +129,7 @@ def _check_version():
         pass
 
 
-def showstats(region_params, island_params):
+def showstats(region_params, meta_params, island_params):
     """ This should be used to display anything that might be useful. """
 
     project_dir = region_params["project_dir"]
@@ -284,6 +295,7 @@ def do_sims(data, args):
 def main():
     """ main function """
     print(MESS_HEADER)
+    MESS.__interactive__ = 0  ## Turn off API output
 
     ## parse params file input (returns to stdout if --help or --version)
     args = parse_command_line()
@@ -338,12 +350,13 @@ def main():
 
     ## create new Region or load existing Region
     if args.params:
-        region_params, island_params = parse_params(args)
-        LOGGER.debug("region params - {}\nisland params - {}".format(region_params, island_params))
+        region_params, meta_params, island_params = parse_params(args)
+        LOGGER.debug("region params - {}\nmetacommunity params - {}\nisland params - {}"\
+                    .format(region_params, meta_params, island_params))
 
         ## Print results and exit immediately
         if args.results:
-            showstats(region_params, island_params)
+            showstats(region_params, meta_params, island_params)
             sys.exit()
 
         ## Generate numerous simulations
@@ -356,7 +369,7 @@ def main():
                         clear.write("file reset")
 
             ## launch or load Region with custom profile/pid
-            data = getregion(args, region_params, island_params)
+            data = getregion(args, region_params, meta_params, island_params)
             if not args.quiet:
                 print("\n    {}".format(data))
 
@@ -365,6 +378,10 @@ def main():
             except Exception as inst:
                 print("  Unexpected error - {}".format(inst))
 
+BAD_PARAMETER_ERROR = """
+    Malformed params file: {}
+    Bad parameter {} - {}
+    {}"""
 
 MESS_HEADER = \
 "\n -------------------------------------------------------------"+\

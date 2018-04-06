@@ -107,8 +107,8 @@ LOCAL_PARAMS = {
 ## Error messages
 BAD_PARAMETER = """\
     Error setting parameter '{}'
-        {}
-        You entered: {}
+    {}
+    You entered: {}
     """
 
 if __name__ == "__main__":

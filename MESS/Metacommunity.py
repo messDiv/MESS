@@ -10,7 +10,7 @@ import random
 import sys
 import os
 import MESS
-from MESS.util import MESSError
+from MESS.util import MESSError,set_params
 
 import logging
 LOGGER = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ class Metacommunity(object):
         ##
         ## Also be sure to add it to _paramschecker so the type gets set correctly
         self.paramsdict = OrderedDict([
-                        ("meta_type", meta_type),
+                        ("metacommunity_type", meta_type),
                         ("nspecies", 1000),
                         ("uniform_abund", 1000000),
                         ("logser_shape", 0.98),
@@ -79,19 +79,20 @@ class Metacommunity(object):
 
 
     def __str__(self):
-        return "<Metacommunity: {} Richness {}>".format(self.paramsdict["meta_type"],\
+        return "<Metacommunity: {} Richness {}>".format(self.paramsdict["metacommunity_type"],\
                                                         self.paramsdict["nspecies"])
 
 
     def _paramschecker(self, param, newvalue, quiet=False):
         """ Raises exceptions when params are set to values they should not be"""
         ## TODO: This should actually check the values and make sure they make sense
-        ## TODO: Also check here if you're setting the mode parameter you have to rerun prepopulate
         try:
             LOGGER.debug("set param {} - {} = {}".format(self, param, newvalue))
-
+            if not quiet and MESS.__interactive__:
+                print("  Updating Metacommunity parameters requires running set_metacommunity()"\
+                        + " to apply the changes.")
             ## Cast params to correct types
-            if param == "meta_type":
+            if param == "metacommunity_type":
                 self.paramsdict[param] = newvalue
 
             elif param == "nspecies":
@@ -109,7 +110,7 @@ class Metacommunity(object):
 
         except Exception as inst:
             ## Do something intelligent here?
-            raise MESSError("    Bad parameter {} {}".format(param, newvalue))
+            raise MESSError("Bad parameter {} - Bad value {}".format(param, newvalue))
 
 
     def write_params(self, outfile=None, append=True):
@@ -136,7 +137,7 @@ class Metacommunity(object):
                 header += ("-"*(80-len(header)))
                 paramsfile.write(header)
             
-            header = "------- Metacommunity params: {}".format(self.name)
+            header = "------- Metacommunity params: "
             header += ("-"*(80-len(header)))
             paramsfile.write(header)
 
@@ -171,7 +172,7 @@ class Metacommunity(object):
 
         random=True will set random trait values in the range [0-1]
         """
-        meta_type = self.paramsdict["meta_type"]
+        meta_type = self.paramsdict["metacommunity_type"]
 
         ## Accumulators for bringing in all the values. These will
         ## eventually all get shoved into self.community
@@ -293,7 +294,7 @@ class Metacommunity(object):
 ## Metacommunity Parameter Info Dicts
 #############################
 LOCAL_PARAMS = {
-    "meta_type" : "One of 'uniform', 'logseries', or valid filename",\
+    "metacommunity_type" : "Options: uniform/logser/<filename>",\
     "nspecies" : "Number of species in the regional pool",\
     "uniform_abund" : "If uniform: abundance per species",\
     "logser_shape" : "If logser: Shape parameter of the distribution",\
@@ -314,3 +315,5 @@ if __name__ == "__main__":
 
     for x in xrange(10):
         print(data.get_migrant())
+
+    data = set_params(data, "meta_type", "logser")

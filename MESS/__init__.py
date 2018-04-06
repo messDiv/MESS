@@ -19,7 +19,7 @@ import atexit as _atexit
 from .util import *
 from .Region import Region 
 from .LocalCommunity import LocalCommunity
-#from ipyrad.core.parallel import get_client as _get_client
+from .Metacommunity import Metacommunity
 
 ####################################################################
 ## create logger for debugging
