@@ -8,6 +8,7 @@ except:
 from scipy.stats import logser
 from collections import OrderedDict
 import collections
+import pandas as pd
 import numpy as np
 import itertools
 import random
@@ -53,6 +54,32 @@ class LocalCommunity(object):
                         ("mig_clust_size", mig_clust_size),
                         ("allow_multiple_colonizations", allow_multiple_colonizations),
         ])
+
+
+        self.files = dict({
+                "full_output": [],
+                
+                })
+        ## summary stats dict
+        self.stats = pd.Series(
+            index=["_lambda",
+                   "generation",
+                   "K",
+                   "colrate",
+                   "colrate_calculated",
+                   "extrate_calculated",
+                   "R",
+                   "shannon",
+                   "mean_pi",
+                   "stdv_pi",
+                   "median_pi",
+                   "iqr_pi",
+                   "mean_dxy",
+                   "stdv_dxy",
+                   "median_dxy",
+                   "iqr_dxy",
+                   "sgd",
+                   "trees"]).astype(np.object)
 
         ## List for storing species objects that have had sequence
         ## simulated and sumstats calculated
@@ -650,6 +677,23 @@ class LocalCommunity(object):
         return(self.species_objects)
 
 
+    def get_stats(self):
+        LOGGER.debug("Entering get_stats()")
+        self.simulate_seqs()
+        self.stats._lambda = self._lambda()
+        self.stats.colrate_calculated = self.colonizations/float(self.current_time)
+        self.stats.extrate_calculated = self.extinctions/float(self.current_time)
+        self.stats.shannon = shannon(self.get_abundances(octaves=False))
+
+        sp = self.get_species()
+        if sp:
+            pis = np.array([x.pi_local for x in sp])
+            dxys = np.array([x.dxy for x in sp])
+            self.stats.mean_pi = np.mean(pis)
+            self.stats.mean_dxy = np.mean(dxys)
+
+        return self.stats
+
 #############################
 ## Model Parameter Info Dicts
 #############################
@@ -700,3 +744,4 @@ if __name__ == "__main__":
     print("Species:\n{}".format(data.get_species()))
     print("Extinction rate - {}".format(data.extinctions/float(data.current_time)))
     print("Colonization rate - {}".format(data.colonizations/float(data.current_time)))
+    print(data.get_stats())

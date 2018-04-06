@@ -17,9 +17,9 @@ class species(object):
         self.name = names.names().get_name()
         self.uuid = UUID
         self.abundance = abundance
-        self.alpha = 1000
+        self.alpha = 100
         self.local_Ne = self.abundance * self.alpha
-        self.meta_abundance = meta_abundance * 1000
+        self.meta_abundance = meta_abundance
         #self.colonization_time = np.log(colonization_time)
         self.migration_rate = migration_rate
         self.colonization_time = colonization_time
@@ -42,17 +42,17 @@ class species(object):
         ## Stats
         self.pi = 0
         self.S = 0
-        self.S_island = 0
+        self.S_local = 0
         self.S_meta = 0
-        self.pi_island = 0
+        self.pi_local = 0
         self.pi_meta = 0
         self.pi_net = 0
         self.dxy = 0
         self.tajD = 0
 
     def __str__(self):
-        return "<species {}/coltime {}/local Ne {}/meta Ne {}/migrate {}/pi_island {}/pi_meta {}/dxy {}/S_island {}/S_meta {}>".format(self.name, self.colonization_time,\
-                            self.local_Ne, self.Ne, self.migration_rate, self.pi_island, self.pi_meta, self.dxy, self.S_island, self.S_meta)
+        return "<species {}/coltime {}/local Ne {}/meta Ne {}/migrate {}/pi_local {}/pi_meta {}/dxy {}/S_local {}/S_meta {}>".format(self.name, self.colonization_time,\
+                            self.local_Ne, self.Ne, self.migration_rate, self.pi_local, self.pi_meta, self.dxy, self.S_local, self.S_meta)
 
     def __repr__(self):
         return self.__str__()
@@ -122,15 +122,15 @@ class species(object):
 
         ## Counter makes a dict, so just get the counts for 2, which indicates 
         ## sites segregating in the pop
-        ## S will not always == S_island + S_meta. If a site is fixed in one pop and not
+        ## S will not always == S_local + S_meta. If a site is fixed in one pop and not
         ## present in the other then S will be less than the total. If a site is segragating
         ## in both pops then S will be greater than the total.
         ## There's probably a smarter way to do this....
-        self.S_island = collections.Counter([len(set(ihaps_t[x])) for x in range(len(ihaps_t))])[2]
+        self.S_local = collections.Counter([len(set(ihaps_t[x])) for x in range(len(ihaps_t))])[2]
         self.S_meta = collections.Counter([len(set(mhaps_t[x])) for x in range(len(mhaps_t))])[2]
 
         ## Pass in the transposed arrays, since we already have them
-        self.pi_island = get_pi(ihaps_t) / self.sequence_length
+        self.pi_local = get_pi(ihaps_t) / self.sequence_length
         self.pi_meta = get_pi(mhaps_t) / self.sequence_length
 
         ## get pairwise differences between populations while ignoring differences
@@ -138,15 +138,15 @@ class species(object):
         self.dxy = get_dxy(ihaps_t, mhaps_t) / self.sequence_length
 
         ## pi_net
-        self.pi_net = self.dxy - (self.pi_island + self.pi_meta)/2
+        self.pi_net = self.dxy - (self.pi_local + self.pi_meta)/2
 
         ## Forbid biologically unrealistic values of pi
-        if self.pi_meta > 0.2 or self.pi_island > 0.2:
+        if self.pi_meta > 0.2 or self.pi_local > 0.2:
             print("Bad pi {}".format(self))
             self.simulate_seqs()
             self.get_sumstats()
 
-        self.tajD = tajD_island(island_haps, self.S_island)
+        self.tajD = tajD_island(island_haps, self.S_local)
 
     def update_abundance(self, abund):
         self.abundance = abund
@@ -240,17 +240,17 @@ def get_dxy(ihaps_t, mhaps_t):
 
 if __name__ == "__main__":
     from tabulate import tabulate
-    import implicit_BI
+    import MESS
 
-    data = implicit_BI.implicit_BI()
+    data = MESS.LocalCommunity("tmp")
     data.set_metacommunity("logser")
     data.prepopulate(mode="volcanic")
     for i in range(50000):
         if not i % 10000:
-            print("Done {}".format(i))
+            print("{} ".format(i))
         data.step()
     abundance_distribution = data.get_abundances(octaves=False)
-    implicit_BI.plot_abundances_ascii(abundance_distribution)
+    MESS.LocalCommunity.plot_abundances_ascii(abundance_distribution)
 
     sp = data.get_species()
     for s in sp:

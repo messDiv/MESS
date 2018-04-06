@@ -55,50 +55,50 @@ def make_outputfile(model, stats):
 
 def get_min_max_stats_through_time(sp_through_time):
     ## Normalization routines
-    max_pi_island = 0
+    max_pi_local = 0
     max_dxy = 0
 
     for sp_list in sp_through_time.values():
 
         ## Get max pi and max dxy
-        pis = np.array([(x.dxy, x.pi_island) for x in sp_list])
+        pis = np.array([(x.dxy, x.pi_local) for x in sp_list])
         ## pis will be empty if this timeslice includes no extant species
         if pis.any():
             my_max_dxy = max([x[0] for x in pis])
-            my_max_pi_island = max([x[1] for x in pis])
+            my_max_pi_local = max([x[1] for x in pis])
             if max_dxy < my_max_dxy:
                 max_dxy = my_max_dxy
-            if max_pi_island < my_max_pi_island:
-                max_pi_island = my_max_pi_island
+            if max_pi_local < my_max_pi_local:
+                max_pi_local = my_max_pi_local
 
-    return max_pi_island, max_dxy
+    return max_pi_local, max_dxy
 
 def normalize_heatmap_to_numpy(sp_list, max_pi, max_dxy):
     ## Get the sumstats for this timeslice
     ## Only include extant species in plots
-    #pis = np.array([(x.dxy, x.pi_island) for x in sp_list if x.uuid[0] in extant])
+    #pis = np.array([(x.dxy, x.pi_local) for x in sp_list if x.uuid[0] in extant])
     ## include all species at each timeslice
-    pis = np.array([(x.dxy, x.pi_island) for x in sp_list])
+    pis = np.array([(x.dxy, x.pi_local) for x in sp_list])
 
     ## Empty heatmap we'll write into
     heat = np.zeros((10,10), dtype=np.int)
 
     ## Make the bins
     dxy_bins = np.linspace(0, max_dxy, 10, endpoint=True)
-    pi_island_bins = np.linspace(0, max_pi, 10, endpoint=True)
+    pi_local_bins = np.linspace(0, max_pi, 10, endpoint=True)
 
     ## Now you have the bins each value belongs in, but you need to 
     ## go through and populate the heat matrix
-    for dxy, pi_island in pis:
+    for dxy, pi_local in pis:
         count_dxy = 0
-        count_pi_island = 0
+        count_pi_local = 0
         try:
             while not dxy <= dxy_bins[count_dxy]:
                 count_dxy += 1
-            while not pi_island <= pi_island_bins[count_pi_island]:
-                count_pi_island += 1
+            while not pi_local <= pi_local_bins[count_pi_local]:
+                count_pi_local += 1
             ## increment the heatmap point this corresponds to
-            heat[count_dxy][count_pi_island] += 1
+            heat[count_dxy][count_pi_local] += 1
         except Exception as inst:
             ## Got a value bigger than our current max pi/dxy. ignore.
             pass
@@ -157,13 +157,6 @@ def write_outfile(model, stats, data, eq):
 
     stats.write("\t".join(map(str,heat)))
     stats.write("\n")
-
-## Here abundances is an ordered dict of tuples which are (abundance, count)
-def shannon(abundances):
-    ## Unpack the abundance dist
-    abunds = [v for v in abundances.values()]
-    tot = np.sum(abunds)
-    return -1 * np.sum([x/float(tot) * math.log(x/float(tot)) for x in abunds  if x > 0])
 
 
 def abundances_from_sp_list(species, octaves=False):
@@ -237,17 +230,15 @@ def tabulate_sumstats(data):
             pass
             ## This will barf if invasive isn't a tuple
 
-    #print("Species colonization times (in generations):\n{}".format([x.colonization_time for x in sp]))
-    #print("Species Ne:\n{}".format([x.Ne for x in sp]))
-    headers = ["Species Name", "Col time", "Loc Abund", "Meta Abund", "pi", "pi_net", "Dxy",  "S", "S_island", "pi_island", "tajD_island", "S_meta", "pi_meta"]
-    acc = [[s.name, s.colonization_time, s.abundance, int(s.meta_abundance), s.pi, s.pi_net, s.dxy, s.S, s.S_island, s.pi_island, s.tajD, s.S_meta, s.pi_meta] for s in sp]
+    headers = ["Species Name", "Col time", "Loc Abund", "Meta Abund", "pi", "pi_net", "Dxy",  "S", "S_local", "pi_local", "tajD_island", "S_meta", "pi_meta"]
+    acc = [[s.name, s.colonization_time, s.abundance, int(s.meta_abundance), s.pi, s.pi_net, s.dxy, s.S, s.S_local, s.pi_local, s.tajD, s.S_meta, s.pi_meta] for s in sp]
 
     return tabulate(acc, headers, floatfmt=".4f")
 
 
 def write_megalog(megalogfile, i, percent_equil, data):
     sp = data.get_species()
-    acc = [[s.uuid[0], s.colonization_time, s.abundance, int(s.meta_abundance), s.pi, s.pi_net, s.dxy, s.S, s.S_island, s.pi_island, s.tajD, s.S_meta, s.pi_meta] for s in sp]
+    acc = [[s.uuid[0], s.colonization_time, s.abundance, int(s.meta_abundance), s.pi, s.pi_net, s.dxy, s.S, s.S_local, s.pi_local, s.tajD, s.S_meta, s.pi_meta] for s in sp]
     megalogfile.write("\n".join(["{}\t{}\t{}".format(percent_equil, i, "\t".join(map(str, s))) for s in acc]) + "\n")
 
 ## This actually is doing pi x dxy, but some of the variable
@@ -261,31 +252,31 @@ def heatmap_pi_dxy(data, write="", title=""):
 
     heat = np.zeros((10,10), dtype=np.int)
 
-    pis = np.array([(x.dxy, x.pi_island) for x in sp])
+    pis = np.array([(x.dxy, x.pi_local) for x in sp])
     max_pi = max([x[0] for x in pis])
-    max_pi_island = max([x[1] for x in pis])
+    max_pi_local = max([x[1] for x in pis])
 
     ## Make the bins
     pi_bins = np.linspace(0, max_pi, 10)
-    pi_island_bins = np.linspace(0, max_pi_island, 10)
+    pi_local_bins = np.linspace(0, max_pi_local, 10)
 
     ## Now you have the bins each value belongs in, but you need to 
     ## go through and populate the heat matrix
-    for pi, pi_island in pis:
+    for pi, pi_local in pis:
         count_pi = 0
-        count_pi_island = 0
+        count_pi_local = 0
         while not pi <= pi_bins[count_pi]:
             count_pi += 1
-        while not pi_island <= pi_island_bins[count_pi_island]:
-            count_pi_island += 1
+        while not pi_local <= pi_local_bins[count_pi_local]:
+            count_pi_local += 1
         ## increment the heatmap point this corresponds to
-        heat[count_pi][count_pi_island] += 1
+        heat[count_pi][count_pi_local] += 1
     plt.pcolormesh(heat,cmap=plt.cm.Blues)
     plt.xlabel('Dxy')
     plt.ylabel('Pi_w Island')
     plt.colorbar()
     plt.xticks(np.arange(len(pi_bins)), ["{0:.4f}".format(x) for x in pi_bins], rotation='vertical')
-    plt.yticks(np.arange(len(pi_bins)), ["{0:.4f}".format(x) for x in pi_island_bins])
+    plt.yticks(np.arange(len(pi_bins)), ["{0:.4f}".format(x) for x in pi_local_bins])
     
     ## If writing to a file, don't bother displaying it, plus it hangs the program
     if write:
@@ -515,35 +506,35 @@ def make_animated_gif(datadir, outfile):
         print("You probably don't have imagemagick installed")
 
 
-def get_max_heat_bin(sp_through_time, max_pi_island, max_dxy):
+def get_max_heat_bin(sp_through_time, max_pi_local, max_dxy):
     max_heat_bin = 0
 
     for sp_list in sp_through_time.values():
         ## Get the sumstats for this timeslice
         ## Only include extant species in plots
-        #pis = np.array([(x.dxy, x.pi_island) for x in sp_list if x.uuid[0] in extant])
+        #pis = np.array([(x.dxy, x.pi_local) for x in sp_list if x.uuid[0] in extant])
         ## include all species at each timeslice
-        pis = np.array([(x.dxy, x.pi_island) for x in sp_list])
+        pis = np.array([(x.dxy, x.pi_local) for x in sp_list])
 
         ## Empty heatmap we'll write into
         heat = np.zeros((20,20), dtype=np.int)
 
         ## Make the bins
         dxy_bins = np.linspace(0, max_dxy, 20, endpoint=True)
-        pi_island_bins = np.linspace(0, max_pi_island, 20, endpoint=True)
+        pi_local_bins = np.linspace(0, max_pi_local, 20, endpoint=True)
 
         ## Now you have the bins each value belongs in, but you need to 
         ## go through and populate the heat matrix
-        for dxy, pi_island in pis:
+        for dxy, pi_local in pis:
             count_dxy = 0
-            count_pi_island = 0
+            count_pi_local = 0
             try:
                 while not dxy <= dxy_bins[count_dxy]:
                     count_dxy += 1
-                while not pi_island <= pi_island_bins[count_pi_island]:
-                    count_pi_island += 1
+                while not pi_local <= pi_local_bins[count_pi_local]:
+                    count_pi_local += 1
                 ## increment the heatmap point this corresponds to
-                heat[count_dxy][count_pi_island] += 1
+                heat[count_dxy][count_pi_local] += 1
             except Exception as inst:
                 ## Got a value bigger than our current max pi/dxy. ignore.
                 pass
@@ -586,12 +577,12 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
     ## Get a list of UUIDs of the extant species at time 0 (present)
     extant = [x.uuid[0] for x in sp_through_time.values()[-1]]
     ## find the max_pi and max_dxy for all extant species through all timepoints
-    max_pi_island = 0
+    max_pi_local = 0
     max_dxy = 0
     
     ## For each recorded timeslice
     my_dxys = []
-    my_pi_islands = []
+    my_pi_locals = []
 
     ## Get variables we care about
     max_n_species, max_abundance, _, _, _, _ = prep_normalized_plots(sp_through_time)
@@ -602,28 +593,28 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
     for sp_list in sp_through_time.values():
 
         ## Get max pi and max dxy
-        pis = np.array([(x.dxy, x.pi_island) for x in sp_list if x.uuid[0] in extant])
+        pis = np.array([(x.dxy, x.pi_local) for x in sp_list if x.uuid[0] in extant])
         ## pis will be empty if this timeslice includes no extant species
         if pis.any():
             my_max_dxy = max([x[0] for x in pis])
-            my_max_pi_island = max([x[1] for x in pis])
+            my_max_pi_local = max([x[1] for x in pis])
             if max_dxy < my_max_dxy:
                 max_dxy = my_max_dxy
-            if max_pi_island < my_max_pi_island:
-                max_pi_island = my_max_pi_island
+            if max_pi_local < my_max_pi_local:
+                max_pi_local = my_max_pi_local
             my_dxys.append(my_max_dxy)
-            my_pi_islands.append(my_max_pi_island)
+            my_pi_locals.append(my_max_pi_local)
 
 #    max_dxy = np.average(my_dxys)
-#    max_pi_island = np.average(my_pi_islands)
+#    max_pi_local = np.average(my_pi_locals)
     max_dxy = np.median(my_dxys)
-    max_pi_island = np.median(my_pi_islands)
+    max_pi_local = np.median(my_pi_locals)
     ## However this function is calculating the heatmaps is fucked up, so you have to
     ## hard code max values for pi and dxy here.
     max_dxy = 0.04
-    max_pi_island = 0.02
+    max_pi_local = 0.02
     if verbose:
-        print("Got\tmax_dxy - {}\t max_pi_island - {}".format(max_dxy, max_pi_island))
+        print("Got\tmax_dxy - {}\t max_pi_local - {}".format(max_dxy, max_pi_local))
     ## Make the heatmaps, one for each timeslice
     ## TODO: Should we include all species or just the ones that live to the end?
     nslices = len(sp_through_time)
@@ -631,7 +622,7 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
     ## files in an order where we can cat them in numerical order w/o too much fuss
     file_index = 10**len(list(str(nslices)))
 
-    max_bin_val = get_max_heat_bin(sp_through_time, max_pi_island, max_dxy)
+    max_bin_val = get_max_heat_bin(sp_through_time, max_pi_local, max_dxy)
     ## Make the throwaway plot to get the colorbar
     cbar_min, cbar_max = (0, max_bin_val)
     step = 1
@@ -651,29 +642,29 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
         
         ## Get the sumstats for this timeslice
         ## Only include extant species in plots
-        #pis = np.array([(x.dxy, x.pi_island) for x in sp_list if x.uuid[0] in extant])
+        #pis = np.array([(x.dxy, x.pi_local) for x in sp_list if x.uuid[0] in extant])
         ## include all species at each timeslice
-        pis = np.array([(x.dxy, x.pi_island) for x in sp_list])
+        pis = np.array([(x.dxy, x.pi_local) for x in sp_list])
 
         ## Empty heatmap we'll write into
         heat = np.zeros((20,20), dtype=np.int)
 
         ## Make the bins
         dxy_bins = np.linspace(0, max_dxy, 20, endpoint=True)
-        pi_island_bins = np.linspace(0, max_pi_island, 20, endpoint=True)
+        pi_local_bins = np.linspace(0, max_pi_local, 20, endpoint=True)
 
         ## Now you have the bins each value belongs in, but you need to 
         ## go through and populate the heat matrix
-        for dxy, pi_island in pis:
+        for dxy, pi_local in pis:
             count_dxy = 0
-            count_pi_island = 0
+            count_pi_local = 0
             try:
                 while not dxy <= dxy_bins[count_dxy]:
                     count_dxy += 1
-                while not pi_island <= pi_island_bins[count_pi_island]:
-                    count_pi_island += 1
+                while not pi_local <= pi_local_bins[count_pi_local]:
+                    count_pi_local += 1
                 ## increment the heatmap point this corresponds to
-                heat[count_dxy][count_pi_island] += 1
+                heat[count_dxy][count_pi_local] += 1
             except Exception as inst:
                 ## Got a value bigger than our current max pi/dxy. ignore.
                 pass
@@ -710,7 +701,7 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
         plt.colorbar(my_colorbar)
 
         plt.xlabel(u"Nucleotide diversity (\u03c0)", fontsize=20)
-        plt.xticks(np.arange(len(pi_island_bins)), ["{0:.4f}".format(x) for x in pi_island_bins], rotation='vertical')
+        plt.xticks(np.arange(len(pi_local_bins)), ["{0:.4f}".format(x) for x in pi_local_bins], rotation='vertical')
 
         if one_d:
             pass
@@ -730,8 +721,8 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
         #                     path_effects=[PathEffects.withStroke(linewidth=3,foreground="w")])
 
 #        Trying to adjust the stupid x-axis labels
-#        ax1.set_xticks(np.arange(len(pi_island_bins) + 0.5))
-#        ax1.set_xticklabels(["{0:.4f}".format(x) for x in pi_island_bins], rotation="vertical", ha="center")
+#        ax1.set_xticks(np.arange(len(pi_local_bins) + 0.5))
+#        ax1.set_xticklabels(["{0:.4f}".format(x) for x in pi_local_bins], rotation="vertical", ha="center")
 
         if one_d:
             plt.title("1D-SGD", fontsize=24)
@@ -853,29 +844,29 @@ def heatmap_pi_dxy_ascii(data, labels=False):
 
     heat = np.zeros((10,10), dtype=np.int)
 
-    pis = np.array([(x.dxy, x.pi_island) for x in sp])
+    pis = np.array([(x.dxy, x.pi_local) for x in sp])
     ## Set a reasonable default
-    max_pi = max_pi_island = 0.1
+    max_pi = max_pi_local = 0.1
     if pis.any():
         max_pi = max([x[0] for x in pis])
-        max_pi_island = max([x[1] for x in pis])
-        #print(max_pi, max_pi_island)
+        max_pi_local = max([x[1] for x in pis])
+        #print(max_pi, max_pi_local)
 
     ## Make the bins
     pi_bins = np.linspace(0, max_pi, 10)
-    pi_island_bins = np.linspace(0, max_pi_island, 10)
+    pi_local_bins = np.linspace(0, max_pi_local, 10)
 
     ## Now you have the bins each value belongs in, but you need to 
     ## go through and populate the heat matrix
-    for pi, pi_island in pis:
+    for pi, pi_local in pis:
         count_pi = 0
-        count_pi_island = 0
+        count_pi_local = 0
         while not pi <= pi_bins[count_pi]:
             count_pi += 1
-        while not pi_island <= pi_island_bins[count_pi_island]:
-            count_pi_island += 1
+        while not pi_local <= pi_local_bins[count_pi_local]:
+            count_pi_local += 1
         ## increment the heatmap point this corresponds to
-        heat[count_pi][count_pi_island] += 1
+        heat[count_pi][count_pi_local] += 1
     pivals = [x[0] for x in pis]
     dxyvals = [x[1] for x in pis]
 
@@ -894,7 +885,7 @@ def heatmap_pi_dxy_ascii(data, labels=False):
         ret += ' '.join(map(str, row)) + "\n"
 
     if labels:
-        ret += "\t" + str(["{0:.4f}".format(x) for x in pi_island_bins])
+        ret += "\t" + str(["{0:.4f}".format(x) for x in pi_local_bins])
         ret += "\n\t\tpi_w island"
 
     return ret
@@ -1083,7 +1074,7 @@ if __name__ == "__main__":
         extfile = open(os.path.join(args.outdir, "extinction_times.txt"), "w")
         megalogfile = open(os.path.join(args.outdir, "megalog.txt"), "w")
         ## write header
-        megalogfile.write("\t".join(["%eq", "step", "Species_uuid", "Col_time", "Loc_Abund", "Meta_Abund", "pi", "pi_net", "Dxy",  "S", "S_island", "pi_island", "tajD_island", "S_meta", "pi_meta"]))
+        megalogfile.write("\t".join(["%eq", "step", "Species_uuid", "Col_time", "Loc_Abund", "Meta_Abund", "pi", "pi_net", "Dxy",  "S", "S_local", "pi_local", "tajD_island", "S_meta", "pi_meta"]))
         megalogfile.write("\n")
 
         ## Make the output file properly formatted for this model and return the file object
@@ -1193,7 +1184,7 @@ if __name__ == "__main__":
             diversity_stats = dict([(s.uuid[0], (s.pi, s.dxy)) for s in data.get_species()])
 
             abundacesfile.write("{} {}\n".format(percent_equil, data.get_abundances(octaves=False)))
-            pidxyfile.write("{} pi {}\n".format(percent_equil, [s.pi_island for s in data.get_species()]))
+            pidxyfile.write("{} pi {}\n".format(percent_equil, [s.pi_local for s in data.get_species()]))
             pidxyfile.write("{} dxy {}\n".format(percent_equil, [s.dxy for s in data.get_species()]))
             extfile.write("{} {}\n".format(percent_equil, " ".join([str(x) for x in data.extinction_times])))
 
@@ -1236,7 +1227,7 @@ if __name__ == "__main__":
     if args.bottleneck < 1:
         tmp_local = data.local_community
         data.bottleneck(args.bottleneck)
-    pidxyfile.write("{} pi {}\n".format(percent_equil, [s.pi_island for s in data.get_species()]))
+    pidxyfile.write("{} pi {}\n".format(percent_equil, [s.pi_local for s in data.get_species()]))
     pidxyfile.write("{} dxy {}\n".format(percent_equil, [s.dxy for s in data.get_species()]))
     extfile.write("{} {}\n".format(percent_equil, " ".join([str(x) for x in data.extinction_times])))
     equilibria[i] = percent_equil

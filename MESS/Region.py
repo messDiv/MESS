@@ -57,6 +57,7 @@ class Region(object):
         ])
 
         ## Track local communities in this model and colonization rates among them
+        self.metacommunity = MESS.Metacommunity(self.paramsdict["metacommunity_type"])
         self.islands = {}
         self.colonization_matrix = []
 
@@ -112,6 +113,7 @@ class Region(object):
 
             elif param == "metacommunity_type":
                 ## TODO: Check that the types are ok
+                self.set_metacommunity(newvalue)
                 self.paramsdict[param] = newvalue
 
             elif param == "allow_multiple_colonizations":
@@ -183,7 +185,10 @@ class Region(object):
         self.islands[name] = loc
 
 
-    def update_colonization_matrix(self, matrix):
+    def set_metacommunity(self, meta_type):
+        pass    
+
+    def set_colonization_matrix(self, matrix):
         """ Set the matrix that describes colonization rate between local communities."""
         ## TODO: Make sure the matrix is the right shape
         self.colonization_matrix = matrix
@@ -218,10 +223,11 @@ class Region(object):
                 elapsed = datetime.timedelta(seconds=int(time.time()-start))
                 progressbar(sims, i, printstr.format(elapsed))
                 if not do_lambda:
-                    self.simulate(nsteps=gens[i])
+                    res = self.simulate(nsteps=gens[i])
                 else:
-                    self.simulate(_lambda=gens[i], quiet=quiet)
+                    res = self.simulate(_lambda=gens[i], quiet=quiet)
             progressbar(100, 100, " Finished {} simulations\n".format(sims))
+            print(res)
 
         ## Parallelize
         else:
@@ -295,13 +301,18 @@ class Region(object):
             for island in self.islands.values():
                 island.step()
             step += 1
+        ## TODO: Combine stats across local communities if more than on
+        outfile = os.path.join(outdir, "simout.txt")
+        self.islands.values()[0].get_stats().to_csv(outfile, na_rep=0, float_format='%.5f')
+        return self.islands.values()[0].get_stats()
 
 def simulate(data, time=time, quiet=True):
     import os
     LOGGER.debug("Entering sim - {} on pid {}\n{}".format(data, os.getpid(), data.paramsdict))
-    data.simulate(_lambda=time, quiet=quiet)
+    res = data.simulate(_lambda=time, quiet=quiet)
     LOGGER.debug("Leaving sim - {} on pid {}\n{}".format(data, os.getpid(),\
                                                         [str(x) for x in data.islands.values()]))
+    return res
 
 #############################
 ## Model Parameter Info Dicts
