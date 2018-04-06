@@ -1,5 +1,6 @@
 from util import *
 from collections import OrderedDict
+import datetime
 import numpy as np
 import time
 import string
@@ -106,7 +107,6 @@ class Region(object):
                     if low >= high:
                         raise MESSError("Bad parameter for generations: low must be < high value.")
                     self.paramsdict[param] = tuple([low, high])
-                    print(self.paramsdict[param])
                 else:
                     self.paramsdict[param] = int(float(newvalue))
 
@@ -193,23 +193,70 @@ class Region(object):
     def run(self, sims, force=False, ipyclient=None, quiet=False):
         """ Do the heavy lifting here"""
         print("    Generating {} simulations.".format(sims))
+
+        ## Just get all the time values to simulate up front
+        ## Doesn't save time really, just makes housekeeping easier
+        gens = self.paramsdict["generations"]
+        do_lambda = False
+        if type(gens) is tuple:
+            ## Generations is a range so uniform random sample for this sim
+            gens = np.random.randint(gens[0], gens[1], sims)
+        elif gens > 0:
+            ## Generations is just a value
+            gens = np.array([gens] * sims)
+        else:
+            ## If doing lambda we only really care about 3ish signficant figures
+            gens = np.round(np.random.random(sims), 3)
+            do_lambda = True
+        LOGGER.debug("Sample of durations of simulations: {}".format(gens[:10]))
+
+        ## Run serially. This will be slow for anything but toy models.
+        printstr = " Performing Simulations    | {} |"
         if not ipyclient:
-            ## Run serially
+            start = time.time()
             for i in xrange(sims):
-                progressbar(sims, i)
-                gens = self.paramsdict["generations"]
-                if type(gens) is tuple:
-                    ## Generations is a range so uniform random sample for this sim
-                    gens = np.random.randint(gens[0], gens[1])
-                    self.simulate(nsteps=gens)
+                elapsed = datetime.timedelta(seconds=int(time.time()-start))
+                progressbar(sims, i, printstr.format(elapsed))
+                if not do_lambda:
+                    self.simulate(nsteps=gens[i])
                 else:
-                    ## If doing lambda we only really care about 3ish signficant figures
-                    _lambda = round(np.random.random(), 3)
-                    self.simulate(_lambda=_lambda, quiet=quiet)
+                    self.simulate(_lambda=gens[i], quiet=quiet)
+            progressbar(100, 100, " Finished {} simulations\n".format(sims))
+
+        ## Parallelize
+        else:
+            parallel_jobs = {}
+            ## Magic to make the Region() object picklable
+            ipyclient[:].use_dill()
+            lbview = ipyclient.load_balanced_view()
+            for i in xrange(sims):
+                parallel_jobs[i] = lbview.apply(simulate, *(self, gens[i], quiet))
+
+            ## Wait for all jobs to finish
+            start = time.time()
+            while 1:
+                fin = [i.ready() for i in parallel_jobs.values()]
+                elapsed = datetime.timedelta(seconds=int(time.time()-start))
+                progressbar(len(fin), sum(fin),
+                    printstr.format(elapsed))
+                time.sleep(0.1)
+                if len(fin) == sum(fin):
+                    print("")
+                    break
             progressbar(100, 100, "\n    Finished {} simulations\n".format(sims))
 
-        else:
-            pass
+            faildict = {}
+            passdict = {}
+            ## Gather results
+            for result in parallel_jobs:
+                if not parallel_jobs[result].successful():
+                    faildict[result] = parallel_jobs[result].metadata.error
+                else:
+                    passdict[result] = parallel_jobs[result].result()
+            print(passdict)
+            print(faildict)
+
+
     ## This is the function that will be run inside the cluster engine, so
     ## everything it does needs to be
     ##
@@ -249,6 +296,12 @@ class Region(object):
                 island.step()
             step += 1
 
+def simulate(data, time=time, quiet=True):
+    import os
+    LOGGER.debug("Entering sim - {} on pid {}\n{}".format(data, os.getpid(), data.paramsdict))
+    data.simulate(_lambda=time, quiet=quiet)
+    LOGGER.debug("Leaving sim - {} on pid {}\n{}".format(data, os.getpid(),\
+                                                        [str(x) for x in data.islands.values()]))
 
 #############################
 ## Model Parameter Info Dicts
@@ -300,5 +353,4 @@ if __name__ == "__main__":
     #print(data.islands.values()[0])
     print("Testing lambda function.")
     data.simulate(_lambda=.4)
-    print(len(data.islands.values()[0].local_community))
     #data.run(10)

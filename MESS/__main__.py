@@ -200,10 +200,10 @@ def parse_command_line():
 def do_sims(data, args):
     ## if ipyclient is running (and matched profile) then use that one
     if args.ipcluster:
-        ipyclient = ipp.Client(profile=args.ipcluster)
-        data._ipcluster["cores"] = len(ipyclient)
+        ipyclient = ipp.Client(cluster_id=args.ipcluster)
+        data._ipcluster["cores"] = len(ipyclient.ids)
         if not args.quiet:
-            print("   Attached to cluster {} w/ {} engines.".format(args.ipcluster, len(ipyclient)))
+            print("    Attached to cluster {} w/ {} engines.".format(args.ipcluster, data._ipcluster["cores"]))
 
     ## if not then we need to register and launch an ipcluster instance
     elif args.cores >= 0:
@@ -249,13 +249,14 @@ def do_sims(data, args):
                     ipyclient.abort()
                     time.sleep(1)
                     for engine_id, pid in data._ipcluster["pids"].items():
+                        LOGGER.debug("Cleaning up ipcluster engine/pid {}/{}".format(engine_id, pid))
                         if ipyclient.queue_status()[engine_id]["tasks"]:
                             os.kill(pid, 2)
                             LOGGER.info('interrupted engine {} w/ SIGINT to {}'\
                                     .format(engine_id, pid))
                     time.sleep(1)
-                except ipp.NoEnginesRegistered:
-                    pass
+                except ipp.NoEnginesRegistered as inst:
+                    LOGGER.debug(inst)
 
                 ## if CLI, stop jobs and shutdown. Don't use _cli here 
                 ## because you can have a CLI object but use the --ipcluster
