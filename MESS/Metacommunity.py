@@ -36,11 +36,10 @@ class Metacommunity(object):
         ## Also be sure to add it to _paramschecker so the type gets set correctly
         self.paramsdict = OrderedDict([
                         ("meta_type", meta_type),
-                        ("nspecies", 100),
+                        ("nspecies", 1000),
                         ("uniform_abund", 1000000),
                         ("logser_shape", 0.98),
                         ("J", 1000000),
-                        ("trait_values", {}),
         ])
 
         self.community = np.zeros([self.paramsdict["nspecies"]], dtype=METACOMMUNITY_DTYPE)
@@ -92,28 +91,25 @@ class Metacommunity(object):
             LOGGER.debug("set param {} - {} = {}".format(self, param, newvalue))
 
             ## Cast params to correct types
-            if param == "K":
-                self.paramsdict[param] = int(float(newvalue))
-                self.local_community = []
-                self.prepopulate(mode=self.paramsdict["mode"], quiet=True)
+            if param == "meta_type":
+                self.paramsdict[param] = newvalue
 
-            if param in ["mig_clust_size", "age"]:
+            elif param == "nspecies":
                 self.paramsdict[param] = int(float(newvalue))
 
-            elif param in ["colrate"]:
+            elif param == "uniform_abund":
+                self.paramsdict[param] = int(float(newvalue))
+
+            elif param == "logser_shape":
                 self.paramsdict[param] = float(newvalue)
 
-            elif param == "mode":
-                ## Must reup the local community if you change the mode
-                self.paramsdict[param] = newvalue
-                self.local_community = []
-                self.prepopulate(mode=self.paramsdict["mode"], quiet=True)
+            elif param == "J":
+                ## Do nothing. J is calculated from the data and not set, for now.
+                pass
 
-            else:
-                self.paramsdict[param] = newvalue
         except Exception as inst:
             ## Do something intelligent here?
-            raise
+            raise MESSError("    Bad parameter {} {}".format(param, newvalue))
 
 
     def write_params(self, outfile=None, append=True):
@@ -235,7 +231,6 @@ class Metacommunity(object):
             trait_values = np.random.rand(self.paramsdict["nspecies"])
 
         ## If ids haven't been assigned yet, do that here
-        print(ids)
         if not ids:
             ids = np.array(["t"+str(x) for x in range(0, self.paramsdict["nspecies"])])
 
@@ -282,41 +277,27 @@ class Metacommunity(object):
 
         return new_species
 
-    def migrate_step(self):
-        """ Allow multiple colonizations. In this case we return the sampled species
-        as well as a bool reporting whether or not this is the first colonization of
-        this species into the local community so that the coltime can be recorded.
-        multiple colonizations of a species do not update coltime, but we record them
-        for migration rate calculation."""
+    def get_migrant(self):
+        """ Return one 
+        """
 
-        init_col = True
-        migrant_draw = np.random.multinomial(1, self.immigration_probabilities, size=1).argmax()
-        new_species = self.species[migrant_draw]
-        if new_species in [x[0] for x in self.local_community]:
-            #print("Multiple colonization: sp id {}".format(new_species[0]))
-            ## This is a post-colonization migrant so record the event and tell downstream
-            ## not to update the colonization time.
-            self.post_colonization_migrants[new_species] += 1
-            init_col = False
-        else:
-            ## This is a new migrant so init the post-colonization count
-            self.post_colonization_migrants[new_species] = 0
-            #print("New immigrant {}\t{}".format(new_species, self.post_colonization_migrants))
+        migrant_draw = np.random.multinomial(1, self.community["immigration_probabilities"], size=1).argmax()
+        new_species = self.community["ids"][migrant_draw]
+        trait_value = self.community["trait_values"][migrant_draw]
 
-        return new_species, init_col
+        LOGGER.debug("Migrant idx {}\tid {}\t trait_val{}".format(migrant_draw, new_species, trait_value))
+        return new_species, trait_value
 
 
 #############################
 ## Metacommunity Parameter Info Dicts
 #############################
 LOCAL_PARAMS = {
-    "name" : "Local community name",\
-    "mode" : "Local community formation mode (volcanic/landbridge)",\
-    "K" : "Local carrying capacity",\
-    "colrate" : "Colonization rate into local community",\
-    "mig_clust_size" : "# of individuals per colonization event",\
-    "age" : "Local community age",\
-    "allow_multiple_colonizations" : "Toggle allowing post colonization migration",
+    "meta_type" : "One of 'uniform', 'logseries', or valid filename",\
+    "nspecies" : "Number of species in the regional pool",\
+    "uniform_abund" : "If uniform: abundance per species",\
+    "logser_shape" : "If logser: Shape parameter of the distribution",\
+    "J" : "Total # of individuals in the regional pool (calculated)",
 }
 
 
@@ -330,3 +311,6 @@ if __name__ == "__main__":
     print("{} {}".format(data, data.community[:10]))
     data = Metacommunity("../metacommunity_LS4.txt")
     print("{} {}".format(data, data.community[:10]))
+
+    for x in xrange(10):
+        print(data.get_migrant())
