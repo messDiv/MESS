@@ -185,7 +185,7 @@ def cluster_info(ipyclient):
     for hostname in set(hosts):
         result.append("  host compute node: [{} cores] on {}"\
             .format(hosts.count(hostname), hostname))
-    print("\n".join(result))
+    return "\n".join(result)
 
 
 ## GLOBALS
