@@ -17,10 +17,7 @@ import os
 import MESS
 
 from MESS.stats import shannon
-try:
-    from species import species
-except:
-    print("Species module failed to load, things probably won't work right.")
+from species import species
 
 import logging
 LOGGER = logging.getLogger(__name__)
@@ -28,6 +25,10 @@ LOGGER = logging.getLogger(__name__)
 ## Limit on the number of redraws in the event of disallowed
 ## multiple migration, error out and warn if exceeded
 MAX_DUPLICATE_REDRAWS_FROM_METACOMMUNITY = 1500
+
+LOCAL_COMMUNITY_DTYPE = np.dtype([("ids", "|S10"),
+                                  ("founder_flags", "bool"),
+                                  ("colonization_times", "i4")]) 
 
 class LocalCommunity(object):
 
@@ -55,11 +56,21 @@ class LocalCommunity(object):
                         ("allow_multiple_colonizations", allow_multiple_colonizations),
         ])
 
+        ## Dictionary of 'secret' parameters that most people won't want to mess with
+        self._hackersonly = dict([
+                        ("allow_empty", False),
+        ])
+
+        self.local_community = np.zeros([self.paramsdict["K"]], dtype=LOCAL_COMMUNITY_DTYPE)
+
+        ## The regional pool that this local community belongs to
+        ## this is updated by Region._link_local(), so don't set it by hand
+        self.region = ""
 
         self.files = dict({
                 "full_output": [],
-                
                 })
+
         ## summary stats dict
         self.stats = pd.Series(
             index=["_lambda",
@@ -86,23 +97,8 @@ class LocalCommunity(object):
         self.species_objects = []
         self.exponential = exponential
 
-        ## Settings specific to the uniform metacommunity
-        ## This is individuals per species
-        self.uniform_inds = 1000000
-        self.uniform_species = 1000
-
-        ## Variables associated with the metacommunity (these are poorly named)
-        ## total_inds has to be set by set_metacommunity
-        ## This is total individuals in the metacommunity
-        self.total_inds = 0
-        self.immigration_probabilities = []
-        self.abundances = []
-        self.species = []
-
         self.maxabundance = 0
-        self.colonization_rate = colrate
         self.allow_multiple_colonizations = allow_multiple_colonizations
-        self.mig_clust_size = mig_clust_size
 
         ## Variables for tracking the local community
         self.local_community = []
@@ -154,9 +150,6 @@ class LocalCommunity(object):
         #but will have to be updated for competitive exlcusion models
         self.individual_death_probabilites = []
 
-        ## Set the default metacommunity and prepopulate the island
-        self.set_metacommunity("logser")
-        self.prepopulate(mode=self.paramsdict["mode"], quiet=quiet)
 
 
     ## Return fraction of equilibrium obtained by the local community
@@ -164,6 +157,7 @@ class LocalCommunity(object):
         founder_flags = [x[1] for x in self.local_community]
         percent_equil = float(founder_flags.count(False))/len(founder_flags)
         return percent_equil
+
 
     def _paramschecker(self, param, newvalue, quiet=False):
         """ Raises exceptions when params are set to values they should not be"""
@@ -298,6 +292,7 @@ class LocalCommunity(object):
 
         self.maxabundance = np.amax(self.immigration_probabilities)
 
+        ## TODO: This still needs to happen per local community
         ## Init post colonization migrants counters
         self.post_colonization_migrants = {x:0 for x in self.species}
 
@@ -329,38 +324,53 @@ class LocalCommunity(object):
             self.weight = self.trait_evolution_rate_parameter * self.metcommunity_tree_height * (self.competitive_strength ** 2)
 
 
-    def prepopulate(self, mode="landbridge", quiet=False):
-        ## Clean up local_community if it already exists
-        self.local_community = []
-        if mode == "landbridge":
-            ## prepopulate the island w/ total_inds individuals sampled from the metacommunity
-            init_community = np.random.multinomial(self.paramsdict["K"], self.immigration_probabilities, size=1)
-            for i, x in enumerate(init_community[0]):
-                if x:
-                    self.local_community.extend([self.species[i]] * x)
-                    ## Set founder flag
-            self.local_community = [tuple([x, True]) for x in self.local_community]
-            #self.local_community = list(itertools.chain.from_iterable(self.local_community))
+    def prepopulate(self, quiet=False):
+        LOGGER.debug("prepopulating local_community")
 
-            ## All species diverge simultaneously upon creation of the island.
-            for taxon in self.local_community:
-                self.divergence_times[taxon] = 1
-        elif mode == "volcanic":
+        if not self.region:
+            msg = "Skip populating the local community as it is unlinked to a region."
+            LOGGER.error(msg)
+            if MESS.__interactive__: print("    {}".format(msg))
+            return
+
+        ## Clean up local_community if it already exists
+        self.local_community = np.zeros([self.paramsdict["K"]], dtype=LOCAL_COMMUNITY_DTYPE)
+
+        if self.paramsdict["mode"] == "landbridge":
+            ## prepopulate the island w/ a random sample from the metacommunity
+            init_community = np.random.multinomial(self.paramsdict["K"],\
+                                                    self.region.metacommunity.community["immigration_probabilities"],
+                                                    size=1)[0]
+
+            ## Get non-zero indices and construct the local community list
+            idx = init_community.nonzero()
+            tmp_loc = []
+            for sp, count in zip(self.region.metacommunity.community["ids"][idx], init_community[idx]):
+                tmp_loc.extend([sp] * count)
+            self.local_community["ids"] = np.array(tmp_loc)
+
+        elif self.paramsdict["mode"]  == "volcanic":
             ## If not landbridge then doing volcanic, so sample just the most abundant
             ## from the metacommunity
-            new_species = (self.species[self.immigration_probabilities.index(self.maxabundance)], True)
-            self.local_community.append(new_species)
+            max_idx = self.region.metacommunity.community["abundances"].argmax()
+            new_species = self.region.metacommunity.community["ids"][max_idx]
+            print(new_species)
+
             ## prepopulate volcanic either with all the most abundant species in the metacommunity
             ## or with one sample of this species and a bunch of "emtpy deme space". The empty
             ## demes screw up competition/environmental filtering models
-            if True:
-               self.local_community.extend([new_species] * (self.paramsdict["K"] - 1))
+            if self._hackersonly["allow_empty"]:
+                self.local_community["ids"] = np.full(self.paramsdict["K"], None)
+                self.local_community["ids"][0] = new_species
             else:
-                for i in range(1,self.paramsdict["K"]):
-                    self.local_community.append((None,True))
-            self.divergence_times[new_species] = 1
+                self.local_community["ids"] = np.full(self.paramsdict["K"], new_species)
+
         else:
             raise MESSError(BAD_MODE_PARAMETER.format(mode))
+
+        ## At time 0 all individuals are founders and all colonization times are zero
+        self.local_community["founder_flags"] = np.ones(self.paramsdict["K"], dtype=bool)
+        self.local_community["colonization_times"] = np.zeros(self.paramsdict["K"], dtype="i4")
 
         if not quiet:
             print("  Initializing local community:")
@@ -522,7 +532,7 @@ class LocalCommunity(object):
     def step(self, nsteps=1):
         for step in range(nsteps):
             ## Check probability of an immigration event
-            if np.random.random_sample() < self.colonization_rate:
+            if np.random.random_sample() < self.paramsdict["colrate"]:
                 ## If clustered migration remove the necessary number of additional individuals
                 for _ in range(self.paramsdict["mig_clust_size"]):
                     self.death_step()
@@ -548,7 +558,7 @@ class LocalCommunity(object):
                         self.invasion_time = self.current_time
 
                 ## Add the colonizer to the local community, record the colonization time
-                self.local_community.extend([(new_species, False)] * self.mig_clust_size)
+                self.local_community.extend([(new_species, False)] * self.paramsdict["mig_clust_size"])
                 self.colonizations += 1
             else:
                 self.death_step()
@@ -718,30 +728,13 @@ BAD_MODE_PARAMETER = """
 
 
 if __name__ == "__main__":
-    data = LocalCommunity("tmp", K=500, allow_multiple_colonizations=True, quiet=True)
-    #data.set_metacommunity("uniform")
-    #data.environmental_filtering = True
-    #data.competitive_exclusion = True
-    data.set_metacommunity("uniform")
-    data.prepopulate(mode="landbridge", quiet=True)
+    data = MESS.Region("tmp")
+    loc = LocalCommunity("tmp", K=100)
+    data._link_local(loc)
+    ## Allow for either having or not having empty demes
+    assert(len(collections.Counter(loc.local_community["ids"])) < 3)
+    loc.paramsdict["mode"] = "landbridge"
+    loc.prepopulate()
+    assert(len(collections.Counter(loc.local_community["ids"])) > 3)
 
-    for i in range(10000):
-        if not i % 100:
-            print("{} ".format(i)),
-            #print(i, len(data.local_community), len(set(data.local_community)))
-            #print(data.local_community)
-        data.step()
-    print(data.local_community)
-    abundance_distribution = data.get_abundances(octaves=False)
-    print("\n")
-    print(data)
 
-    data.simulate_seqs()
-    print("Species abundance distribution:\n{}".format(abundance_distribution))
-    #print("Colonization times per species:\n{}".format(data.divergence_times))
-    #plt.bar(abundance_distribution.keys(), abundance_distribution.values())
-    #plt.show()
-    print("Species:\n{}".format(data.get_species()))
-    print("Extinction rate - {}".format(data.extinctions/float(data.current_time)))
-    print("Colonization rate - {}".format(data.colonizations/float(data.current_time)))
-    print(data.get_stats())
