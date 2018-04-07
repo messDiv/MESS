@@ -27,8 +27,10 @@ LOGGER = logging.getLogger(__name__)
 MAX_DUPLICATE_REDRAWS_FROM_METACOMMUNITY = 1500
 
 LOCAL_COMMUNITY_DTYPE = np.dtype([("ids", "|S10"),
-                                  ("founder_flags", "bool"),
-                                  ("colonization_times", "i4")]) 
+                                  ("founder_flags", "bool")])
+LOCAL_INFO_DTYPE = np.dtype([("ids", "|S10"),
+                             ("colonization_times", "i4"),
+                             ("post_colonization_migrants", "i4")]) 
 
 class LocalCommunity(object):
 
@@ -61,7 +63,20 @@ class LocalCommunity(object):
                         ("allow_empty", False),
         ])
 
+        ## np array for storing the state of our local community. This array is of length K
+        ## and contains ID and founder flag for each individual in the community
+        ##  * "ids" - ID string of species identifier per individual
+        ##  * "founder_flags" - Boolean flag indicating whether or not the individual belongs
+        ##    to a lineage that was present in the local community at time 0.
         self.local_community = np.zeros([self.paramsdict["K"]], dtype=LOCAL_COMMUNITY_DTYPE)
+
+        ## np array for storing info about each species in the local community. This is for
+        ## info that would be annoying or impossible to keep track of "per individual". 
+        ## The array is of length == len(Counter(local_community))
+        ##  * "ids" - species identifiers present in local community
+        ##  * "colonization_times" - Colonization times per species
+        ##  * "post_colonization_migrants" - Count of post colonization migrants per species
+        self.local_info = np.zeros([], dtype=LOCAL_INFO_DTYPE)
 
         ## The regional pool that this local community belongs to
         ## this is updated by Region._link_local(), so don't set it by hand
@@ -99,12 +114,6 @@ class LocalCommunity(object):
 
         self.maxabundance = 0
         self.allow_multiple_colonizations = allow_multiple_colonizations
-
-        ## Variables for tracking the local community
-        self.local_community = []
-        self.divergence_times = {}
-        ## Track number of secondary colonization events per species
-        self.post_colonization_migrants = {}
 
         self.extinctions = 0
         self.colonizations = 0
@@ -239,69 +248,17 @@ class LocalCommunity(object):
             paramsfile.write("\n")        
 
 
-    def set_metacommunity(self, infile, random=False):
-        """
-        For setting the metacommunity you can either generate a random
-        uniform community or read on in from a file that's basically just
-        a long list of abundances (as ints). Abundances are set from one
-        of these locations then the species labels and immigration probs
-        are calculated from there
-
-        random=True will set random trait values in the range [0-1]
-        """
-        if infile in ["logser", "uniform"]:
-            if infile == "logser":
-                ## Parameter of the logseries distribution
-                p = .98
-                self.abundances = logser.rvs(p, size=self.paramsdict["K"])
-            else:
-                self.abundances = [self.uniform_inds] * self.uniform_species
+    def __str__(self):
+        return "<LocalCommunity {}: Shannon's Entropy {}>".format(self.name, shannon(self.get_abundances(octaves=False)))
 
 
-            self.species = ["t"+str(x) for x in range(0, len(self.abundances))]
-
-            if random:
-                self.species_trait_values = {x:y for x,y in zip(self.species, np.random.rand(len(self.species)))}
-            else:
-                self.species_trait_values = {x:y for x,y in zip(self.species, np.random.rand(len(self.species)))}
-        else:
-            #infile="SpInfo.txt"
-            if os.path.isfile(infile):
-                with open(infile, 'r') as inf:
-                    lines = inf.readlines()
-                    self.metcommunity_tree_height = float(lines[0].split()[0])
-                    self.trait_evolution_rate_parameter = float(lines[1].split()[0])
-
-                    for i in range(2,len(lines)):
-                        info = lines[i].split()
-                        self.species.append(info[0])
-                        self.species_trait_values[info[0]] = (float(info[1]))
-                        self.abundances.append(int(info[2]))
-
-                    ### Try fetching traits as well. If there are no traits then assume we're not doing trait based
-                    #try:
-                    #    inf.seek()
-                    #    self.species_trait_values = {x:y for x,y in enumerate([float(line.split()[1]) for line in inf])}
-                    #except:
-                    #    self.species_trait_values = {x:y for x,y in enumerate(np.zeros(len(self.abundances)))}
-            else:
-                raise Exception("Bad metacommunity input - ".format(infile))
-
-        self.total_inds = sum(self.abundances)
-        self.immigration_probabilities = [float(self.abundances[i])/self.total_inds for i in range(len(self.abundances))]
-
-        self.maxabundance = np.amax(self.immigration_probabilities)
-
+    def fixme(self):
         ## TODO: This still needs to happen per local community
         ## Init post colonization migrants counters
         self.post_colonization_migrants = {x:0 for x in self.species}
 
         if self.environmental_filtering | self.competitive_exclusion:
             self.calculate_death_probabilities()
-
-
-    def __str__(self):
-        return "<LocalCommunity {}: Shannon's Entropy {}>".format(self.name, shannon(self.get_abundances(octaves=False)))
 
 
     def calculate_death_probabilities(self):
@@ -354,7 +311,6 @@ class LocalCommunity(object):
             ## from the metacommunity
             max_idx = self.region.metacommunity.community["abundances"].argmax()
             new_species = self.region.metacommunity.community["ids"][max_idx]
-            print(new_species)
 
             ## prepopulate volcanic either with all the most abundant species in the metacommunity
             ## or with one sample of this species and a bunch of "emtpy deme space". The empty
@@ -368,9 +324,13 @@ class LocalCommunity(object):
         else:
             raise MESSError(BAD_MODE_PARAMETER.format(mode))
 
-        ## At time 0 all individuals are founders and all colonization times are zero
+        ## At time 0 all individuals are founders and all colonization times
+        ## and post colonization migrant counts are zero
         self.local_community["founder_flags"] = np.ones(self.paramsdict["K"], dtype=bool)
-        self.local_community["colonization_times"] = np.zeros(self.paramsdict["K"], dtype="i4")
+
+        ids = np.unique(self.local_community["ids"])
+        self.local_info = np.zeros(len(ids), dtype=LOCAL_INFO_DTYPE)
+        self.local_info["ids"] = ids
 
         if not quiet:
             print("  Initializing local community:")
@@ -378,6 +338,7 @@ class LocalCommunity(object):
             print("    N individuals = {}".format(len(self.local_community)))
                             
 
+    ## Not updated
     def death_step(self):
         ## Select the individual to die
 
@@ -473,6 +434,7 @@ class LocalCommunity(object):
                 print("invasive went extinct")
                 self.invasive = -1
 
+    ## Not updated
     def migrate_no_dupes_step(self):
         ## Loop until you draw species unique in the local community
         ## The flag to tell 'while when we're done, set when you successfully
@@ -505,6 +467,8 @@ class LocalCommunity(object):
 
         return new_species
 
+
+    ## Not updated
     def migrate_step(self):
         """ Allow multiple colonizations. In this case we return the sampled species
         as well as a bool reporting whether or not this is the first colonization of
@@ -529,6 +493,7 @@ class LocalCommunity(object):
         return new_species, init_col
 
 
+    ## Not updated
     def step(self, nsteps=1):
         for step in range(nsteps):
             ## Check probability of an immigration event
@@ -585,7 +550,7 @@ class LocalCommunity(object):
     def get_abundances(self, octaves=False):
         ## Make a counter for the local_community, counts the number of
         ## individuals w/in each species
-        abundances = collections.Counter([x[0] for x in self.local_community])
+        abundances = collections.Counter(self.local_community["ids"])
 
         ## If we were doing mode=volcanic then there may be some remaining
         ## space in our carrying capacity that is unoccupied (indicated by
@@ -627,8 +592,10 @@ class LocalCommunity(object):
             abundance_distribution = dist_in_octaves
         return abundance_distribution
 
+
     ## How strong is the bottleneck? Strength should be interpreted as percent of local
     ## community to retain
+    ## Not done
     def bottleneck(self, strength=1):
         reduction = int(round(self.paramsdict["K"] * strength))
         self.local_community = self.local_community[:reduction]
@@ -646,6 +613,7 @@ class LocalCommunity(object):
                 abund = self.local_community.count(s.uuid)
                 s.update_abundance(abund)
                 self.species_objects[i] = s
+
 
     def simulate_seqs(self):
         self.species_objects = []
@@ -670,7 +638,7 @@ class LocalCommunity(object):
                                         migration_rate=self.post_colonization_migrants[UUID[0]]/float(tdiv)))
                 except:
                     print(UUID)
-                    print(self.post_colonization_migrants)
+                    print(self.local_info["post_colonization_migrants"])
                     raise
         for s in self.species_objects:
             s.simulate_seqs()
@@ -679,9 +647,11 @@ class LocalCommunity(object):
             #if s.abundance > 1000:
             #    print("\n{}".format(s))
 
+
     def set_species(self, species_objects):
         self.species_objects = species_objects
         print(self.species_objects)
+
 
     def get_species(self):
         return(self.species_objects)
@@ -703,6 +673,7 @@ class LocalCommunity(object):
             self.stats.mean_dxy = np.mean(dxys)
 
         return self.stats
+
 
 #############################
 ## Model Parameter Info Dicts
@@ -732,9 +703,10 @@ if __name__ == "__main__":
     loc = LocalCommunity("tmp", K=100)
     data._link_local(loc)
     ## Allow for either having or not having empty demes
-    assert(len(collections.Counter(loc.local_community["ids"])) < 3)
+    assert(len(collections.Counter(loc.local_community["ids"])) <= 2)
     loc.paramsdict["mode"] = "landbridge"
     loc.prepopulate()
     assert(len(collections.Counter(loc.local_community["ids"])) > 3)
 
-
+    #print(loc.local_info[:10])
+    print(loc.get_abundances())
