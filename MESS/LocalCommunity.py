@@ -192,7 +192,6 @@ class LocalCommunity(object):
             ## Do something intelligent here?
             raise
 
-        print(type(self.paramsdict["K"]))
 
     def write_params(self, outfile=None, append=True):
         """
@@ -400,10 +399,12 @@ class LocalCommunity(object):
             try:
                 ## Record the lifetime of this species and remove their record from divergence_times
                 ## Remove the species from the local_info array
-                self.extinction_times.append(self.current_time - self.local_info[victim]["divergence_times"])
-                self.local_info.drop(columns=[victim])
-            except:
-                ## The empty deme will make this freak
+                self.extinction_times.append(self.current_time - self.local_info[victim]["colonization_times"])
+                vic_info = self.local_info.pop(victim)
+                LOGGER.debug("Extinction victim info {}".format(vic_info))
+                ##del self.local_info[victim]
+            except Exception as inst:
+                raise MESSError("Exception during recording extinction - {}".format(inst))
                 pass
             ## If the invasive prematurely goes extinct just pick a new one
             if victim[0] == self.invasive:
@@ -453,7 +454,7 @@ class LocalCommunity(object):
         multiple colonizations of a species do not update coltime, but we record them
         for migration rate calculation."""
 
-        new_species = self.region.get_migrant()
+        new_species, _ = self.region.get_migrant()
         if new_species in self.local_community:
             ## This is a post-colonization migrant so record the event and tell downstream
             ## not to update the colonization time.
@@ -594,16 +595,21 @@ class LocalCommunity(object):
                                                     abundance = local_abund,\
                                                     meta_abundance = meta_abund,
                                                     migration_rate = self.local_info[name]["post_colonization_migrants"]/float(tdiv)))
-            except:
-                print(UUID)
-                print(self.local_info["post_colonization_migrants"])
-                raise
-        for s in self.species_objects:
-            s.simulate_seqs()
-            s.get_sumstats()
-            ## For debugging invasives
-            #if s.abundance > 1000:
-            #    print("\n{}".format(s))
+                for s in self.species_objects:
+                    s.simulate_seqs()
+                    s.get_sumstats()
+                    ## For debugging invasives
+                    #if s.abundance > 1000:
+                    #    print("\n{}".format(s))
+            except Exception as inst:
+                print(self.local_community)
+                print(self.local_info)
+                msg = "Error in simulatt_seqs() - {}\nabundance - {} / meta_abundance {}\n{}\n{}".format(name,
+                                                                                                         local_abund,
+                                                                                                         meta_abund,
+                                                                                                         self.local_info[name],
+                                                                                                         inst)
+                raise MESSError(msg)
 
 
     def set_species(self, species_objects):
@@ -667,9 +673,11 @@ if __name__ == "__main__":
     loc.paramsdict["mode"] = "landbridge"
     loc.prepopulate()
     assert(len(collections.Counter(loc.local_community)) > 3)
-
-    #print(loc.local_info[:10])
     print(loc.get_abundances())
-    loc.step(10000)
+
+    loc.paramsdict["mode"] = "volcanic"
+    loc.prepopulate()
+    loc.step(1000)
     print(loc.local_info)
     print(loc)
+    loc.get_stats()
