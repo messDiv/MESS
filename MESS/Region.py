@@ -227,6 +227,12 @@ class Region(object):
         return new_species, trait_value
 
 
+    def get_abundance(self, species=None):
+        """Return abundance of a species in the regional pool."""
+        ## This is dumb, metacommunity should be pd
+        return self.metacommunity.community["abundances"]\
+                [np.where(self.metacommunity.community["ids"] == "t1")][0]
+
     ## Main function for managing cluster parallelized simulations
     def run(self, sims, force=False, ipyclient=None, quiet=False):
         """ Do the heavy lifting here"""

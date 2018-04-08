@@ -285,7 +285,7 @@ class Metacommunity(object):
         new_species = self.community["ids"][migrant_draw]
         trait_value = self.community["trait_values"][migrant_draw]
 
-        LOGGER.debug("Migrant idx {}\tid {}\t trait_val{}".format(migrant_draw, new_species, trait_value))
+        LOGGER.debug("Migrant idx {}\tid {}\t trait_val {}".format(migrant_draw, new_species, trait_value))
         return new_species, trait_value
 
 
