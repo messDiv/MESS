@@ -92,7 +92,7 @@ class Metacommunity(object):
                 print("  Updating Metacommunity parameters requires running set_metacommunity()"\
                         + " to apply the changes.")
             ## Cast params to correct types
-            if param == "metacommunity_type":
+            elif param == "metacommunity_type":
                 self.paramsdict[param] = newvalue
 
             elif param == "nspecies":
