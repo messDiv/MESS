@@ -16,7 +16,8 @@ import sys
 import os
 import MESS
 
-from MESS.stats import shannon
+from util import MESSError
+from stats import shannon
 from species import species
 
 import logging
@@ -26,11 +27,6 @@ LOGGER = logging.getLogger(__name__)
 ## multiple migration, error out and warn if exceeded
 MAX_DUPLICATE_REDRAWS_FROM_METACOMMUNITY = 1500
 
-LOCAL_COMMUNITY_DTYPE = np.dtype([("ids", "|S10"),
-                                  ("founder_flags", "bool")])
-LOCAL_INFO_DTYPE = np.dtype([("ids", "|S10"),
-                             ("colonization_times", "i4"),
-                             ("post_colonization_migrants", "i4")]) 
 
 class LocalCommunity(object):
 
@@ -63,12 +59,12 @@ class LocalCommunity(object):
                         ("allow_empty", False),
         ])
 
-        ## np array for storing the state of our local community. This array is of length K
-        ## and contains ID and founder flag for each individual in the community
-        ##  * "ids" - ID string of species identifier per individual
-        ##  * "founder_flags" - Boolean flag indicating whether or not the individual belongs
-        ##    to a lineage that was present in the local community at time 0.
-        self.local_community = np.zeros([self.paramsdict["K"]], dtype=LOCAL_COMMUNITY_DTYPE)
+        ## list for storing the state of our local community. The list is much faster
+        ## than a numpy array, plus lists are mutable, which is convenient.
+        ## I have tried making the local community a numpy array twice, and both times
+        ## it turned out to suck both times.
+        self.local_community = []
+        self.founder_flags = []
 
         ## np array for storing info about each species in the local community. This is for
         ## info that would be annoying or impossible to keep track of "per individual". 
@@ -76,7 +72,7 @@ class LocalCommunity(object):
         ##  * "ids" - species identifiers present in local community
         ##  * "colonization_times" - Colonization times per species
         ##  * "post_colonization_migrants" - Count of post colonization migrants per species
-        self.local_info = np.zeros([], dtype=LOCAL_INFO_DTYPE)
+        self.local_info = []
 
         ## The regional pool that this local community belongs to
         ## this is updated by Region._link_local(), so don't set it by hand
@@ -111,9 +107,6 @@ class LocalCommunity(object):
         ## simulated and sumstats calculated
         self.species_objects = []
         self.exponential = exponential
-
-        self.maxabundance = 0
-        self.allow_multiple_colonizations = allow_multiple_colonizations
 
         self.extinctions = 0
         self.colonizations = 0
@@ -160,11 +153,13 @@ class LocalCommunity(object):
         self.individual_death_probabilites = []
 
 
-
     ## Return fraction of equilibrium obtained by the local community
     def _lambda(self):
-        founder_flags = [x[1] for x in self.local_community]
-        percent_equil = float(founder_flags.count(False))/len(founder_flags)
+        percent_equil = 0
+        try:
+            percent_equil = float(self.founder_flags.count(False))/len(self.founder_flags)
+        except ZeroDivisionError:
+            pass
         return percent_equil
 
 
@@ -198,6 +193,7 @@ class LocalCommunity(object):
         except Exception as inst:
             ## Do something intelligent here?
             raise
+
 
     def write_params(self, outfile=None, append=True):
         """
@@ -252,15 +248,7 @@ class LocalCommunity(object):
         return "<LocalCommunity {}: Shannon's Entropy {}>".format(self.name, shannon(self.get_abundances(octaves=False)))
 
 
-    def fixme(self):
-        ## TODO: This still needs to happen per local community
-        ## Init post colonization migrants counters
-        self.post_colonization_migrants = {x:0 for x in self.species}
-
-        if self.environmental_filtering | self.competitive_exclusion:
-            self.calculate_death_probabilities()
-
-
+    ## Not done
     def calculate_death_probabilities(self):
         if self.environmental_filtering:
             #environmental optimum is a random value between (-rate of BM * tree depth, rate of BM * tree depth)
@@ -291,50 +279,46 @@ class LocalCommunity(object):
             return
 
         ## Clean up local_community if it already exists
-        self.local_community = np.zeros([self.paramsdict["K"]], dtype=LOCAL_COMMUNITY_DTYPE)
+        self.local_community = []
 
         if self.paramsdict["mode"] == "landbridge":
             ## prepopulate the island w/ a random sample from the metacommunity
-            init_community = np.random.multinomial(self.paramsdict["K"],\
-                                                    self.region.metacommunity.community["immigration_probabilities"],
-                                                    size=1)[0]
-
-            ## Get non-zero indices and construct the local community list
-            idx = init_community.nonzero()
-            tmp_loc = []
-            for sp, count in zip(self.region.metacommunity.community["ids"][idx], init_community[idx]):
-                tmp_loc.extend([sp] * count)
-            self.local_community["ids"] = np.array(tmp_loc)
+            ## TODO: The underscore here is ignoring trait values
+            self.local_community, _ = self.region.get_nmigrants(self.paramsdict["K"])
 
         elif self.paramsdict["mode"]  == "volcanic":
             ## If not landbridge then doing volcanic, so sample just the most abundant
             ## from the metacommunity
-            max_idx = self.region.metacommunity.community["abundances"].argmax()
-            new_species = self.region.metacommunity.community["ids"][max_idx]
+            ## TODO: The _ is a standin for trait values, have to do something with them
+            new_species, _ = self.region.get_most_abundant()
 
             ## prepopulate volcanic either with all the most abundant species in the metacommunity
             ## or with one sample of this species and a bunch of "emtpy deme space". The empty
             ## demes screw up competition/environmental filtering models
             if self._hackersonly["allow_empty"]:
-                self.local_community["ids"] = np.full(self.paramsdict["K"], None)
-                self.local_community["ids"][0] = new_species
+                self.local_community = [None] * self.paramsdict["K"]
+                self.local_community[0] = new_species
             else:
-                self.local_community["ids"] = np.full(self.paramsdict["K"], new_species)
-
+                self.local_community = [new_species] * self.paramsdict["K"]
         else:
             raise MESSError(BAD_MODE_PARAMETER.format(mode))
 
         ## At time 0 all individuals are founders and all colonization times
         ## and post colonization migrant counts are zero
-        self.local_community["founder_flags"] = np.ones(self.paramsdict["K"], dtype=bool)
-
-        ids = np.unique(self.local_community["ids"])
-        self.local_info = np.zeros(len(ids), dtype=LOCAL_INFO_DTYPE)
-        self.local_info["ids"] = ids
+        ids = list(set(self.local_community))
+        self.local_info = pd.DataFrame([], columns = ids,\
+                                            index = ["colonization_times",\
+                                                     "post_colonization_migrants"])
+        self.local_info = self.local_info.fillna(0)
+        self.founder_flags = [True] * len(self.local_community)
+        print(self.local_info)
+        
+        if self.environmental_filtering | self.competitive_exclusion:
+            self.calculate_death_probabilities()
 
         if not quiet:
             print("  Initializing local community:")
-            print("    N species = {}".format(len(set([x[0] for x in self.local_community]))))
+            print("    N species = {}".format(len(set(self.local_community))))
             print("    N individuals = {}".format(len(self.local_community)))
                             
 
@@ -394,6 +378,7 @@ class LocalCommunity(object):
         else:
             ## If not trait based just select one individual randomly (neutral0
             victim = random.choice(self.local_community)
+
         ## If no invasive has invaded then just do the normal sampling
         if self.invasive == -1:
             ## If no invasive species yet just go on
@@ -405,34 +390,27 @@ class LocalCommunity(object):
                 self.survived_invasives += 1
                 victim = random.choice(self.local_community)
 
-        try:
-            #print(victim)
-            self.local_community.remove(victim)
-        except Exception as inst:
-            print(victim)
-            print(self.local_community)
-            raise
+        ## Clean up local community list and founder flag list
+        idx = self.local_community.index(victim)
+        self.local_community.pop(idx)
+        self.founder_flags.pop(idx)
 
         ## Record local extinction events
         if not victim in self.local_community:
-            ## This was supposed to not record "extinctions" of empty deme space
-            ## but it fucks up the calculation of extinction rate
-            ##if not victim[0] == None:
-            if True:
-                self.extinctions += 1
-                try:
-                    ## reset post colonization migrant count for this species
-                    ## Record the lifetime of this species and remove their record from divergence_times
-                    self.post_colonization_migrants[victim[0]] = 0
-                    self.extinction_times.append(self.current_time - self.divergence_times[victim])
-                    del self.divergence_times[victim]
-                except:
-                    ## The empty deme will make this freak
-                    pass
+            self.extinctions += 1
+            try:
+                ## Record the lifetime of this species and remove their record from divergence_times
+                ## Remove the species from the local_info array
+                self.extinction_times.append(self.current_time - self.local_info[victim]["divergence_times"])
+                self.local_info.drop(columns=[victim])
+            except:
+                ## The empty deme will make this freak
+                pass
             ## If the invasive prematurely goes extinct just pick a new one
-            if victim == self.invasive:
-                print("invasive went extinct")
+            if victim[0] == self.invasive:
+                LOGGER.info("invasive went extinct")
                 self.invasive = -1
+
 
     ## Not updated
     def migrate_no_dupes_step(self):
@@ -446,13 +424,9 @@ class LocalCommunity(object):
         idiot_count = 0
         while not unique:
             ## Sample from the metacommunity
-            migrant_draw = np.random.multinomial(1, self.immigration_probabilities, size=1)
-            #print("Immigration event - {}".format(np.where(migrant_draw == 1)))
-            #print("Immigrant - {}".format(self.species[np.where(migrant_draw == 1)[1][0]]))
-            new_species = self.species[np.where(migrant_draw == 1)[1][0]]
-            ##TODO: Should set a flag to guard whether or not to allow multiple colonizations
-            #print(new_species)
-            if new_species not in [x[0] for x in self.local_community]:
+            ## TODO: _ here is the ignored trait value, for now
+            new_species, _ = self.region.get_migrant()
+            if new_species not in self.local_community:
                 ## Got a species not in the local community
                 unique = 1
             else:
@@ -465,6 +439,10 @@ class LocalCommunity(object):
                migration (unimplemented)."""
                sys.exit(msg)
 
+        ## This is a new migrant so init local_info for it
+        self.local_info[new_species] = 0
+        self.local_info[new_species]["post_colonization_migrants"] = 0
+        self.local_info[new_species]["colonization_times"] = self.current_time
         return new_species
 
 
@@ -476,21 +454,17 @@ class LocalCommunity(object):
         multiple colonizations of a species do not update coltime, but we record them
         for migration rate calculation."""
 
-        init_col = True
-        migrant_draw = np.random.multinomial(1, self.immigration_probabilities, size=1).argmax()
-        new_species = self.species[migrant_draw]
-        if new_species in [x[0] for x in self.local_community]:
-            #print("Multiple colonization: sp id {}".format(new_species[0]))
+        new_species = self.region.get_migrant()
+        if new_species in self.local_community:
             ## This is a post-colonization migrant so record the event and tell downstream
             ## not to update the colonization time.
-            self.post_colonization_migrants[new_species] += 1
-            init_col = False
+            self.local_info[new_species]["post_colonization_migrants"] += 1
         else:
-            ## This is a new migrant so init the post-colonization count
-            self.post_colonization_migrants[new_species] = 0
-            #print("New immigrant {}\t{}".format(new_species, self.post_colonization_migrants))
+            ## This is a new migrant so init local_info for it
+            self.local_info[new_species] = 0
+            self.local_info[new_species]["colonization_times"] = self.current_time
 
-        return new_species, init_col
+        return new_species
 
 
     ## Not updated
@@ -504,44 +478,37 @@ class LocalCommunity(object):
 
                 ## Grab the new colonizing species
                 ## the init_colonization flag is used to test whether to update the divergence time
-                init_colonization = True
                 if self.paramsdict["allow_multiple_colonizations"]:
-                    new_species, init_colonization = self.migrate_step()
+                    new_species = self.migrate_step()
                 else:
                     new_species = self.migrate_no_dupes_step()
-
-                ## Only record coltime if this is the first time this species enters the local community
-                if init_colonization:
-                    self.divergence_times[(new_species, False)] = self.current_time
 
                 ## Only set the invasive species once at the time of next migration post invasion time
                 ## If invasion time is < 0 this means "Don't do invasive"
                 if not self.invasion_time < 0:
                     if self.invasive == -1 and self.current_time >= self.invasion_time:
-                        self.invasive = (new_species, False)
+                        self.invasive = new_species
                         LOGGER.info("setting invasive species {} at time {}".format(self.invasive, self.current_time))
                         self.invasion_time = self.current_time
 
                 ## Add the colonizer to the local community, record the colonization time
-                self.local_community.extend([(new_species, False)] * self.paramsdict["mig_clust_size"])
+                self.local_community.append(new_species)
+                self.founder_flags.append(False)
                 self.colonizations += 1
             else:
                 self.death_step()
-                ## Sample from the local community, including empty demes
                 ## Sample all available from local community (community grows slow in volcanic model)
-                ## Also, lots of early turnover
-                ## This all was only true before i implemented the full rosindell/harmon model,
-                ## There are no more empty demes in the current config
-                chx = np.random.randint(0, len(self.local_community))
-                self.local_community.append(self.local_community[chx])
-                ## Much faster than random.choice
-                #self.local_community.append(random.choice(self.local_community))
+                ## This is the fastest way to sample from a list. >4x faster than np.random.choice
+                chx = random.choice(self.local_community)
+                self.local_community.append(chx)
+                idx = self.local_community.index(chx)
+                self.founder_flags.append(self.founder_flags[idx])
 
                 ## Sample only from available extant species (early pops grow quickly in the volcanic model)
                 ## If you do this, the original colonizer just overwhelms everything else
                 ## This is more similar to the Rosindell and Harmon model, in which they simply
                 ## prepopulate the island entirely with one species. This is effectively the same
-                #self.local_community.append(random.choice([x for x in self.local_community if not x[0] == 0]))
+                #self.local_community.append(random.choice([x for x in self.local_community if not x == None]))
 
             ## update current time
             self.current_time += 1
@@ -550,7 +517,7 @@ class LocalCommunity(object):
     def get_abundances(self, octaves=False):
         ## Make a counter for the local_community, counts the number of
         ## individuals w/in each species
-        abundances = collections.Counter(self.local_community["ids"])
+        abundances = collections.Counter(self.local_community)
 
         ## If we were doing mode=volcanic then there may be some remaining
         ## space in our carrying capacity that is unoccupied (indicated by
@@ -700,13 +667,18 @@ BAD_MODE_PARAMETER = """
 
 if __name__ == "__main__":
     data = MESS.Region("tmp")
-    loc = LocalCommunity("tmp", K=100)
+    loc = LocalCommunity("wat", K=100)
     data._link_local(loc)
+    print(loc)
+    print(loc.local_info)
     ## Allow for either having or not having empty demes
-    assert(len(collections.Counter(loc.local_community["ids"])) <= 2)
+    assert(len(collections.Counter(loc.local_community)) <= 2)
     loc.paramsdict["mode"] = "landbridge"
     loc.prepopulate()
-    assert(len(collections.Counter(loc.local_community["ids"])) > 3)
+    assert(len(collections.Counter(loc.local_community)) > 3)
 
     #print(loc.local_info[:10])
     print(loc.get_abundances())
+    loc.step(10000)
+    print(loc.local_info)
+    print(loc)

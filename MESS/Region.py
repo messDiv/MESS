@@ -79,8 +79,9 @@ class Region(object):
         """ Just link a local community that was created externally.
         This is primarily used by __main__ during the initialization process."""
         LOGGER.debug("Linking local community - {}".format(local_community))
+        local_community.region = self
+        local_community.prepopulate()
         self.islands[local_community.paramsdict["name"]] = local_community
-
 
     def _link_metacommunity(self, metacommunity):
         """ Just import a metacommunity object that's been created externally."""
@@ -193,10 +194,37 @@ class Region(object):
     def set_metacommunity(self, meta_type):
         pass    
 
+
     def set_colonization_matrix(self, matrix):
         """ Set the matrix that describes colonization rate between local communities."""
         ## TODO: Make sure the matrix is the right shape
         self.colonization_matrix = matrix
+
+
+    ###############################################
+    ## Accessor for sampling from the regional pool
+    ###############################################
+    def get_nmigrants(self, nmigrants=1):
+        """Get a sample of inidividuals from the regional pool.
+        Returns a list of species ids"""
+
+        ## TODO: This could potentially be used to draw migrants from
+        ## the local island pool as well as the metacommunity
+        migrants, trait_vals = self.metacommunity.get_nmigrants(nmigrants)
+        return migrants, trait_vals
+
+
+    def get_migrant(self):
+        return self.metacommunity.get_migrant()
+
+
+    def get_most_abundant(self):
+        """Just get the most abundant species from the metacommunity"""
+
+        max_idx = self.metacommunity.community["abundances"].argmax()
+        new_species = self.metacommunity.community["ids"][max_idx] 
+        trait_value = self.metacommunity.community["trait_values"][max_idx]
+        return new_species, trait_value
 
 
     ## Main function for managing cluster parallelized simulations
@@ -368,3 +396,4 @@ if __name__ == "__main__":
     print("Testing lambda function.")
     data.simulate(_lambda=.4)
     #data.run(10)
+    print(data.get_most_abundant())

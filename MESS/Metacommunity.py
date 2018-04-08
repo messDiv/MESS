@@ -281,13 +281,22 @@ class Metacommunity(object):
     def get_migrant(self):
         """ Return one 
         """
-
         migrant_draw = np.random.multinomial(1, self.community["immigration_probabilities"], size=1).argmax()
         new_species = self.community["ids"][migrant_draw]
         trait_value = self.community["trait_values"][migrant_draw]
 
         LOGGER.debug("Migrant idx {}\tid {}\t trait_val{}".format(migrant_draw, new_species, trait_value))
         return new_species, trait_value
+
+
+    def get_nmigrants(self, nmigrants=1):
+        migrants = []
+        trait_vals = []
+        for i in range(nmigrants):
+            mig, trait = self.get_migrant()
+            migrants.append(mig)
+            trait_vals.append(trait)
+        return migrants, trait_vals
 
 
 #############################
@@ -316,4 +325,7 @@ if __name__ == "__main__":
     for x in xrange(10):
         print(data.get_migrant())
 
-    data = set_params(data, "meta_type", "logser")
+    data = set_params(data, "metacommunity_type", "logser")
+
+    migs, traits = data.get_nmigrants(5)
+    print(migs, traits)
