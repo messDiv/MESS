@@ -173,10 +173,9 @@ class LocalCommunity(object):
             ## Cast params to correct types
             if param == "K":
                 self.paramsdict[param] = int(float(newvalue))
-                self.local_community = []
-                self.prepopulate(mode=self.paramsdict["mode"], quiet=True)
+                self.prepopulate(quiet=True)
 
-            if param in ["mig_clust_size", "age"]:
+            elif param in ["mig_clust_size", "age"]:
                 self.paramsdict[param] = int(float(newvalue))
 
             elif param in ["colrate"]:
@@ -185,8 +184,7 @@ class LocalCommunity(object):
             elif param == "mode":
                 ## Must reup the local community if you change the mode
                 self.paramsdict[param] = newvalue
-                self.local_community = []
-                self.prepopulate(mode=self.paramsdict["mode"], quiet=True)
+                self.prepopulate(quiet=True)
 
             else:
                 self.paramsdict[param] = newvalue
@@ -194,6 +192,7 @@ class LocalCommunity(object):
             ## Do something intelligent here?
             raise
 
+        print(type(self.paramsdict["K"]))
 
     def write_params(self, outfile=None, append=True):
         """
@@ -584,29 +583,21 @@ class LocalCommunity(object):
 
     def simulate_seqs(self):
         self.species_objects = []
-        ## Setting colonization_time as a scaling factor rather than as a raw tdiv
-        ## The old way of doing this is `self.current_time - tdiv`
-        #self.species_objects = [species(UUID=UUID, colonization_time=1/float(tdiv), abundance=self.local_community.count(UUID),\
-        for UUID, tcol in self.divergence_times.items():
-            if UUID in self.local_community:
-                meta_abundance = -1
-                for x in self.species:
-                    if UUID[0] == x:
-                        meta_abundance = self.abundances[int(x[1:])]
-                #meta_abundance = [x[1] for x in self.abundances if x[0] == UUID[0]]
-                #meta_abundance = self.abundances[self.species.index(UUID[0])]
-                abundance = self.local_community.count(UUID)
-                #print(self.local_community)
-                try:
-                    tdiv = self.current_time - tcol
-                    self.species_objects.append(species(UUID=UUID, colonization_time=tdiv,\
-                                        exponential=self.exponential, abundance=abundance,\
-                                        meta_abundance=meta_abundance,
-                                        migration_rate=self.post_colonization_migrants[UUID[0]]/float(tdiv)))
-                except:
-                    print(UUID)
-                    print(self.local_info["post_colonization_migrants"])
-                    raise
+        for name, coltime in self.local_info.loc["colonization_times"].iteritems():
+            try:
+                meta_abund = self.region.get_abundance(name)
+                local_abund = self.local_community.count(name)
+                tdiv = self.current_time - coltime 
+                self.species_objects.append(species(UUID=name,
+                                                    colonization_time = tdiv,\
+                                                    exponential = self.exponential,
+                                                    abundance = local_abund,\
+                                                    meta_abundance = meta_abund,
+                                                    migration_rate = self.local_info[name]["post_colonization_migrants"]/float(tdiv)))
+            except:
+                print(UUID)
+                print(self.local_info["post_colonization_migrants"])
+                raise
         for s in self.species_objects:
             s.simulate_seqs()
             s.get_sumstats()
