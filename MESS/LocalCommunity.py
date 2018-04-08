@@ -30,7 +30,7 @@ MAX_DUPLICATE_REDRAWS_FROM_METACOMMUNITY = 1500
 
 class LocalCommunity(object):
 
-    def __init__(self, name=None, K=5000, colrate=0.01, allow_multiple_colonizations=False, \
+    def __init__(self, name=None, K=5000, colrate=0.01, allow_multiple_colonizations=True, \
                 mig_clust_size=1, exponential=False, quiet=False):
         self.quiet = quiet
 
@@ -589,32 +589,28 @@ class LocalCommunity(object):
                 meta_abund = self.region.get_abundance(name)
                 local_abund = self.local_community.count(name)
                 tdiv = self.current_time - coltime 
-                self.species_objects.append(species(UUID=name,
-                                                    colonization_time = tdiv,\
-                                                    exponential = self.exponential,
-                                                    abundance = local_abund,\
-                                                    meta_abundance = meta_abund,
-                                                    migration_rate = self.local_info[name]["post_colonization_migrants"]/float(tdiv)))
-                for s in self.species_objects:
-                    s.simulate_seqs()
-                    s.get_sumstats()
-                    ## For debugging invasives
-                    #if s.abundance > 1000:
-                    #    print("\n{}".format(s))
+                sp = species(UUID=name,
+                             colonization_time = tdiv,\
+                             exponential = self.exponential,
+                             abundance = local_abund,\
+                             meta_abundance = meta_abund,
+                             migration_rate = self.local_info[name]["post_colonization_migrants"]/float(tdiv))
+                sp.simulate_seqs()
+                sp.get_sumstats()
+                self.species_objects.append(sp)
+                LOGGER.debug(sp)
+                ## For debugging invasives
+                #if s.abundance > 1000:
+                #    print("\n{}".format(s))
             except Exception as inst:
                 print(self.local_community)
                 print(self.local_info)
-                msg = "Error in simulatt_seqs() - {}\nabundance - {} / meta_abundance {}\n{}\n{}".format(name,
+                msg = "Error in simulate_seqs() - {}\nabundance - {} / meta_abundance {}\n{}\n{}".format(name,
                                                                                                          local_abund,
                                                                                                          meta_abund,
                                                                                                          self.local_info[name],
                                                                                                          inst)
                 raise MESSError(msg)
-
-
-    def set_species(self, species_objects):
-        self.species_objects = species_objects
-        print(self.species_objects)
 
 
     def get_species(self):
@@ -664,7 +660,7 @@ BAD_MODE_PARAMETER = """
 
 if __name__ == "__main__":
     data = MESS.Region("tmp")
-    loc = LocalCommunity("wat", K=100)
+    loc = LocalCommunity("wat", K=5000)
     data._link_local(loc)
     print(loc)
     print(loc.local_info)
@@ -677,7 +673,8 @@ if __name__ == "__main__":
 
     loc.paramsdict["mode"] = "volcanic"
     loc.prepopulate()
-    loc.step(1000)
-    print(loc.local_info)
-    print(loc)
-    loc.get_stats()
+    loc.step(100000)
+    print(len(set(loc.local_community)))
+    print(loc.local_info.shape)
+    print("getting stats")
+    print(loc.get_stats())

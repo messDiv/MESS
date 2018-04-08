@@ -265,6 +265,7 @@ class Region(object):
                     res = self.simulate(nsteps=gens[i])
                 else:
                     res = self.simulate(_lambda=gens[i], quiet=quiet)
+                LOGGER.debug("Finished simulation {} stats:\n{}".format(i, res))
             progressbar(100, 100, " Finished {} simulations\n".format(sims))
 
         ## Parallelize
@@ -334,15 +335,17 @@ class Region(object):
 
         while not done_func():
             ## This is not ideal functionality, but it at least gives you a sense of progress
-            ##if not quiet:
-            ##    progressbar(100, 100, "{}%".format(self.islands.values()[0]._lambda()))
+            if not quiet:
+                progressbar(100, 100, "{}%".format(self.islands.values()[0]._lambda()))
             for island in self.islands.values():
                 island.step()
             step += 1
         ## TODO: Combine stats across local communities if more than on
         outfile = os.path.join(outdir, "simout.txt")
-        self.islands.values()[0].get_stats().to_csv(outfile, na_rep=0, float_format='%.5f')
-        return self.islands.values()[0].get_stats()
+        statsdf = self.islands.values()[0].get_stats()
+        statsdf.to_csv(outfile, na_rep=0, float_format='%.5f')
+        return statsdf
+
 
 def simulate(data, time=time, quiet=True):
     import os
