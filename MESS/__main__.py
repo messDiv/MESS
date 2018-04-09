@@ -191,6 +191,9 @@ def parse_command_line():
         type=str, nargs="?", const="default",
         help="connect to ipcluster profile (default: 'default')")
 
+    parser.add_argument("--fancy_plots", action='store_true',
+        help="Construct fancy plots and animated gifs.")
+
     ## if no args then return help message
     if len(sys.argv) == 1:
         parser.print_help()
@@ -292,6 +295,30 @@ def do_sims(data, args):
             LOGGER.error("shutdown warning: %s", inst2)
 
 
+def fancy_plots(data, args):
+    """ Fancy plots are nice to generate once in a while, but you don't want to
+    be making them for all your actual simulations because they take a long time
+    and plus one or two will be very representative of a model."""
+
+    try:
+        if args.ipcluster or args.cores >=0:
+            print("    Generating fancy plots so running locally on one core.")
+
+        data.fancy_plots(quiet=args.quiet)
+    except KeyboardInterrupt as inst:
+        print("\n  Keyboard Interrupt by user")
+        LOGGER.info("assembly interrupted by user.")
+    except MESSError as inst:
+        LOGGER.error("MESSError: %s", inst)
+        print("\n  Encountered an error (see details in ./mess_log.txt)"+\
+              "\n  Error summary is below -------------------------------"+\
+              "\n{}".format(inst))
+    except Exception as inst:
+        LOGGER.error(inst)
+        print("\n  Encountered an unexpected error (see ./mess_log.txt)"+\
+              "\n  Error message is below -------------------------------"+\
+              "\n{}".format(inst))
+
 def main():
     """ main function """
     print(MESS_HEADER)
@@ -331,7 +358,7 @@ def main():
 
     ## if params then must provide action argument with it
     if args.params:
-        if not any([args.results, args.sims]):
+        if not any([args.results, args.sims, args.fancy_plots]):
             print(MESS_USAGE)
             sys.exit(2)
 
@@ -354,13 +381,18 @@ def main():
         LOGGER.debug("region params - {}\nmetacommunity params - {}\nisland params - {}"\
                     .format(region_params, meta_params, island_params))
 
+        ## launch or load Region with custom profile/pid
+        data = getregion(args, region_params, meta_params, island_params)
+
         ## Print results and exit immediately
         if args.results:
             showstats(region_params, meta_params, island_params)
-            sys.exit()
+
+        elif args.fancy_plots:
+            fancy_plots(data, args)
 
         ## Generate numerous simulations
-        if args.sims:
+        elif args.sims:
             ## Only blank the log file if we're actually going to do real
             ## work. In practice the log file should never get this big.
             if os.path.exists(MESS.__debugfile__):
@@ -368,8 +400,6 @@ def main():
                     with open(MESS.__debugfile__, 'w') as clear:
                         clear.write("file reset")
 
-            ## launch or load Region with custom profile/pid
-            data = getregion(args, region_params, meta_params, island_params)
             if not args.quiet:
                 print("\n    {}".format(data))
 
@@ -377,6 +407,7 @@ def main():
                 do_sims(data, args)
             except Exception as inst:
                 print("  Unexpected error - {}".format(inst))
+
 
 BAD_PARAMETER_ERROR = """
     Malformed params file: {}

@@ -7,6 +7,7 @@ except:
     print("matplotlib and/or ascii_graph not installed, so plotting is disabled.")
 from scipy.stats import logser
 from collections import OrderedDict
+from scipy.stats import iqr
 import collections
 import pandas as pd
 import numpy as np
@@ -17,7 +18,7 @@ import os
 import MESS
 
 from util import MESSError
-from stats import shannon
+from stats import shannon, SAD
 from species import species
 
 import logging
@@ -116,6 +117,9 @@ class LocalCommunity(object):
         ## We can plot this and average it to figure out how long
         ## species hang around in the local community
         self.extinction_times = []
+        ## Dicts for tracking esoteric shit if _log() is called
+        self.lambda_through_time = {}
+        self.species_through_time = {}
 
         ## The invasive species identity
         self.invasive = -1
@@ -242,8 +246,16 @@ class LocalCommunity(object):
             paramsfile.write("\n")        
 
 
+    def _log(self):
+        """ A function for occasionally logging a ton of information through time.
+        This is normally only really used for fancy plotting."""
+        self.lambda_through_time[self.current_time] = self._lambda()
+        self.simulate_seqs()
+        self.species_through_time[self.current_time] = self.species_objects
+
+
     def __str__(self):
-        return "<LocalCommunity {}: Shannon's Entropy {}>".format(self.name, shannon(self.get_abundances(octaves=False)))
+        return "<LocalCommunity {}: Shannon's Entropy {}>".format(self.name, shannon(self.get_abundances()))
 
 
     ## Not done
@@ -309,15 +321,14 @@ class LocalCommunity(object):
                                                      "post_colonization_migrants"])
         self.local_info = self.local_info.fillna(0)
         self.founder_flags = [True] * len(self.local_community)
-        print(self.local_info)
         
         if self.environmental_filtering | self.competitive_exclusion:
             self.calculate_death_probabilities()
 
         if not quiet:
-            print("  Initializing local community:")
-            print("    N species = {}".format(len(set(self.local_community))))
-            print("    N individuals = {}".format(len(self.local_community)))
+            print("    Initializing local community:")
+            print("      N species = {}".format(len(set(self.local_community))))
+            print("      N individuals = {}".format(len(self.local_community)))
                             
 
     ## Not updated
@@ -515,49 +526,7 @@ class LocalCommunity(object):
 
 
     def get_abundances(self, octaves=False):
-        ## Make a counter for the local_community, counts the number of
-        ## individuals w/in each species
-        abundances = collections.Counter(self.local_community)
-
-        ## If we were doing mode=volcanic then there may be some remaining
-        ## space in our carrying capacity that is unoccupied (indicated by
-        ## None in the abundances.keys()
-        try:
-            abundances.pop(None)
-        except KeyError:
-            pass
-
-        ## Make a set of abundances to get all the unique values
-        abundance_classes = set(abundances.values())
-
-        ## Now for each abundance class you have to go through and
-        ## count the number of species at that abundance.
-        ## This is currently stupid because in python there's no
-        ## straightforward way to get keys from values in a dict.
-        abundance_distribution = collections.OrderedDict()
-        for i in abundance_classes:
-            count = 0
-            for _, v in abundances.items():
-                if v == i:
-                    count += 1
-            abundance_distribution[i] = count
-        if octaves:
-            dist_in_octaves = collections.OrderedDict()
-            min = 1
-            max = 2
-            while max/2 < len(abundance_distribution):
-                ## Count up all species w/in each octave
-                count = 0
-                ## Here `i` is the abundance class and
-                ## `j` is the count for that class
-                for i, j in abundance_distribution.items():
-                    if (i < max) and (i >= min):
-                        count += j
-                dist_in_octaves[min] = count
-                min = min * 2
-                max = max * 2
-            abundance_distribution = dist_in_octaves
-        return abundance_distribution
+        return SAD(self.local_community)
 
 
     ## How strong is the bottleneck? Strength should be interpreted as percent of local
@@ -613,24 +582,29 @@ class LocalCommunity(object):
                 raise MESSError(msg)
 
 
-    def get_species(self):
-        return(self.species_objects)
-
-
     def get_stats(self):
         LOGGER.debug("Entering get_stats()")
         self.simulate_seqs()
+
         self.stats._lambda = self._lambda()
+        self.stats.generation = self.current_time
+        self.stats.K = self.paramsdict["K"]
+        self.stats.colrate = self.paramsdict["colrate"]
         self.stats.colrate_calculated = self.colonizations/float(self.current_time)
         self.stats.extrate_calculated = self.extinctions/float(self.current_time)
+        self.stats.R = len(set(self.local_community))
         self.stats.shannon = shannon(self.get_abundances(octaves=False))
 
-        sp = self.get_species()
-        if sp:
-            pis = np.array([x.pi_local for x in sp])
-            dxys = np.array([x.dxy for x in sp])
-            self.stats.mean_pi = np.mean(pis)
-            self.stats.mean_dxy = np.mean(dxys)
+        pis = np.array([x.pi_local for x in self.species_objects])
+        dxys = np.array([x.dxy for x in self.species_objects])
+        self.stats.mean_pi = np.mean(pis)
+        self.stats.stdv_pi = np.std(pis)
+        self.stats.median_pi = np.median(pis)
+        self.stats.iqr_pi = iqr(pis)
+        self.stats.mean_dxy = np.mean(dxys)
+        self.stats.stdv_dxy = np.std(dxys)
+        self.stats.median_dxy= np.median(dxys)
+        self.stats.iqr_dxy = iqr(dxys)
 
         return self.stats
 
@@ -678,3 +652,4 @@ if __name__ == "__main__":
     print(loc.local_info.shape)
     print("getting stats")
     print(loc.get_stats())
+    print(loc)

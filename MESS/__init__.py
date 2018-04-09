@@ -20,6 +20,8 @@ from .util import *
 from .Region import Region 
 from .LocalCommunity import LocalCommunity
 from .Metacommunity import Metacommunity
+from . import plotting
+from . import stats
 
 ####################################################################
 ## create logger for debugging

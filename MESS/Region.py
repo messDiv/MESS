@@ -83,11 +83,27 @@ class Region(object):
         local_community.prepopulate()
         self.islands[local_community.paramsdict["name"]] = local_community
 
+
     def _link_metacommunity(self, metacommunity):
         """ Just import a metacommunity object that's been created externally."""
         LOGGER.debug("Linking metacommunity - {}".format(metacommunity))
         self.metacommunity = metacommunity
 
+
+    def _get_simulation_outdir(self, prefix=""):
+        """ Construct an output directory for a simulation run.
+        Make output directory formatted like <output_dir>/<name>-<timestamp><random 2 digit #>
+        This will _mostly_ avoid output directory collisions, right?"""
+
+        dirname = prefix + self.paramsdict["simulation_name"]
+        outdir = os.path.join(self.paramsdict["project_dir"],\
+                              dirname\
+                              + "-" + str(time.time()).replace(".", "")[-7:]\
+                              + str(np.random.randint(100)))
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+
+        return outdir
 
     def _paramschecker(self, param, newvalue, quiet=False):
         """ Raises exceptions when params are set to values they should not be"""
@@ -316,14 +332,8 @@ class Region(object):
         if _lambda > 0 and nsteps > 0:
             LOGGER.error("simulate accepts only one of either lambda or nsteps args")
             return
-        ## Make output directory formatted like <output_dir>/<name>-<timestamp><random 2 digit #>
-        ## This will _mostly_ avoid output directory collisions, right?
-        outdir = os.path.join(self.paramsdict["project_dir"],\
-                              self.paramsdict["simulation_name"]\
-                              + "-" + str(time.time()).replace(".", "")[-7:]\
-                              + str(np.random.randint(100)))
-        if not os.path.exists(outdir):
-            os.mkdir(outdir)
+
+        outdir = self._get_simulation_outdir()
 
         step = 0
         ## Create an temp function to test whether we've reached the end of this simulation
@@ -346,6 +356,43 @@ class Region(object):
         statsdf.to_csv(outfile, na_rep=0, float_format='%.5f')
         return statsdf
 
+
+    def fancy_plots(self, quiet=True):
+        LOGGER.debug("Entering fancy_plots()")
+
+        _lambda = 0
+        step = 0
+        while _lambda < 1:
+            for island in self.islands.values():
+                island.step()
+            _lambda = self.islands.values()[0]._lambda()
+            if not quiet:
+                progressbar(100, np.ceil(_lambda * 100), "Performing simulation")
+            step += 1
+            if not step % self.paramsdict["recording_period"]:
+               for island in self.islands.values():
+                    island._log() 
+        progressbar(100, 100, "Finished simulation\n")
+
+        outdir = self._get_simulation_outdir(prefix="fancy-")
+
+        for island in self.islands.values():
+            try:
+                MESS.plotting.plot_rank_abundance_through_time(outdir,
+                                                        island.species_through_time,
+                                                        island.lambda_through_time)
+                MESS.plotting.normalized_pi_dxy_heatmaps(outdir,
+                                                        island.species_through_time,
+                                                        island.lambda_through_time)
+                MESS.plotting.normalized_pi_dxy_heatmaps(outdir,
+                                                        island.species_through_time,
+                                                        island.lambda_through_time,
+                                                        one_d=True)
+                MESS.plotting.plot_abundance_vs_colonization_time(outdir,
+                                                        island.species_through_time,
+                                                        island.lambda_through_time)
+            except Exception as inst:
+                print("    Exception in fancy_plots() - {}".format(inst))
 
 def simulate(data, time=time, quiet=True):
     import os
