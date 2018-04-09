@@ -17,7 +17,7 @@ import sys
 import os
 import MESS
 
-from util import MESSError
+from util import MESSError, _tuplecheck
 from stats import shannon, SAD
 from species import species
 
@@ -50,7 +50,7 @@ class LocalCommunity(object):
                         ("mode", "volcanic"),
                         ("K", K),
                         ("colrate", colrate),
-                        ("age", 1e6),
+                        ("age", 100000),
                         ("mig_clust_size", mig_clust_size),
                         ("allow_multiple_colonizations", allow_multiple_colonizations),
         ])
@@ -176,14 +176,14 @@ class LocalCommunity(object):
 
             ## Cast params to correct types
             if param == "K":
-                self.paramsdict[param] = int(float(newvalue))
+                self.paramsdict["K"] = _tuplecheck(newvalue, dtype=int)
                 self.prepopulate(quiet=True)
 
             elif param in ["mig_clust_size", "age"]:
-                self.paramsdict[param] = int(float(newvalue))
+                self.paramsdict[param] = _tuplecheck(newvalue, dtype=int)
 
             elif param in ["colrate"]:
-                self.paramsdict[param] = float(newvalue)
+                self.paramsdict[param] = _tuplecheck(newvalue, dtype=float)
 
             elif param == "mode":
                 ## Must reup the local community if you change the mode
@@ -647,9 +647,10 @@ if __name__ == "__main__":
 
     loc.paramsdict["mode"] = "volcanic"
     loc.prepopulate()
-    loc.step(100000)
+    loc.step(10000)
     print(len(set(loc.local_community)))
     print(loc.local_info.shape)
     print("getting stats")
     print(loc.get_stats())
     print(loc)
+    print(loc.paramsdict)

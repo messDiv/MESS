@@ -10,6 +10,7 @@ import math
 # pylint: disable=C0103
 # pylint: disable=R0903
 
+from stats import *
 
 class species(object):
 

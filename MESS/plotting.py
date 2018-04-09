@@ -71,7 +71,7 @@ def plot_rank_abundance_through_time(outdir, sp_through_time, equilibria,\
         fig = plt.figure(figsize=(12,5))
 
         ## Make the SAD subplot
-        abund = abundances_from_sp_list(species, octaves=True)
+        abund = SAD([x.abundance for x in species], from_abundances=True, octaves=True)
         ax1 = plt.subplot(121)
         plot_sad(abund, max_n_species, max_n_bins, max_class_count, octave_bin_labels, verbose)
 
@@ -385,7 +385,7 @@ def prep_normalized_plots(sp_through_time):
     max_n_bins = 0
     octave_bin_labels = []
     for sp in sp_through_time.values():
-        abund = abundances_from_sp_list(sp, octaves=True)
+        abund = SAD([x.abundance for x in sp], from_abundances=True, octaves=True)
         octave = max(abund.keys())
         class_count = max(abund.values())
         if octave > max_octave:
@@ -528,15 +528,6 @@ def get_max_heat_bin(sp_through_time, max_pi_local, max_dxy):
     return max_heat_bin
 
 
-def abundances_from_sp_list(species, octaves=False):
-    ## Make a counter for the local_community, counts the number of
-    ## individuals w/in each species
-    community = []
-    for i, sp in enumerate(species):
-        community.extend([i] * sp.abundance)
-    return SAD(community, octaves)
-
-
 def make_animated_gif(datadir, outfile):
     """ This function will take all png files in a directory and make them
     into an animated gif. The inputs are the directory with all the images
@@ -557,6 +548,7 @@ def make_animated_gif(datadir, outfile):
         print("Trouble creating abundances through time animated gif - {}".format(inst))
         print("You probably don't have imagemagick installed")
 
+
 if __name__ == "__main__":
     import collections
     import numpy as np
@@ -566,8 +558,6 @@ if __name__ == "__main__":
     loc.step(1000)
     loc.simulate_seqs()
     print(loc.species_objects)
-    print(abundances_from_sp_list(loc.species_objects))
-    print(abundances_from_sp_list(loc.species_objects, octaves=True))
-
-    plot_rank_abundance_through_time("/tmp", {}, {}) 
+    print(SAD([x.abundance for x in loc.species_objects], from_abundances=True))
+    print(SAD([x.abundance for x in loc.species_objects], from_abundances=True, octaves=True))
 

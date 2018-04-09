@@ -147,6 +147,7 @@ def parse_command_line():
 
     ## create the parser
     parser = argparse.ArgumentParser(
+        add_help=False,
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""\n
   * Example command-line usage: 
@@ -156,21 +157,6 @@ def parse_command_line():
     """)
 
     ## add arguments 
-    parser.add_argument('-v', '--version', action='version', 
-        version=str(pkg_resources.get_distribution('mess')))
-
-    parser.add_argument('-f', "--force", action='store_true',
-        help="force overwrite of existing data")
-
-    parser.add_argument('-r', "--results", action='store_true',
-        help="show status of this simulation run")
-
-    parser.add_argument('-q', "--quiet", action='store_true',
-        help="do not print to stderror or stdout.")
-
-    parser.add_argument('-d', "--debug", action='store_true',
-        help="print lots more info to ipyrad_log.txt.")
-
     parser.add_argument('-n', metavar='new', dest="new", type=str, 
         default=None, 
         help="create new file 'params-{new}.txt' in current directory")
@@ -187,11 +173,31 @@ def parse_command_line():
         type=int, default=0,
         help="number of CPU cores to use (Default=0=All)")
 
+    parser.add_argument('-r', action='store_true', dest="results",
+        help="show status of this simulation run")
+
+    parser.add_argument('-e', metavar='empirical', dest="empirical", type=str, 
+        default=None, 
+        help="Validate and import empirical data.")
+
+    parser.add_argument('-f', action='store_true', dest="force",
+        help="force overwrite of existing data")
+
+    parser.add_argument('-q', action='store_true', dest="quiet",
+        help="do not print to stderror or stdout.")
+
+    parser.add_argument('-d', action='store_true', dest="debug",
+        help="print lots more info to ipyrad_log.txt.")
+
+    parser.add_argument('-v', action='version', 
+        version=str(pkg_resources.get_distribution('mess')),
+        help=argparse.SUPPRESS)
+
     parser.add_argument("--ipcluster", metavar="ipcluster", dest="ipcluster",
         type=str, nargs="?", const="default",
-        help="connect to ipcluster profile (default: 'default')")
+        help="connect to ipcluster profile")
 
-    parser.add_argument("--fancy_plots", action='store_true',
+    parser.add_argument("--fancy-plots", action='store_true', dest="fancy_plots",
         help="Construct fancy plots and animated gifs.")
 
     ## if no args then return help message
@@ -333,6 +339,7 @@ def main():
     if os.path.exists(MESS.__debugflag__):
         os.remove(MESS.__debugflag__)
 
+    print(args)
     if args.debug:
         print("\n  ** Enabling debug mode **\n")
         MESS._debug_on()
@@ -383,6 +390,10 @@ def main():
 
         ## launch or load Region with custom profile/pid
         data = getregion(args, region_params, meta_params, island_params)
+
+        ## Validate, format, and import empirical data
+        if args.empirical:
+            import_empirical(args.empirical)
 
         ## Print results and exit immediately
         if args.results:

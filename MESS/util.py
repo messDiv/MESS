@@ -1,11 +1,14 @@
 from __future__ import print_function
 import subprocess
 import shlex
+import glob
 import sys
 import os
 
 import logging
 LOGGER = logging.getLogger(__name__)
+
+from stats import *
 
 ## Custom exception class
 class MESSError(Exception):
@@ -63,6 +66,79 @@ def _expander(namepath):
     return namepath
 
 
+def get_param(param):
+    """ Sample a parameter from a range. This is used to allow parameter
+    values in the params file to be specified as a tuple and have simulations
+    sample from the range on the fly.
+    """
+
+
+def _tuplecheck(newvalue, dtype=str):
+    """
+    Takes a string argument and returns value as a tuple.
+    Needed for paramfile conversion from CLI to set_params args
+    """
+    ## TODO: This actually should work
+    return dtype(newvalue)
+
+    if isinstance(newvalue, list):
+        newvalue = tuple(newvalue)
+
+    if isinstance(newvalue, str):
+        try:
+            newvalue = newvalue.rstrip(")").strip("(")
+            minval = dtype(newvalue.split("-")[0].strip())
+            maxval = dtype(newvalue.split("-")[1].strip())
+        ## If split fails then theres only one value
+        except IndexError:
+            newvalue = dtype(newvalue)
+        ## If dtype fails to cast any element of newvalue
+        except ValueError:
+            LOGGER.info("_tuplecheck() failed to cast to {} - {}"\
+                        .format(dtype, newvalue))
+            raise
+
+        except Exception as inst:
+            LOGGER.info(inst)
+            raise SystemExit(\
+            "\nError: Param`{}` is not formatted correctly.\n({})\n"\
+                 .format(newvalue, inst))
+
+        return newvalue
+
+
+def import_empirical(input_dir):
+    """ Validate, format, and import empirical data from a directory."""
+    if not os.path.exists(input_dir):
+        raise MESSError("Importing empirical directory that doesn't exist - {}".format(input_dir))
+
+    abundfile = os.path.join(input_dir, "abunds.txt")
+    if os.path.isfile(abundfile):
+        dat = open(abundfile).read().strip().split(",")
+        dat = map(int, dat)
+        print("Got empirical shannon - {}".format(shannon(SAD(dat, from_abundances=True))))
+
+    fastadir = os.path.join(input_dir, "spider-fasta")
+    if os.path.exists(fastadir):
+        files = glob.glob(os.path.join(fastadir, "*.fasta"))
+        pis = []
+        for f in files:
+            dat = read_sequence(f)
+            pis.append(pi(dat))
+            print(pi(dat), f)
+        dat = SGD(pis)
+        print("Empirical SGD - {}".format(dat))
+
+
+def read_sequence(fastafile):
+    """ Read in sequence data from a file and return just the sequencess
+    as an array. """
+    with open(fastafile) as infile:
+        datlines = infile.readlines()[1::2]
+        datlines = [x.strip() for x in datlines]
+        return(np.array(datlines))
+
+
 def set_params(data, param, newvalue, quiet=False):
     """
     Set a parameter to a new value. Raises error if newvalue is wrong type.
@@ -112,4 +188,4 @@ BAD_PARAMETER = """\
     """
 
 if __name__ == "__main__":
-    print(REGION_PARAMS)
+    import_empirical("empirical_data")
