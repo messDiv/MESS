@@ -17,6 +17,7 @@ from MESS.parallel import *
 
 LOGGER = logging.getLogger(__name__)
 
+
 def parse_params(args):
     """ Parse the params file and return Region params as a dict
     and a list of dicts for params for each island."""
@@ -158,11 +159,10 @@ def parse_command_line():
 
     ## add arguments 
     parser.add_argument('-n', metavar='new', dest="new", type=str, 
-        default=None, 
         help="create new file 'params-{new}.txt' in current directory")
 
     parser.add_argument('-p', metavar='params', dest="params",
-        type=str, default=None,
+        type=str,
         help="path to params file simulations: params-{assembly_name}.txt")
 
     parser.add_argument("-s", metavar="sims", dest="sims",
@@ -200,6 +200,20 @@ def parse_command_line():
     parser.add_argument("--fancy-plots", action='store_true', dest="fancy_plots",
         help="Construct fancy plots and animated gifs.")
 
+    ## This is kind of cool, but i'm not super married to it yet
+    ## It's a little pissy and would require rearranging a bunch of stuff
+    #subparsers = parser.add_subparsers(title="Optional subcommands", metavar="")
+    #list_parser = subparsers.add_parser('simulate', help='Generate profuse simulations')
+    #list_parser.add_argument('-a', metavar='abundances', dest="abundances",
+    #    help='File containing abundance data')
+    #list_parser = subparsers.add_parser('import', help='Validate and import empirical data')
+    #list_parser.add_argument('-a', metavar='abundances', dest="abundances",
+    #    help='File containing abundance data')
+    #list_parser.add_argument('-s', metavar="sequence_dir", dest="sequence_dir",
+    #    help='Directory containing fasta files, one per species')
+    #list_parser = subparsers.add_parser('ABC', help='Perform ABC model selection / parameter estimation')
+    #list_parser = subparsers.add_parser('RF', help='Perform Random Forest model selection / parameter estimation')
+
     ## if no args then return help message
     if len(sys.argv) == 1:
         parser.print_help()
@@ -207,11 +221,13 @@ def parse_command_line():
 
     ## parse args
     args = parser.parse_args()
+    print(args)
 
     if not any(x in ["params", "new"] for x in vars(args).keys()):
-        print("Bad arguments: must include at least one of"\
-                +"`-p` or `-n`\n")
-        parser.print_help()
+        print("\nBad arguments: must include at least one of"\
+                +" `-p` or `-n`\n")
+ 
+        #parser.print_help()
         sys.exit(1)
 
     return args
@@ -339,7 +355,6 @@ def main():
     if os.path.exists(MESS.__debugflag__):
         os.remove(MESS.__debugflag__)
 
-    print(args)
     if args.debug:
         print("\n  ** Enabling debug mode **\n")
         MESS._debug_on()
