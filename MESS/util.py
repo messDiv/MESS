@@ -71,6 +71,7 @@ def sample_param_range(param, nsamps=1):
     values in the params file to be specified as a tuple and have simulations
     sample from the range on the fly.
     """
+    LOGGER.debug("Sampled from range {}".format(param))
     if isinstance(param, tuple):
         if isinstance(param[0], float):
             param = np.random.uniform(param[0], param[1], nsamps)
@@ -80,8 +81,7 @@ def sample_param_range(param, nsamps=1):
         param = np.round(np.random.random(nsamps), 3)
     else:
         param = [param] * nsamps
-    if nsamps == 1:
-        param = param[0]
+    LOGGER.debug("Sampled Value: {}".format(param))
     return param
 
 
@@ -102,6 +102,7 @@ def _tuplecheck(newvalue, dtype=str):
             newvalue = newvalue.rstrip(")").strip("(")
             minval = dtype(newvalue.split("-")[0].strip())
             maxval = dtype(newvalue.split("-")[1].strip())
+            newvalue = tuple([minval, maxval])
         ## If split fails then theres only one value
         except IndexError:
             newvalue = dtype(newvalue)
@@ -117,6 +118,7 @@ def _tuplecheck(newvalue, dtype=str):
             "\nError: Param`{}` is not formatted correctly.\n({})\n"\
                  .format(newvalue, inst))
 
+    LOGGER.debug("Returning tuple - {}".format(newvalue))
     return newvalue
 
 
