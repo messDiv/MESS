@@ -17,7 +17,7 @@ import sys
 import os
 import MESS
 
-from util import MESSError, _tuplecheck
+from util import MESSError, _tuplecheck, sample_param_range
 from stats import shannon, SAD
 from species import species
 
@@ -53,6 +53,13 @@ class LocalCommunity(object):
                         ("age", 100000),
                         ("mig_clust_size", mig_clust_size),
                         ("allow_multiple_colonizations", allow_multiple_colonizations),
+        ])
+
+        ## A dictionary for holding prior ranges for values we're interested in
+        self._priors = dict([
+                        ("K", K),
+                        ("colrate", colrate),
+                        ("mig_clust_size", mig_clust_size)
         ])
 
         ## Dictionary of 'secret' parameters that most people won't want to mess with
@@ -157,6 +164,24 @@ class LocalCommunity(object):
         self.individual_death_probabilites = []
 
 
+    def _copy(self):
+        """ Create a new clean copy of this LocalCommunity."""
+        LOGGER.debug("Copying LocalCommunity - {}".format(self.name))
+        new = LocalCommunity(self.name)
+
+        new.region = self.region
+        new._priors = self._priors
+
+        new.paramsdict = self.paramsdict
+        ## Get sample from prior range on params that may have priors
+        for param in ["K", "colrate", "mig_clust_size"]:
+            self.paramsdict[param] = sample_param_range(new._priors[param])[0]
+
+        new._hackersonly = self._hackersonly
+        LOGGER.debug("Copied LocalCommunity - {}".format(self.paramsdict))
+        return new
+
+
     ## Return fraction of equilibrium obtained by the local community
     def _lambda(self):
         percent_equil = 0
@@ -175,24 +200,28 @@ class LocalCommunity(object):
             LOGGER.debug("set param {} - {} = {}".format(self, param, newvalue))
 
             ## Cast params to correct types
-            if param == "K":
-                self.paramsdict["K"] = _tuplecheck(newvalue, dtype=int)
-                self.prepopulate(quiet=True)
-
-            elif param in ["mig_clust_size", "age"]:
-                self.paramsdict[param] = _tuplecheck(newvalue, dtype=int)
+            if param in ["K", "mig_clust_size", "age"]:
+                tup = _tuplecheck(newvalue, dtype=int)
+                if isinstance(tup, tuple):
+                    self._priors[param] = tup
+                else:
+                    self.paramsdict[param] = tup
 
             elif param in ["colrate"]:
-                self.paramsdict[param] = _tuplecheck(newvalue, dtype=float)
+                tup = _tuplecheck(newvalue, dtype=float)
+                if isinstance(tup, tuple):
+                    self._priors[param] = tup
+                else:
+                    self.paramsdict[param] = tup
 
             elif param == "mode":
                 ## Must reup the local community if you change the mode
                 self.paramsdict[param] = newvalue
-                self.prepopulate(quiet=True)
 
             else:
                 self.paramsdict[param] = newvalue
         except Exception as inst:
+            LOGGER.debug("Bad parameter - {} {}".format(param, newvalue))
             ## Do something intelligent here?
             raise
 
@@ -280,8 +309,7 @@ class LocalCommunity(object):
 
 
     def prepopulate(self, quiet=False):
-        LOGGER.debug("prepopulating local_community")
-
+        LOGGER.debug("prepopulating local_community - {}".format(self))
         if not self.region:
             msg = "Skip populating the local community as it is unlinked to a region."
             LOGGER.error(msg)
@@ -329,6 +357,7 @@ class LocalCommunity(object):
             print("    Initializing local community:")
             print("      N species = {}".format(len(set(self.local_community))))
             print("      N individuals = {}".format(len(self.local_community)))
+        LOGGER.debug("Done prepopulating - {}".format(self))
                             
 
     ## Not updated
