@@ -236,7 +236,6 @@ class Region(object):
 
     def get_most_abundant(self):
         """Just get the most abundant species from the metacommunity"""
-
         max_idx = self.metacommunity.community["abundances"].argmax()
         new_species = self.metacommunity.community["ids"][max_idx] 
         trait_value = self.metacommunity.community["trait_values"][max_idx]
@@ -249,6 +248,7 @@ class Region(object):
         return self.metacommunity.community["abundances"]\
                 [np.where(self.metacommunity.community["ids"] == "t1")][0]
 
+
     ## Main function for managing cluster parallelized simulations
     def run(self, sims, force=False, ipyclient=None, quiet=False):
         """ Do the heavy lifting here"""
@@ -256,18 +256,13 @@ class Region(object):
 
         ## Just get all the time values to simulate up front
         ## Doesn't save time really, just makes housekeeping easier
-        gens = self.paramsdict["generations"]
+        gens = sample_param_range(self.paramsdict["generations"], nsamps=sims)
+
+        ## Check if we're doing steps or lambda
         do_lambda = False
-        if type(gens) is tuple:
-            ## Generations is a range so uniform random sample for this sim
-            gens = np.random.randint(gens[0], gens[1], sims)
-        elif gens > 0:
-            ## Generations is just a value
-            gens = np.array([gens] * sims)
-        else:
-            ## If doing lambda we only really care about 3ish signficant figures
-            gens = np.round(np.random.random(sims), 3)
+        if isinstance(gens[0], float):
             do_lambda = True
+
         LOGGER.debug("Sample of durations of simulations: {}".format(gens[:10]))
 
         ## Run serially. This will be slow for anything but toy models.

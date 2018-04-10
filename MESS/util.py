@@ -66,11 +66,23 @@ def _expander(namepath):
     return namepath
 
 
-def get_param(param):
+def sample_param_range(param, nsamps=1):
     """ Sample a parameter from a range. This is used to allow parameter
     values in the params file to be specified as a tuple and have simulations
     sample from the range on the fly.
     """
+    if isinstance(param, tuple):
+        if isinstance(param[0], float):
+            param = np.random.uniform(param[0], param[1], nsamps)
+        else:
+            param = np.random.randint(param[0], param[1], nsamps)
+    elif param == 0:
+        param = np.round(np.random.random(nsamps), 3)
+    else:
+        param = [param] * nsamps
+    if nsamps == 1:
+        param = param[0]
+    return param
 
 
 def _tuplecheck(newvalue, dtype=str):
@@ -79,12 +91,13 @@ def _tuplecheck(newvalue, dtype=str):
     Needed for paramfile conversion from CLI to set_params args
     """
     ## TODO: This actually should work
-    return dtype(newvalue)
 
     if isinstance(newvalue, list):
-        newvalue = tuple(newvalue)
-
-    if isinstance(newvalue, str):
+        try:
+            newvalue = tuple(newvalue)
+        except TypeError:
+            pass
+    else:
         try:
             newvalue = newvalue.rstrip(")").strip("(")
             minval = dtype(newvalue.split("-")[0].strip())
@@ -104,7 +117,7 @@ def _tuplecheck(newvalue, dtype=str):
             "\nError: Param`{}` is not formatted correctly.\n({})\n"\
                  .format(newvalue, inst))
 
-        return newvalue
+    return newvalue
 
 
 def import_empirical(input_dir):
