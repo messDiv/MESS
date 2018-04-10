@@ -80,7 +80,6 @@ class Region(object):
         This is primarily used by __main__ during the initialization process."""
         LOGGER.debug("Linking local community - {}".format(local_community))
         local_community.region = self
-        local_community.prepopulate()
         self.islands[local_community.paramsdict["name"]] = local_community
 
 
@@ -104,6 +103,7 @@ class Region(object):
             os.mkdir(outdir)
 
         return outdir
+
 
     def _paramschecker(self, param, newvalue, quiet=False):
         """ Raises exceptions when params are set to values they should not be"""
@@ -142,6 +142,14 @@ class Region(object):
         except Exception as inst:
             ## Do something intelligent here?
             raise
+
+
+    def _reset_local_communities(self):
+        LOGGER.debug("_reset_local_community()")
+        for name, island in self.islands.items():
+            new = island._copy()
+            new.prepopulate(quiet=True)
+            self.islands[name] = new
 
 
     def write_params(self, outfile=None, force=False):
@@ -254,10 +262,15 @@ class Region(object):
         """ Do the heavy lifting here"""
         print("    Generating {} simulations.".format(sims))
 
+        ## Open output file. If force then overwrite existing, otherwise just append.
+        append = 'a'
+        if force:
+            append = 'w'
+        SIMOUT = open(os.path.join(self.paramsdict["project_dir"], "SIMOUT.txt"), append)
+
         ## Just get all the time values to simulate up front
         ## Doesn't save time really, just makes housekeeping easier
         gens = sample_param_range(self.paramsdict["generations"], nsamps=sims)
-
         ## Check if we're doing steps or lambda
         do_lambda = False
         if isinstance(gens[0], float):
@@ -272,10 +285,13 @@ class Region(object):
             for i in xrange(sims):
                 elapsed = datetime.timedelta(seconds=int(time.time()-start))
                 progressbar(sims, i, printstr.format(elapsed))
+
                 if not do_lambda:
                     res = self.simulate(nsteps=gens[i])
                 else:
                     res = self.simulate(_lambda=gens[i], quiet=quiet)
+
+                SIMOUT.write("\t".join(map(str, res.values)) + "\n")
                 LOGGER.debug("Finished simulation {} stats:\n{}".format(i, res))
             progressbar(100, 100, " Finished {} simulations\n".format(sims))
 
@@ -329,6 +345,10 @@ class Region(object):
             return
 
         outdir = self._get_simulation_outdir()
+
+        ## Not as big of a deal on ipp simulations, but if you're running on a local computer
+        ## the local communities need to get reupped for each simulation.
+        self._reset_local_communities()
 
         step = 0
         ## Create an temp function to test whether we've reached the end of this simulation
