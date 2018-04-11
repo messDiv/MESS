@@ -13,7 +13,7 @@ from stats import *
 
 class species(object):
 
-    def __init__(self, UUID = "", exponential = False, abundance = 1, meta_abundance = 1, colonization_time = 0, migration_rate=0):
+    def __init__(self, UUID = "", growth_rate="constant", abundance = 1, meta_abundance = 1, colonization_time = 0, migration_rate=0):
         self.name = names.names().get_name()
         self.uuid = UUID
         self.abundance = abundance
@@ -34,10 +34,12 @@ class species(object):
         ## Need to calculate the growth rate
         #self.r_island = -np.log(100./self.local_Ne)/self.colonization_time
         ## This one works okay.
-        if exponential:
+        if growth_rate == "exponential":
             self.r_island = -np.log(1./self.local_Ne)/self.colonization_time
-        else:
+        elif growth_rate == "constant":
             self.r_island = 0
+        else:
+            raise MESSError("Unrecognized population growth parameter - {}".format(growth_rate))
 
         ## Stats
         self.pi = 0

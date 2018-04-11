@@ -51,6 +51,7 @@ class Region(object):
                        ("data_model", 4),
                        ("generations", 0),
                        ("recording_period", 10000),
+                       ("population_growth_rate", "constant"),
                        ("allow_multiple_colonizations", True),
         ])
 
@@ -302,7 +303,7 @@ class Region(object):
             ipyclient[:].use_dill()
             lbview = ipyclient.load_balanced_view()
             for i in xrange(sims):
-                parallel_jobs[i] = lbview.apply(simulate, *(self, gens[i], quiet))
+                parallel_jobs[i] = lbview.apply(simulate, *(self, gens[i]))
 
             ## Wait for all jobs to finish
             start = time.time()
@@ -365,8 +366,8 @@ class Region(object):
         while not done_func():
             ## This is not ideal functionality, but it at least gives you a sense of progress
             ## Especially don't do this on ipyparallel engines, because it floods the pipe.
-            #if not quiet:
-            #    progressbar(100, 100, "{}%".format(self.islands.values()[0]._lambda()))
+            if not quiet:
+                progressbar(100, 100, "{}%".format(self.islands.values()[0]._lambda()))
             for island in self.islands.values():
                 island.step()
             step += 1
@@ -431,6 +432,7 @@ REGION_PARAMS = {
     "data_model" : "Structure of data output to reference table (see docs)",\
     "generations" : "Duration of simulations. Specify int range or 0 for lambda.",\
     "recording_period" : "Number of forward-time generations between samples for logging",\
+    "population_growth_rate" : "Rate of growth since colonization: exponential/constant",\
     "allow_multiple_colonizations" : "Toggle allowing post colonization migration",\
 }
 

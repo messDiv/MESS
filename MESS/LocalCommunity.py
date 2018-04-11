@@ -27,7 +27,7 @@ MAX_DUPLICATE_REDRAWS_FROM_METACOMMUNITY = 1500
 class LocalCommunity(object):
 
     def __init__(self, name=None, K=5000, colrate=0.01, \
-                mig_clust_size=1, exponential=False, quiet=False):
+                mig_clust_size=1, quiet=False):
         self.quiet = quiet
 
         if name is None:
@@ -51,9 +51,9 @@ class LocalCommunity(object):
 
         ## A dictionary for holding prior ranges for values we're interested in
         self._priors = dict([
-                        ("K", K),
-                        ("colrate", colrate),
-                        ("mig_clust_size", mig_clust_size)
+                        ("K", []),
+                        ("colrate", []),
+                        ("mig_clust_size", [])
         ])
 
         ## Dictionary of 'secret' parameters that most people won't want to mess with
@@ -111,7 +111,6 @@ class LocalCommunity(object):
         ## List for storing species objects that have had sequence
         ## simulated and sumstats calculated
         self.species_objects = []
-        self.exponential = exponential
 
         self.extinctions = 0
         self.colonizations = 0
@@ -172,7 +171,9 @@ class LocalCommunity(object):
         new.paramsdict = self.paramsdict
         ## Get sample from prior range on params that may have priors
         for param in ["K", "colrate", "mig_clust_size"]:
-            self.paramsdict[param] = sample_param_range(new._priors[param])[0]
+            ## if _priors is empty then this param is fixed
+            if np.any(self._priors[param]):
+                self.paramsdict[param] = sample_param_range(new._priors[param])[0]
 
         new._hackersonly = self._hackersonly
         LOGGER.debug("Copied LocalCommunity - {}".format(self.paramsdict))
@@ -201,6 +202,7 @@ class LocalCommunity(object):
                 tup = _tuplecheck(newvalue, dtype=int)
                 if isinstance(tup, tuple):
                     self._priors[param] = tup
+                    self.paramsdict[param] = sample_param_range(tup)[0]
                 else:
                     self.paramsdict[param] = tup
 
@@ -208,6 +210,7 @@ class LocalCommunity(object):
                 tup = _tuplecheck(newvalue, dtype=float)
                 if isinstance(tup, tuple):
                     self._priors[param] = tup
+                    self.paramsdict[param] = sample_param_range(tup)[0]
                 else:
                     self.paramsdict[param] = tup
 
@@ -586,7 +589,7 @@ class LocalCommunity(object):
                 tdiv = self.current_time - coltime 
                 sp = species(UUID=name,
                              colonization_time = tdiv,\
-                             exponential = self.exponential,
+                             growth_rate = self.region.paramsdict["population_growth_rate"],\
                              abundance = local_abund,\
                              meta_abundance = meta_abund,
                              migration_rate = self.local_info[name]["post_colonization_migrants"]/float(tdiv))
