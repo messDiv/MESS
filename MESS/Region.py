@@ -24,7 +24,6 @@ class Region(object):
         ## special characters, spaces, or path delimiters. Allow _ and -.
         ## This will raise an error immediately if there are bad chars in name.
         self._check_name(name)
-        self.name = name
 
         self._version = MESS.__version__
 
@@ -65,7 +64,7 @@ class Region(object):
     ## Housekeeping functions
     #########################
     def __str__(self):
-        return "<MESS.Region {}: {}>".format(self.name, self.islands.keys())
+        return "<MESS.Region {}: {}>".format(self.paramsdict["simulation_name"], self.islands.keys())
 
     ## Test assembly name is valid and raise if it contains any special characters
     def _check_name(self, name):
@@ -160,7 +159,7 @@ class Region(object):
         generate default params.txt files for `MESS -n`
         """
         if outfile is None:
-            outfile = "params-"+self.name+".txt"
+            outfile = "params-"+self.paramsdict["simulation_name"]+".txt"
 
         ## Test if params file already exists?
         ## If not forcing, test for file and bail out if it exists

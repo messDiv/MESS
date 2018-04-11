@@ -26,7 +26,7 @@ MAX_DUPLICATE_REDRAWS_FROM_METACOMMUNITY = 1500
 
 class LocalCommunity(object):
 
-    def __init__(self, name=None, K=5000, colrate=0.01, allow_multiple_colonizations=True, \
+    def __init__(self, name=None, K=5000, colrate=0.01, \
                 mig_clust_size=1, exponential=False, quiet=False):
         self.quiet = quiet
 
@@ -47,7 +47,6 @@ class LocalCommunity(object):
                         ("colrate", colrate),
                         ("age", 100000),
                         ("mig_clust_size", mig_clust_size),
-                        ("allow_multiple_colonizations", allow_multiple_colonizations),
         ])
 
         ## A dictionary for holding prior ranges for values we're interested in
@@ -58,6 +57,9 @@ class LocalCommunity(object):
         ])
 
         ## Dictionary of 'secret' parameters that most people won't want to mess with
+        ##  * allow_empty is a switch on whether to fully populate local community
+        ##      with one species for 'volcanic' mode or to introduce just one 
+        ##      individual and populate the rest of K with 'empty' demes.
         self._hackersonly = dict([
                         ("allow_empty", False),
         ])
@@ -513,7 +515,7 @@ class LocalCommunity(object):
 
                 ## Grab the new colonizing species
                 ## the init_colonization flag is used to test whether to update the divergence time
-                if self.paramsdict["allow_multiple_colonizations"]:
+                if self.region.paramsdict["allow_multiple_colonizations"]:
                     new_species = self.migrate_step()
                 else:
                     new_species = self.migrate_no_dupes_step()
@@ -645,7 +647,6 @@ LOCAL_PARAMS = {
     "colrate" : "Colonization rate into local community",\
     "mig_clust_size" : "# of individuals per colonization event",\
     "age" : "Local community age",\
-    "allow_multiple_colonizations" : "Toggle allowing post colonization migration",
 }
 
 
