@@ -328,7 +328,9 @@ class Region(object):
                     passdict[result] = parallel_jobs[result].result()
                     res = passdict[result]
                     SIMOUT.write("\t".join(map(str, res.values)) + "\n")
-            print(faildict)
+
+            ## TODO: Do something more intelligent in the event that any of them fails.
+            LOGGER.error("Any failed simulations will report here: {}".format(faildict))
 
 
     ## This is the function that will be run inside the cluster engine, so
@@ -340,6 +342,7 @@ class Region(object):
     ##
     ## TODO: Need to think about how to quantify lambda if there is more
     ## than one island
+    ## TODO: Need to implement the force flag here to allow or prevent overwriting
     def simulate(self, _lambda=0, nsteps=0, quiet=True):
         LOGGER.debug("Entering simulate(): lambda={}, nsteps={}".format(_lambda, nsteps))
         if _lambda > 0 and nsteps > 0:

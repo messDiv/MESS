@@ -221,6 +221,7 @@ def parse_command_line():
 
     ## parse args
     args = parser.parse_args()
+    ## TODO: Clean this up
     print(args)
 
     if not any(x in ["params", "new"] for x in vars(args).keys()):
