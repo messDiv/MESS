@@ -102,6 +102,11 @@ class Region(object):
         if not os.path.exists(outdir):
             os.mkdir(outdir)
 
+        ## Push the outdir into each of the local communities.
+        for name, island in self.islands.items():
+            island._hackersonly["outdir"] = outdir
+            self.islands[name] = island
+
         return outdir
 
 
@@ -152,7 +157,7 @@ class Region(object):
             self.islands[name] = new
 
 
-    def write_params(self, outfile=None, force=False):
+    def write_params(self, outfile=None, outdir=None, force=False):
         """ Write out the parameters of this model to a file properly
         formatted as input for `MESS -p <params.txt>`. A good and
         simple way to share/archive parameter settings for simulations.
@@ -161,6 +166,12 @@ class Region(object):
         """
         if outfile is None:
             outfile = "params-"+self.paramsdict["simulation_name"]+".txt"
+
+        if not outdir is None:
+            if os.path.exists(outdir):
+                outfile = os.path.join(outdir, outfile)
+            else:
+                raise MESSError(NO_OUTDIR).format(outdir)
 
         ## Test if params file already exists?
         ## If not forcing, test for file and bail out if it exists
@@ -262,6 +273,9 @@ class Region(object):
         """ Do the heavy lifting here"""
         print("    Generating {} simulations.".format(sims))
 
+        ## Preserve any parameter state that has changed:
+        self.write_params(force=True)
+
         ## Open output file. If force then overwrite existing, otherwise just append.
         append = 'a'
         if force:
@@ -349,11 +363,12 @@ class Region(object):
             LOGGER.error("simulate accepts only one of either lambda or nsteps args")
             return
 
-        outdir = self._get_simulation_outdir()
-
         ## Not as big of a deal on ipp simulations, but if you're running on a local computer
         ## the local communities need to get reupped for each simulation.
         self._reset_local_communities()
+
+        ## Get an output directory for dumping data
+        outdir = self._get_simulation_outdir()
 
         step = 0
         ## Create an temp function to test whether we've reached the end of this simulation
@@ -371,10 +386,11 @@ class Region(object):
             for island in self.islands.values():
                 island.step()
             step += 1
-        ## TODO: Combine stats across local communities if more than on
-        outfile = os.path.join(outdir, "simout.txt")
-        statsdf = self.islands.values()[0].get_stats()
-        statsdf.to_csv(outfile, na_rep=0, float_format='%.5f')
+        ## TODO: Combine stats across local communities if more than one
+        for name, island in self.islands.items():
+            statsdf = island.get_stats()
+
+        self.write_params(outdir=outdir)
         return statsdf
 
 
@@ -453,6 +469,10 @@ BAD_MESS_NAME = """\
 PARAMS_EXISTS = """
     Error: Params file already exists: {}
     Use force argument to overwrite.
+    """
+
+NO_OUTDIR = """
+    Error: Attempting to write params to a directory that doesn't exist - {}
     """
 
 REQUIRE_NAME = """\

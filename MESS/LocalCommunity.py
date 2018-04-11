@@ -60,8 +60,11 @@ class LocalCommunity(object):
         ##  * allow_empty is a switch on whether to fully populate local community
         ##      with one species for 'volcanic' mode or to introduce just one 
         ##      individual and populate the rest of K with 'empty' demes.
+        ##  * outdir is inherited from the Region.simulate() command, so users
+        ##      should normally not mess with this.
         self._hackersonly = dict([
                         ("allow_empty", False),
+                        ("outdir", []),
         ])
 
         ## list for storing the state of our local community. The list is much faster
@@ -637,6 +640,10 @@ class LocalCommunity(object):
 
         self.stats.sgd = SGD([x.pi_local for x in self.species_objects])
 
+        ## Log to file
+        statsfile = os.path.join(self._hackersonly["outdir"],
+                                 self.paramsdict["name"] + "-simout.txt")
+        self.stats.to_csv(statsfile, na_rep=0, float_format='%.5f')
         return self.stats
 
 
