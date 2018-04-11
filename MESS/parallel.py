@@ -60,6 +60,25 @@ def start_ipcluster(data):
                  format(inst))
 
 
+## Currently unused, we are still doing it the "nice" way inside main, but
+## leaving this here in case it becomes necessary.
+def stop_ipcluster(data):
+    """ Shut down the ipcluster."""
+
+    standard = """
+        ipcluster stop --clulster-id={}""".format(data._ipcluster["profile"])
+    ## wrap ipcluster start
+    try:
+        LOGGER.info(shlex.split(standard))
+        subprocess.check_call(shlex.split(standard),
+            stderr=subprocess.STDOUT,
+            stdout=subprocess.PIPE)
+
+    except Exception as inst:
+        sys.exit("  Error launching ipcluster for parallelization:\n({})\n".\
+                 format(inst))
+
+
 def register_ipcluster(data):
     """
     The name is a unique id that keeps this __init__ distinct
