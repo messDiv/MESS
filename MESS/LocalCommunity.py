@@ -1,10 +1,5 @@
 #!/usr/bin/env python2.7
 
-try:
-    import matplotlib.pyplot as plt
-    from ascii_graph import Pyasciigraph
-except:
-    print("matplotlib and/or ascii_graph not installed, so plotting is disabled.")
 from scipy.stats import logser
 from collections import OrderedDict
 from scipy.stats import iqr
@@ -18,7 +13,7 @@ import os
 import MESS
 
 from util import MESSError, _tuplecheck, sample_param_range
-from stats import shannon, SAD
+from stats import shannon, SAD, SGD
 from species import species
 
 import logging
@@ -634,6 +629,8 @@ class LocalCommunity(object):
         self.stats.stdv_dxy = np.std(dxys)
         self.stats.median_dxy= np.median(dxys)
         self.stats.iqr_dxy = iqr(dxys)
+
+        self.stats.sgd = SGD([x.pi_local for x in self.species_objects])
 
         return self.stats
 

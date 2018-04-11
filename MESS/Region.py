@@ -212,7 +212,7 @@ class Region(object):
     def add_local_community(self, name, K, c, quiet=False):
         loc = MESS.LocalCommunity(name, K, c, quiet)
         ## TODO: Ensure island names aren't dupes
-        self.islands[name] = loc
+        self._link_local(loc)
 
 
     def set_metacommunity(self, meta_type):
@@ -267,6 +267,7 @@ class Region(object):
         if force:
             append = 'w'
         SIMOUT = open(os.path.join(self.paramsdict["project_dir"], "SIMOUT.txt"), append)
+        SIMOUT.write("\t".join(self.islands.values()[0].stats.keys()) + "\n")
 
         ## Just get all the time values to simulate up front
         ## Doesn't save time really, just makes housekeeping easier
@@ -325,7 +326,8 @@ class Region(object):
                     faildict[result] = parallel_jobs[result].metadata.error
                 else:
                     passdict[result] = parallel_jobs[result].result()
-            print(passdict)
+                    res = passdict[result]
+                    SIMOUT.write("\t".join(map(str, res.values)) + "\n")
             print(faildict)
 
 
@@ -360,8 +362,9 @@ class Region(object):
 
         while not done_func():
             ## This is not ideal functionality, but it at least gives you a sense of progress
-            if not quiet:
-                progressbar(100, 100, "{}%".format(self.islands.values()[0]._lambda()))
+            ## Especially don't do this on ipyparallel engines, because it floods the pipe.
+            #if not quiet:
+            #    progressbar(100, 100, "{}%".format(self.islands.values()[0]._lambda()))
             for island in self.islands.values():
                 island.step()
             step += 1
