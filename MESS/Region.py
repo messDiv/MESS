@@ -51,7 +51,7 @@ class Region(object):
                        ("data_model", 4),
                        ("generations", 0),
                        ("recording_period", 10000),
-                       ("population_growth_rate", "constant"),
+                       ("population_growth", "constant"),
                        ("allow_multiple_colonizations", True),
         ])
 
@@ -448,7 +448,7 @@ REGION_PARAMS = {
     "data_model" : "Structure of data output to reference table (see docs)",\
     "generations" : "Duration of simulations. Specify int range or 0 for lambda.",\
     "recording_period" : "Number of forward-time generations between samples for logging",\
-    "population_growth_rate" : "Rate of growth since colonization: exponential/constant",\
+    "population_growth" : "Rate of growth since colonization: exponential/constant",\
     "allow_multiple_colonizations" : "Toggle allowing post colonization migration",\
 }
 
