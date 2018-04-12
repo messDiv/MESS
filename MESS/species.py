@@ -1,124 +1,178 @@
 #!/usr/bin/env python2.7
 
 import numpy as np
+import pandas as pd
 import collections      # For Counter
 import itertools
 import msprime
 import names
 import math
+import os
 # pylint: disable=C0103
 # pylint: disable=R0903
 
 from stats import *
 
+import logging
+LOGGER = logging.getLogger(__name__)
+
 class species(object):
 
-    def __init__(self, UUID = "", growth_rate="constant", abundance = 1, meta_abundance = 1, colonization_time = 0, migration_rate=0):
+    def __init__(self, UUID = "", growth="constant", abundance = 1,
+                meta_abundance = 1, colonization_time = 0, migration_rate=0):
+
+        ## I'm calling anything that is invariant across species
+        ## a 'parameter' even though I know migration rate is a
+        ## parameter too
+        self.paramsdict = dict([
+                            ("alpha", 100),
+                            ("sequence_length", 570),
+                            ("mutation_rate", 0.000000022),
+                            ("sample_size_local", 100),
+                            ("sample_size_meta", 100),
+        ])
+
+        ## Stats for this species in a nice pd series
+        ## pi_tot is pi calculated for local and metacommunity combined
+        ## da is what was called pi_net in msbayes
+        self.stats = pd.Series(
+            index=[ "name",
+                    "coltime",
+                    "migration_rate",
+                    "growth_rate",
+                    "Ne_local",
+                    "Ne_meta",
+                    "segsites_tot",
+                    "segsites_local",
+                    "segsites_meta",
+                    "pi_tot",
+                    "pi_local",
+                    "pi_meta",
+                    "da",
+                    "dxy",
+                    "tajd_local"]).astype(np.object)
+
+        self.stats["name"] = UUID
+        self.stats["coltime"] = colonization_time
+        self.stats["migration_rate"] = migration_rate
+        self.stats["Ne_local"] = abundance * self.paramsdict["alpha"]
+        self.stats["Ne_meta"] = meta_abundance * self.paramsdict["alpha"]
+
+        ## Parameters
+        ## the 'name' here is just a toy fake species name
         self.name = names.names().get_name()
-        self.uuid = UUID
-        self.abundance = abundance
-        self.alpha = 100
-        self.local_Ne = self.abundance * self.alpha
-        self.meta_abundance = meta_abundance
-        #self.colonization_time = np.log(colonization_time)
-        self.migration_rate = migration_rate
-        self.colonization_time = colonization_time
-        self.Ne = self.meta_abundance
-        self.mutation_rate = 0.000000022
-#        self.mutation_rate = 0.00000007
-        self.sequence_length = 570
         self.tree_sequence = []
-        self.island_sample_size = 100
-        self.meta_sample_size = 100
 
-        ## Need to calculate the growth rate
-        #self.r_island = -np.log(100./self.local_Ne)/self.colonization_time
-        ## This one works okay.
-        if growth_rate == "exponential":
-            self.r_island = -np.log(1./self.local_Ne)/self.colonization_time
-        elif growth_rate == "constant":
-            self.r_island = 0
+        ## Calculate the growth rate and the initial population size
+        ## if doing exponential
+        if growth == "exponential":
+            ## TODO: Add a hackersonly param to tune the number of founders
+            ## or maybe just use mig_clust_size?
+            initial_size = 1.
+            self.stats["growth_rate"] = -np.log(initial_size/self.stats["local_Ne"])/self.stats["coltime"]
+        elif growth == "constant":
+            initial_size = self.stats["Ne_local"]
+            self.stats["growth_rate"] = 0
         else:
-            raise MESSError("Unrecognized population growth parameter - {}".format(growth_rate))
+            raise MESSError("Unrecognized population growth parameter - {}".format(growth))
 
-        ## Stats
-        self.pi = 0
-        self.S = 0
-        self.S_local = 0
-        self.S_meta = 0
-        self.pi_local = 0
-        self.pi_meta = 0
-        self.pi_net = 0
-        self.dxy = 0
-        self.tajD = 0
 
     def __str__(self):
-        return "<species {}/coltime {}/local Ne {}/meta Ne {}/migrate {}/pi_local {}/pi_meta {}/dxy {}/S_local {}/S_meta {}>".format(self.name, self.colonization_time,\
-                            self.local_Ne, self.Ne, self.migration_rate, self.pi_local, self.pi_meta, self.dxy, self.S_local, self.S_meta)
+        return self.stats.to_string()
+
 
     def __repr__(self):
         return self.__str__()
 
-    def simulate_seqs(self):
-        ## This is hackish
-        if self.Ne <= 0:
-            self.Ne = 100
 
-        migmat = [[0, self.migration_rate],
+    def simulate_seqs(self):
+
+        ## TODO: Here we are assuming only one island and that the migration
+        ## is only ever unidirectional from the mainland to the island
+        migmat = [[0, self.stats["migration_rate"]],
                     [0, 0]]
         
-        island_pop = msprime.PopulationConfiguration(sample_size=self.island_sample_size,\
-                                                    initial_size=self.local_Ne,
-                                                    growth_rate=self.r_island)
+        pop_local = msprime.PopulationConfiguration(\
+                        sample_size = self.paramsdict["sample_size_local"],\
+                        initial_size = self.stats["Ne_local"],
+                        growth_rate = self.stats["growth_rate"])
         
-        meta_pop = msprime.PopulationConfiguration(sample_size=self.meta_sample_size, initial_size=self.meta_abundance)
+        pop_meta = msprime.PopulationConfiguration(\
+                        sample_size=self.paramsdict["sample_size_meta"],\
+                        initial_size=self.stats["Ne_meta"])
 
-        split_event = msprime.MassMigration(time=self.colonization_time,\
-                                            source=0,\
-                                            destination=1,\
-                                            proportion=1)
+        ## Going backwards in time, at colonization time throw all lineages from
+        ## the local community back into the metacommunity
+        split_event = msprime.MassMigration(time = self.stats["coltime"],\
+                                            source = 0,\
+                                            destination = 1,\
+                                            proportion = 1)
 
-        island_rate_change_event = msprime.PopulationParametersChange(time=self.colonization_time-1,\
-                                                                        growth_rate=0,\
-                                                                        population_id=0)
+        local_rate_change = msprime.PopulationParametersChange(\
+                                            time = self.stats["coltime"] - 1,\
+                                            growth_rate = 0,\
+                                            population_id = 0)
 
-        island_size_change_event = msprime.PopulationParametersChange(time=self.colonization_time-1,\
-                                                                        initial_size=1,\
-                                                                        population_id=0)
+        ## TODO: Could mess with 'initial_size' here, but you don't want
+        ## to sample too much from the metacommunity or the local pi 
+        ## goes way up.
+        local_size_change = msprime.PopulationParametersChange(\
+                                            time = self.stats["coltime"] - 1,\
+                                            initial_size = 1,\
+                                            population_id = 0)
 
-        migrate_change = msprime.MigrationRateChange(time=self.colonization_time-1, rate=0)
-        ## Useful for debugging demographic events. Mass migration and exponetial growth are both working.
-        #print(self.name, self.colonization_time)
-        debug = msprime.DemographyDebugger(population_configurations=[island_pop, meta_pop],\
-                                            migration_matrix=migmat,
-                                           demographic_events=[island_rate_change_event, island_size_change_event, migrate_change, split_event])
+        migrate_change = msprime.MigrationRateChange(
+                                            time = self.stats["coltime"] - 1,\
+                                            rate = 0)
+
+        ## Useful for debugging demographic events.
+        debug = msprime.DemographyDebugger( population_configurations = [pop_local, pop_meta],\
+                                            migration_matrix = migmat,\
+                                            demographic_events=[local_rate_change,\
+                                                                local_size_change,\
+                                                                migrate_change,\
+                                                                split_event])
+
+        ## Enable this at your own peril, it will dump a ton of shit to stdout
         #debug.print_history()
+        ## I briefly toyed with the idea of logging this to a file, but you really
+        ## don't need it that often, and it'd be a pain to get the outdir in here.
+        #if LOGGER.getEffectiveLevel() == 10:
+        #    debugfile = os.path.join(self._hackersonly["outdir"],
+        #                        self.paramsdict["name"] + "-simout.txt")
+        #    with open(debugfile, 'a') as outfile:
+        #        outfile.write(debug.print_history())
 
-        self.tree_sequence = msprime.simulate(length=self.sequence_length,\
-                                                Ne=self.local_Ne,\
-                                                mutation_rate=self.mutation_rate, \
-                                                population_configurations=[island_pop, meta_pop],\
-                                                migration_matrix=migmat,
-                                                demographic_events=[island_size_change_event, island_rate_change_event, island_size_change_event,\
-                                                                    migrate_change, split_event])
+        self.tree_sequence = msprime.simulate( length = self.paramsdict["sequence_length"],\
+                                                Ne = self.stats["Ne_local"],\
+                                                mutation_rate = self.paramsdict["mutation_rate"],\
+                                                population_configurations = [pop_local, pop_meta],\
+                                                migration_matrix = migmat,\
+                                                demographic_events=[local_rate_change,\
+                                                                    local_size_change,\
+                                                                    migrate_change,\
+                                                                    split_event])
+        self.get_sumstats()
 
-        #self.tree_sequence = msprime.simulate(sample_size=10, Ne=self.Ne, length=self.sequence_length, mutation_rate=self.mutation_rate)
 
     def get_sumstats(self):
-        self.pi = self.tree_sequence.get_pairwise_diversity() / self.sequence_length
-        self.S = len(next(self.tree_sequence.haplotypes()))
-#        total = 0.0
-#        for i in range(1, n+1):
-#            total += 1.0 / i
+
+        ## pairwise diversity per base
+        self.stats["pi_tot"] = self.tree_sequence.get_pairwise_diversity()\
+                                / self.paramsdict["sequence_length"]
+
+        self.stats["segsites_tot"] = len(next(self.tree_sequence.haplotypes()))
+
         all_haps = self.tree_sequence.haplotypes()
         ## Get population specific haplotypes
-        island_haps = [next(all_haps) for _ in range(self.island_sample_size)]
-        meta_haps = [next(all_haps) for _ in range(self.meta_sample_size)]
+        island_haps = [next(all_haps) for _ in range(self.paramsdict["sample_size_local"])]
+        meta_haps = [next(all_haps) for _ in range(self.paramsdict["sample_size_meta"])]
 
         ## Calculate S for each population
         ## Turn to an np array and transpose it, then test if all elements
         ## are the same by making a set from each row and checking if len > 1
         ## In the transposed array rows are bases and columns are individuals
+        ## There's probably a much fucking smarter way to do this
         ihaps_t = np.transpose(np.array([map(int, list(x)) for x in island_haps]))
         mhaps_t = np.transpose(np.array([map(int, list(x)) for x in meta_haps]))
 
@@ -127,32 +181,35 @@ class species(object):
         ## S will not always == S_local + S_meta. If a site is fixed in one pop and not
         ## present in the other then S will be less than the total. If a site is segragating
         ## in both pops then S will be greater than the total.
-        ## There's probably a smarter way to do this....
-        self.S_local = collections.Counter([len(set(ihaps_t[x])) for x in range(len(ihaps_t))])[2]
-        self.S_meta = collections.Counter([len(set(mhaps_t[x])) for x in range(len(mhaps_t))])[2]
+        ## There's probably a smarter way to do this too....
+        self.stats["segsites_local"] = collections.Counter(\
+                                        [len(set(ihaps_t[x])) for x in range(len(ihaps_t))])[2]
+        self.stats["segsites_meta"] = collections.Counter(\
+                                        [len(set(mhaps_t[x])) for x in range(len(mhaps_t))])[2]
 
         ## Pass in the transposed arrays, since we already have them
-        self.pi_local = get_pi(ihaps_t) / self.sequence_length
-        self.pi_meta = get_pi(mhaps_t) / self.sequence_length
+        self.stats["pi_local"] = get_pi(ihaps_t) / self.paramsdict["sequence_length"]
+        self.stats["pi_meta"] = get_pi(mhaps_t) / self.paramsdict["sequence_length"]
 
         ## get pairwise differences between populations while ignoring differences
         ## within populations (Dxy)
-        self.dxy = get_dxy(ihaps_t, mhaps_t) / self.sequence_length
+        self.stats["dxy"] = get_dxy(ihaps_t, mhaps_t) / self.paramsdict["sequence_length"]
 
-        ## pi_net
-        self.pi_net = self.dxy - (self.pi_local + self.pi_meta)/2
+        self.stats["da"] = self.stats["dxy"] - (self.stats["pi_local"] + self.stats["pi_meta"])/2
 
         ## Forbid biologically unrealistic values of pi
-        if self.pi_meta > 0.2 or self.pi_local > 0.2:
+        if self.stats["pi_meta"] > 0.2 or self.stats["pi_local"] > 0.2:
             print("Bad pi {}".format(self))
             self.simulate_seqs()
             self.get_sumstats()
 
-        self.tajD = tajD_island(island_haps, self.S_local)
+        self.stats["tajd_local"] = tajD_island(island_haps, self.stats["segsites_local"])
 
+
+    ## This is hackish and is used by the LocalCommunity.bottleneck() function
+    ## that is more or less untested
     def update_abundance(self, abund):
-        self.abundance = abund
-        self.local_Ne = abund * self.alpha
+        self.stats["Ne_local"] = abund * self.paramsdict["alpha"]
 
 
 def tajD_island(haplotypes, S):
@@ -243,19 +300,11 @@ def get_dxy(ihaps_t, mhaps_t):
 if __name__ == "__main__":
     from tabulate import tabulate
     import MESS
+    sp = species("wat", abundance=100, meta_abundance=1000, colonization_time=1000000)
+    sp.simulate_seqs()
+    print(sp)
 
-    data = MESS.LocalCommunity("tmp")
-    data.set_metacommunity("logser")
-    data.prepopulate(mode="volcanic")
-    for i in range(50000):
-        if not i % 10000:
-            print("{} ".format(i))
-        data.step()
-    abundance_distribution = data.get_abundances(octaves=False)
-    MESS.LocalCommunity.plot_abundances_ascii(abundance_distribution)
-
-    sp = data.get_species()
-    for s in sp:
-        s.simulate_seqs()
-        s.get_sumstats()
-    tabulate_sumstats(data)
+    #data = MESS.Region("wat")
+    #data.add_local_community("tmp", 500, 0.5)
+    #data.simulate(_lambda=0.5)
+    
