@@ -1257,14 +1257,3 @@ if __name__ == "__main__":
         stats.write(tabulate_sumstats(data))
 
 
-    if args.do_plots:
-        ## Make the normalized pi_x_dxy heatmaps
-        plot_rank_abundance_through_time(args.outdir, sp_through_time, equilibria,\
-                    stats_models=args.plot_models, as_curve=args.curves, verbose=args.verbose)
-        normalized_pi_dxy_heatmaps(args.outdir, sp_through_time, equilibria,\
-                    stats_models=args.plot_models, as_curve=args.curves, verbose=args.verbose)
-        normalized_pi_dxy_heatmaps(args.outdir, sp_through_time, equilibria,\
-                    stats_models=args.plot_models, as_curve=args.curves, one_d=True, verbose=args.verbose)
-        plot_abundance_vs_colonization_time(args.outdir, sp_through_time, equilibria,\
-                    stats_models=args.plot_models, as_curve=args.curves)
-
