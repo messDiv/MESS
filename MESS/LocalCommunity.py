@@ -111,9 +111,9 @@ class LocalCommunity(object):
                    "sgd",
                    "trees"]).astype(np.object)
 
-        ## List for storing species objects that have had sequence
+        ## List for storing species that have had sequence
         ## simulated and sumstats calculated
-        self.species_objects = []
+        self.species = []
 
         self.extinctions = 0
         self.colonizations = 0
@@ -283,7 +283,7 @@ class LocalCommunity(object):
         This is normally only really used for fancy plotting."""
         self.lambda_through_time[self.current_time] = self._lambda()
         self.simulate_seqs()
-        self.species_through_time[self.current_time] = self.species_objects
+        self.species_through_time[self.current_time] = self.species
 
 
     def __str__(self):
@@ -569,22 +569,22 @@ class LocalCommunity(object):
         self.local_community = self.local_community[:reduction]
 
         ## First remove the extinct species from the species list
-        pre = len(self.species_objects)
-        self.species_objects = [s for s in self.species_objects if s.uuid in self.local_community]
+        pre = len(self.species)
+        self.species = [s for s in self.species if s.uuid in self.local_community]
         ## Update the extinction counter
-        self.extinctions += (pre - len(self.species_objects))
+        self.extinctions += (pre - len(self.species))
 
-        sp = self.species_objects
+        sp = self.species
         ## Update abundances per species that survived the bottleneck
         for i, s in enumerate(sp):
             if s.uuid in self.local_community:
                 abund = self.local_community.count(s.uuid)
                 s.update_abundance(abund)
-                self.species_objects[i] = s
+                self.species[i] = s
 
 
     def simulate_seqs(self):
-        self.species_objects = []
+        self.species = []
         for name, coltime in self.local_info.loc["colonization_times"].iteritems():
             try:
                 meta_abund = self.region.get_abundance(name)
@@ -592,13 +592,13 @@ class LocalCommunity(object):
                 tdiv = self.current_time - coltime 
                 sp = species(UUID=name,
                              colonization_time = tdiv,\
-                             growth_rate = self.region.paramsdict["population_growth_rate"],\
+                             growth = self.region.paramsdict["population_growth"],\
                              abundance = local_abund,\
                              meta_abundance = meta_abund,
                              migration_rate = self.local_info[name]["post_colonization_migrants"]/float(tdiv))
                 sp.simulate_seqs()
                 sp.get_sumstats()
-                self.species_objects.append(sp)
+                self.species.append(sp)
                 LOGGER.debug(sp)
                 ## For debugging invasives
                 #if s.abundance > 1000:
@@ -606,6 +606,8 @@ class LocalCommunity(object):
             except Exception as inst:
                 print(self.local_community)
                 print(self.local_info)
+                print(len(set(self.local_community)))
+                print(self.local_info.shape)
                 msg = "Error in simulate_seqs() - {}\nabundance - {} / meta_abundance {}\n{}\n{}".format(name,
                                                                                                          local_abund,
                                                                                                          meta_abund,
@@ -627,8 +629,8 @@ class LocalCommunity(object):
         self.stats.R = len(set(self.local_community))
         self.stats.shannon = shannon(self.get_abundances(octaves=False))
 
-        pis = np.array([x.pi_local for x in self.species_objects])
-        dxys = np.array([x.dxy for x in self.species_objects])
+        pis = np.array([x.stats["pi_local"] for x in self.species])
+        dxys = np.array([x.stats["dxy"] for x in self.species])
         self.stats.mean_pi = np.mean(pis)
         self.stats.stdv_pi = np.std(pis)
         self.stats.median_pi = np.median(pis)
@@ -638,12 +640,21 @@ class LocalCommunity(object):
         self.stats.median_dxy= np.median(dxys)
         self.stats.iqr_dxy = iqr(dxys)
 
-        self.stats.sgd = SGD([x.pi_local for x in self.species_objects])
+        self.stats.sgd = SGD(pis, dxys)
 
         ## Log to file
         statsfile = os.path.join(self._hackersonly["outdir"],
                                  self.paramsdict["name"] + "-simout.txt")
         self.stats.to_csv(statsfile, na_rep=0, float_format='%.5f')
+
+        megalog = os.path.join(self._hackersonly["outdir"],
+                                 self.paramsdict["name"] + "-megalog.txt")
+        ## concatenate all species results and transpose the data frame so rows are species
+        fullstats = pd.concat([sp.stats for sp in self.species], axis=1).T
+        fullstats.to_csv(megalog, index_label=False)
+
+        ## If you ever want to pretty print results
+        #print(tabulate(fullstats, list(fullstats), floatfmt=".4f"))
         return self.stats
 
 
