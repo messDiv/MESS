@@ -170,7 +170,7 @@ def parse_command_line():
         help="Generate specified number of simulations")
 
     parser.add_argument("-c", metavar="cores", dest="cores",
-        type=int, default=0,
+        type=int, default=-1,
         help="number of CPU cores to use (Default=0=All)")
 
     parser.add_argument('-r', action='store_true', dest="results",
