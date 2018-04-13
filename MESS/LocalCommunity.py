@@ -278,13 +278,17 @@ class LocalCommunity(object):
             paramsfile.write("\n")        
 
 
-    def _log(self):
+    def _log(self, full=False):
         """ A function for occasionally logging a ton of information through time.
-        This is normally only really used for fancy plotting."""
-        self.lambda_through_time[self.current_time] = self._lambda()
-        self.simulate_seqs()
-        self.species_through_time[self.current_time] = self.species
+        Anything that needs to get recorded through time should happen in here.
+        'full' will dump a ton of stuff to the outdir, and is normally only really
+        used for fancy plotting."""
+        if full:
+            self.lambda_through_time[self.current_time] = self._lambda()
+            self.simulate_seqs()
+            self.species_through_time[self.current_time] = self.species
 
+        ## Always log size changes through time
 
     def __str__(self):
         return "<LocalCommunity {}: Shannon's Entropy {}>".format(self.name, shannon(self.get_abundances()))

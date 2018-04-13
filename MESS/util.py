@@ -40,12 +40,14 @@ def detect_cpus():
 
 
 ## quicksort stolen from the internet
+## This sorts species by Ne
 def qsort(arr):
      if len(arr) <= 1:
           return arr
      else:
-          return qsort([x for x in arr[1:] if x.abundance<arr[0].abundance])\
-                    + [arr[0]] + qsort([x for x in arr[1:] if x.abundance>=arr[0].abundance])
+          return qsort([x for x in arr[1:] if x.stats["Ne_local"]<arr[0].stats["Ne_local"]])\
+                 + [arr[0]] +\
+                 qsort([x for x in arr[1:] if x.stats["Ne_local"]>=arr[0].stats["Ne_local"]])
 
 
 def progressbar(nsims, finished, msg=""):

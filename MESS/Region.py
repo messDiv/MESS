@@ -357,7 +357,13 @@ class Region(object):
     ## TODO: Need to think about how to quantify lambda if there is more
     ## than one island
     ## TODO: Need to implement the force flag here to allow or prevent overwriting
-    def simulate(self, _lambda=0, nsteps=0, quiet=True):
+    def simulate(self, _lambda=0, nsteps=0, log_full=False, quiet=True):
+        ## Run one realization of this Region. simulate() accepts EITHER _lambda
+        ## value to run to OR # of steps to perform, and not both.
+        ##  * log_full turns on extremely verbose logging to files in the outdir
+        ##  * quiet toggles the more fine grained progress bar and normally
+        ##    should be set to True, especially on cluster jobs, otherwise it
+        ##    floods the stdout pipe
         LOGGER.debug("Entering simulate(): lambda={}, nsteps={}".format(_lambda, nsteps))
         if _lambda > 0 and nsteps > 0:
             LOGGER.error("simulate accepts only one of either lambda or nsteps args")
@@ -386,6 +392,9 @@ class Region(object):
             for island in self.islands.values():
                 island.step()
             step += 1
+            if not step % self.paramsdict["recording_period"]:
+               for island in self.islands.values():
+                    island._log(full=log_full) 
         ## TODO: Combine stats across local communities if more than one
         for name, island in self.islands.items():
             statsdf = island.get_stats()
@@ -397,7 +406,7 @@ class Region(object):
     def fancy_plots(self, quiet=True):
         LOGGER.debug("Entering fancy_plots()")
 
-        _lambda = 0
+        """_lambda = 0
         step = 0
         while _lambda < 1:
             for island in self.islands.values():
@@ -408,8 +417,9 @@ class Region(object):
             step += 1
             if not step % self.paramsdict["recording_period"]:
                for island in self.islands.values():
-                    island._log() 
-        progressbar(100, 100, "Finished simulation\n")
+                    island._log(full=True) 
+        progressbar(100, 100, "Finished simulation\n")"""
+        self.simulate(_lambda=1, log_full=True, quiet=quiet)
 
         outdir = self._get_simulation_outdir(prefix="fancy-")
 

@@ -77,6 +77,8 @@ def SGD(pis, dxys=[], nbins=10, flatten=True):
         ## numpy 2d histogram is oriented somewhat unintuitively
         ## transposing the array turns y axis into rows
         hist = hist.T.ravel() if flatten else hist.T
+    ## Return as int array, since histogram2d uses float64 bins
+    hist = hist.astype(int)
     return np.array2string(hist).replace('\n', '')
 
 

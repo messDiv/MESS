@@ -52,7 +52,7 @@ def plot_rank_abundance_through_time(outdir, sp_through_time, equilibria,\
                 max_n_bins, octave_bin_labels))
 
     ## Get a list of UUIDs of the extant species at time 0 (present)
-    extant = [x.uuid[0] for x in sp_through_time.values()[-1]]
+    extant = [x.stats["name"] for x in sp_through_time.values()[-1]]
 
     ## Make the abundance plots, one for each timeslice
     ## TODO: Should we include all species or just the ones that live to the end?
@@ -72,8 +72,8 @@ def plot_rank_abundance_through_time(outdir, sp_through_time, equilibria,\
         ## Make the Plot
         fig = plt.figure(figsize=(12,5))
 
-        ## Make the SAD subplot
-        abund = SAD([x.abundance for x in species], from_abundances=True, octaves=True)
+        ## Make the SAD subplot, convert Ne back to abundance by dividing by alpha
+        abund = SAD([x.stats["Ne_local"]/x.paramsdict["alpha"] for x in species], from_abundances=True, octaves=True)
         ax1 = plt.subplot(121)
         plot_sad(abund, max_n_species, max_n_bins, max_class_count, octave_bin_labels, verbose)
 
@@ -125,7 +125,7 @@ def plot_abundance_vs_colonization_time(outdir, sp_through_time, equilibria,\
                 max_n_bins, octave_bin_labels))
 
     ## Get a list of UUIDs of the extant species at time 0 (present)
-    extant = [x.uuid[0] for x in sp_through_time.values()[-1]]
+    extant = [x.stats["name"] for x in sp_through_time.values()[-1]]
     nslices = len(sp_through_time)
     ## Create a file index that is large enough so we can create all the abundance
     ## files in an order where we can cat them in numerical order w/o too much fuss
@@ -143,7 +143,7 @@ def plot_abundance_vs_colonization_time(outdir, sp_through_time, equilibria,\
 
         ## Make the abundance vs colonization time plot
         ax1 = plt.subplot(121)
-        max_coltime = max([s.colonization_time for s in species])
+        max_coltime = max([s.stats["coltime"]for s in species])
         plot_abund_vs_colon(species, max_coltime, max_abundance)
 
         ## Make the rank abundance distribution subplot
@@ -197,7 +197,7 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
 
     ## GET MAX pi and dxy
     ## Get a list of UUIDs of the extant species at time 0 (present)
-    extant = [x.uuid[0] for x in sp_through_time.values()[-1]]
+    extant = [x.stats["name"] for x in sp_through_time.values()[-1]]
     ## find the max_pi and max_dxy for all extant species through all timepoints
     max_pi_local = 0
     max_dxy = 0
@@ -214,7 +214,7 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
     for sp_list in sp_through_time.values():
 
         ## Get max pi and max dxy
-        pis = np.array([(x.dxy, x.pi_local) for x in sp_list if x.uuid[0] in extant])
+        pis = np.array([(x.stats["dxy"], x.stats["pi_local"]) for x in sp_list if x.stats["name"] in extant])
         ## pis will be empty if this timeslice includes no extant species
         if pis.any():
             my_max_dxy = max([x[0] for x in pis])
@@ -232,6 +232,7 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
     max_pi_local = np.median(my_pi_locals)
     ## However this function is calculating the heatmaps is fucked up, so you have to
     ## hard code max values for pi and dxy here.
+    ## TODO: This is hackish
     max_dxy = 0.04
     max_pi_local = 0.02
     if verbose:
@@ -265,7 +266,7 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
         ## Only include extant species in plots
         #pis = np.array([(x.dxy, x.pi_local) for x in sp_list if x.uuid[0] in extant])
         ## include all species at each timeslice
-        pis = np.array([(x.dxy, x.pi_local) for x in sp_list])
+        pis = np.array([(x.stats["dxy"], x.stats["pi_local"]) for x in sp_list])
 
         ## Empty heatmap we'll write into
         heat = np.zeros((20,20), dtype=np.int)
@@ -379,7 +380,7 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
 def prep_normalized_plots(sp_through_time):
     ## GET MAX values for abundance and num species so we can normalize the plot axes
     max_n_species = max([len(x) for x in sp_through_time.values()])
-    max_abundance = max([max([y.abundance for y in sp]) for sp in sp_through_time.values()])
+    max_abundance = max([max([y.stats["Ne_local"]/y.paramsdict["alpha"] for y in sp]) for sp in sp_through_time.values()])
 
     ## Get max values for abundance class count and abundance octave
     max_octave = 0
@@ -387,7 +388,7 @@ def prep_normalized_plots(sp_through_time):
     max_n_bins = 0
     octave_bin_labels = []
     for sp in sp_through_time.values():
-        abund = SAD([x.abundance for x in sp], from_abundances=True, octaves=True)
+        abund = SAD([x.stats["Ne_local"]/x.paramsdict["alpha"] for x in sp], from_abundances=True, octaves=True)
         octave = max(abund.keys())
         class_count = max(abund.values())
         if octave > max_octave:
@@ -432,11 +433,11 @@ def plot_rank_abundance(sp_list, max_n_species, max_abundance, stats_models=Fals
     species = species[::-1]
     X = np.arange(0,len(species))
     if as_curve:
-        Y = [xx.abundance for xx in species]
+        Y = [xx.stats["Ne_local"]/xx.paramsdict["alpha"] for xx in species]
         plt.semilogy(X, Y, label="simulated")
         ymax = max_abundance
     else:
-        Y = [np.log10(xx.abundance) for xx in species]
+        Y = [np.log10(xx.stats["Ne_local"]/xx.paramsdict["alpha"]) for xx in species]
         plt.scatter(X, Y, color="blue", s=100, label="simulated")
         ymax = int(math.ceil(np.log10(max_abundance)))
 
@@ -449,7 +450,7 @@ def plot_rank_abundance(sp_list, max_n_species, max_abundance, stats_models=Fals
     ## Whether or not to include a couple common statistical models in the plots
     if stats_models:
         import macroeco as meco
-        abund = [xx.abundance for xx in species]
+        abund = [xx.stats["Ne_local"]/xx.paramsdict["alpha"] for xx in species]
         ## Lognormal
         mu, s = meco.models.lognorm.fit_mle(abund)
         lognorm_rad = meco.models.lognorm.rank(len(abund), mu, s)
@@ -482,8 +483,8 @@ def plot_rank_abundance(sp_list, max_n_species, max_abundance, stats_models=Fals
 
 
 def plot_abund_vs_colon(species, max_coltime, max_abundance):
-    x = [np.log10(s.colonization_time) for s in species]
-    y = [np.log10(s.abundance) for s in species]
+    x = [np.log10(s.stats["coltime"]) for s in species]
+    y = [np.log10(s.stats["Ne_local"]/s.paramsdict["alpha"]) for s in species]
     plt.scatter(x, y, color="blue", s=100)
     plt.ylim(0, int(math.ceil(np.log10(max_abundance))))
     plt.xlim(0, 8) #int(math.ceil(np.log10(max_coltime))))
@@ -500,7 +501,7 @@ def get_max_heat_bin(sp_through_time, max_pi_local, max_dxy):
         ## Only include extant species in plots
         #pis = np.array([(x.dxy, x.pi_local) for x in sp_list if x.uuid[0] in extant])
         ## include all species at each timeslice
-        pis = np.array([(x.dxy, x.pi_local) for x in sp_list])
+        pis = np.array([(x.stats["dxy"], x.stats["pi_local"]) for x in sp_list])
 
         ## Empty heatmap we'll write into
         heat = np.zeros((20,20), dtype=np.int)
