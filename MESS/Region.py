@@ -406,19 +406,6 @@ class Region(object):
     def fancy_plots(self, quiet=True):
         LOGGER.debug("Entering fancy_plots()")
 
-        """_lambda = 0
-        step = 0
-        while _lambda < 1:
-            for island in self.islands.values():
-                island.step()
-            _lambda = self.islands.values()[0]._lambda()
-            if not quiet:
-                progressbar(100, np.ceil(_lambda * 100), "Performing simulation")
-            step += 1
-            if not step % self.paramsdict["recording_period"]:
-               for island in self.islands.values():
-                    island._log(full=True) 
-        progressbar(100, 100, "Finished simulation\n")"""
         self.simulate(_lambda=1, log_full=True, quiet=quiet)
 
         outdir = self._get_simulation_outdir(prefix="fancy-")
@@ -440,6 +427,7 @@ class Region(object):
                                                         island.lambda_through_time)
             except Exception as inst:
                 print("    Exception in fancy_plots() - {}".format(inst))
+
 
 def simulate(data, time=time, quiet=True):
     import os

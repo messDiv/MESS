@@ -31,7 +31,7 @@ def plot_rank_abundance_through_time(outdir, sp_through_time, equilibria,\
     seaborn.set
     seaborn.set_style(style="white")
 
-    print("Generating abundance distributions through time")
+    print("\nGenerating abundance distributions through time")
     ## Make the output directory for heatmaps inside the top level output directory
     abund_out = os.path.join(outdir, "abundance_plots")
     if not os.path.exists(abund_out):

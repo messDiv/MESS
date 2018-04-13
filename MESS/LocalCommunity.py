@@ -124,8 +124,8 @@ class LocalCommunity(object):
         ## species hang around in the local community
         self.extinction_times = []
         ## Dicts for tracking esoteric shit if _log() is called
-        self.lambda_through_time = {}
-        self.species_through_time = {}
+        self.lambda_through_time = OrderedDict({})
+        self.species_through_time = OrderedDict({})
 
         ## The invasive species identity
         self.invasive = -1
