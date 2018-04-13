@@ -46,8 +46,7 @@ def plot_rank_abundance_through_time(outdir, sp_through_time, equilibria,\
 
     max_n_species, max_abundance, max_octave, max_class_count, max_n_bins, octave_bin_labels = prep_normalized_plots(sp_through_time)
     if verbose:
-        print("info:\n\nmax_n_species - {}\nmax_abundance - {}\nmax_octave - {}\nmax_class_count - {}"\
-                + "\nmax_n_bins - {}\noctave_bin_labels - {}\n".format(\
+        print("info:\n\nmax_n_species - {}\nmax_abundance - {}\nmax_octave - {}\nmax_class_count - {}\nmax_n_bins - {}\noctave_bin_labels - {}\n".format(\
                 max_n_species, max_abundance, max_octave, max_class_count,\
                 max_n_bins, octave_bin_labels))
 
