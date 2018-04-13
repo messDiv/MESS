@@ -10,3 +10,4 @@ h5py
 setuptools
 ascii_graph
 msprime
+macroeco
