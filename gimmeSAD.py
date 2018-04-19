@@ -32,14 +32,14 @@ import implicit_CI
 class gimmeSAD(object):
 
     def __init__(self):
-        pass        
+        pass
 
     def __str__(self):
         return "<gimmeSAD {}>".format(self.name)
 
 
 ## quicksort stolen from the internet
-def qsort(arr): 
+def qsort(arr):
      if len(arr) <= 1:
           return arr
      else:
@@ -59,14 +59,14 @@ def make_outputfile(model, stats):
     if model in [1, 2]:
         for row in xrange(10):
             stats.write("\tbin_{}".format(row))
-    elif model in [3, 4]:        
+    elif model in [3, 4]:
         for row in xrange(10):
             for col in xrange(10):
                 stats.write("\tbin_{}_{}".format(row, col))
     else:
         raise Exception("Value for --model must be one of [1,2,3,4]")
 
-    stats.write("\n")  
+    stats.write("\n")
 
 def get_min_max_stats_through_time(sp_through_time):
     ## Normalization routines
@@ -102,7 +102,7 @@ def normalize_heatmap_to_numpy(sp_list, max_pi, max_dxy):
     dxy_bins = np.linspace(0, max_dxy, 10, endpoint=True)
     pi_island_bins = np.linspace(0, max_pi, 10, endpoint=True)
 
-    ## Now you have the bins each value belongs in, but you need to 
+    ## Now you have the bins each value belongs in, but you need to
     ## go through and populate the heat matrix
     for dxy, pi_island in pis:
         count_dxy = 0
@@ -118,7 +118,7 @@ def normalize_heatmap_to_numpy(sp_list, max_pi, max_dxy):
             ## Got a value bigger than our current max pi/dxy. ignore.
             pass
     return heat
-        
+
 
 ## This is hackish because it goes through and writes out some stats at runtime
 ## then goes back at the very end and writes out the heatmaps per line
@@ -266,7 +266,7 @@ def write_megalog(megalogfile, i, percent_equil, data):
     megalogfile.write("\n".join(["{}\t{}\t{}".format(percent_equil, i, "\t".join(map(str, s))) for s in acc]) + "\n")
 
 ## This actually is doing pi x dxy, but some of the variable
-## names are goofy cuz i developed it for pi x pi_w_island 
+## names are goofy cuz i developed it for pi x pi_w_island
 def heatmap_pi_dxy(data, write="", title=""):
     """ The write flag specifies whether or not to write the image
     to a file. You must pass in a file name. If this file exists
@@ -284,7 +284,7 @@ def heatmap_pi_dxy(data, write="", title=""):
     pi_bins = np.linspace(0, max_pi, 10)
     pi_island_bins = np.linspace(0, max_pi_island, 10)
 
-    ## Now you have the bins each value belongs in, but you need to 
+    ## Now you have the bins each value belongs in, but you need to
     ## go through and populate the heat matrix
     for pi, pi_island in pis:
         count_pi = 0
@@ -301,7 +301,7 @@ def heatmap_pi_dxy(data, write="", title=""):
     plt.colorbar()
     plt.xticks(np.arange(len(pi_bins)), ["{0:.4f}".format(x) for x in pi_bins], rotation='vertical')
     plt.yticks(np.arange(len(pi_bins)), ["{0:.4f}".format(x) for x in pi_island_bins])
-    
+
     ## If writing to a file, don't bother displaying it, plus it hangs the program
     if write:
         plt.title(title)
@@ -311,7 +311,7 @@ def heatmap_pi_dxy(data, write="", title=""):
     plt.close()
 
 
-## Doesn't exactly work right, it'll prune extant species but there's 
+## Doesn't exactly work right, it'll prune extant species but there's
 ## a good chance an extant species has colonized, then gone extinct,
 ## then recolonized (which is allowable), but it fucks up the plotting
 def prune_extant(sp_through_time):
@@ -320,8 +320,8 @@ def prune_extant(sp_through_time):
 
     ## Get the uuids of all extant species
     extant = [x.uuid[0] for x in sp_through_time.values()[-1]]
-    
-    for time, sp_list in sp_through_time.items(): 
+
+    for time, sp_list in sp_through_time.items():
         sp_through_time[time] = np.array([x for x in sp_list if x.uuid[0] in extant])
 
     return sp_through_time
@@ -356,7 +356,7 @@ def plot_rank_abundance_through_time(outdir, sp_through_time, equilibria,\
 
     ## Get a list of UUIDs of the extant species at time 0 (present)
     extant = [x.uuid[0] for x in sp_through_time.values()[-1]]
-    
+
     ## Make the abundance plots, one for each timeslice
     ## TODO: Should we include all species or just the ones that live to the end?
     nslices = len(sp_through_time)
@@ -382,12 +382,12 @@ def plot_rank_abundance_through_time(outdir, sp_through_time, equilibria,\
         ## Make the rank abundance distribution subplot
         plt.subplot(122)
         plot_rank_abundance(species, max_n_species, max_abundance, stats_models, as_curve)
-        
+
         plt.subplots_adjust(bottom=0.15)
 
         suptitle = "Time: {}".format(times[i])
-        fig.get_axes()[0].annotate(suptitle, (0.5, 0.95), 
-                            xycoords='figure fraction', ha='center', 
+        fig.get_axes()[0].annotate(suptitle, (0.5, 0.95),
+                            xycoords='figure fraction', ha='center',
                             fontsize=24
                             )
 
@@ -547,7 +547,7 @@ def get_max_heat_bin(sp_through_time, max_pi_island, max_dxy):
         dxy_bins = np.linspace(0, max_dxy, 20, endpoint=True)
         pi_island_bins = np.linspace(0, max_pi_island, 20, endpoint=True)
 
-        ## Now you have the bins each value belongs in, but you need to 
+        ## Now you have the bins each value belongs in, but you need to
         ## go through and populate the heat matrix
         for dxy, pi_island in pis:
             count_dxy = 0
@@ -572,7 +572,7 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
                                 only_extant=False, stats_models=False, as_curve=False,\
                                 verbose=False):
     """ Normalize x and y axes for the heatmaps. Only take into account extant species.
-    Inputs are the output directory to write to and an ordered dict 
+    Inputs are the output directory to write to and an ordered dict
     of the species at every recording duration timepoint """
 
     if one_d:
@@ -603,7 +603,7 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
     ## find the max_pi and max_dxy for all extant species through all timepoints
     max_pi_island = 0
     max_dxy = 0
-    
+
     ## For each recorded timeslice
     my_dxys = []
     my_pi_islands = []
@@ -612,7 +612,7 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
     max_n_species, max_abundance, _, _, _, _ = prep_normalized_plots(sp_through_time)
     if verbose:
         print("max_n_species - {}\nmax_abundance - {}".format(max_n_species, max_abundance))
-    
+
     ## Normalization routines
     for sp_list in sp_through_time.values():
 
@@ -659,11 +659,11 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
     tot_heatmaps = len(sp_through_time.values())
     for i, sp_list in enumerate(sp_through_time.values()):
         progressbar(tot_heatmaps, i+1)
- 
+
         title = "Time_"+str(file_index+i)
         write = os.path.join(heat_out, title)
         #print("Doing", title)
-        
+
         ## Get the sumstats for this timeslice
         ## Only include extant species in plots
         #pis = np.array([(x.dxy, x.pi_island) for x in sp_list if x.uuid[0] in extant])
@@ -677,7 +677,7 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
         dxy_bins = np.linspace(0, max_dxy, 20, endpoint=True)
         pi_island_bins = np.linspace(0, max_pi_island, 20, endpoint=True)
 
-        ## Now you have the bins each value belongs in, but you need to 
+        ## Now you have the bins each value belongs in, but you need to
         ## go through and populate the heat matrix
         for dxy, pi_island in pis:
             count_dxy = 0
@@ -764,11 +764,11 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
         ## Make the rank abundance plot
         plt.subplot(122)
         plot_rank_abundance(sp_list, max_n_species, max_abundance, stats_models, as_curve)
-    
+
         ## Make the super title
         suptitle = "Time: {}".format(times[i])
-        fig.get_axes()[0].annotate(suptitle, (0.5, 0.95), 
-                            xycoords='figure fraction', ha='center', 
+        fig.get_axes()[0].annotate(suptitle, (0.5, 0.95),
+                            xycoords='figure fraction', ha='center',
                             fontsize=24
                             )
         plt.savefig(write+".png")
@@ -797,13 +797,13 @@ def plot_sad(abund, max_n_species, max_n_bins, max_class_count, octave_bin_label
     bar = df.plot(kind = "bar", legend = False, ax = ax1)
     ## Otherwise 1st bar is truncated
     plt.title("SAD", fontsize=24)
-    plt.xlim([0.5, max_n_bins]) 
+    plt.xlim([0.5, max_n_bins])
     ax1.set_xticklabels([str(x) for x in octave_bin_labels])
     plt.setp(bar.get_xticklabels(), rotation=0)
     plt.ylim(0, max_class_count)
     plt.xlabel("Abundance Class", fontsize=20)
     plt.ylabel("Count", fontsize=20)
-        
+
 
 def plot_rank_abundance(sp_list, max_n_species, max_abundance, stats_models=False, as_curve=False):
 
@@ -818,7 +818,7 @@ def plot_rank_abundance(sp_list, max_n_species, max_abundance, stats_models=Fals
         Y = [np.log10(xx.abundance) for xx in species]
         plt.scatter(X, Y, color="blue", s=100, label="simulated")
         ymax = int(math.ceil(np.log10(max_abundance)))
-        
+
     plt.title("Rank Abundance", fontsize=24)
     plt.xlim(0, max_n_species)
     plt.ylim(0, ymax)
@@ -880,7 +880,7 @@ def heatmap_pi_dxy_ascii(data, labels=False):
     pi_bins = np.linspace(0, max_pi, 10)
     pi_island_bins = np.linspace(0, max_pi_island, 10)
 
-    ## Now you have the bins each value belongs in, but you need to 
+    ## Now you have the bins each value belongs in, but you need to
     ## go through and populate the heat matrix
     for pi, pi_island in pis:
         count_pi = 0
@@ -927,7 +927,7 @@ def write_sizechanges(outdir, yoyo):
     sizes = {}
     for x in extant:
         sizes[x] = []
-    ## For each time slice going back in time, record the current pop size of each 
+    ## For each time slice going back in time, record the current pop size of each
     ## species of interest
     for k in keys:
        for sp, siz in yoyo[k].items():
@@ -935,7 +935,7 @@ def write_sizechanges(outdir, yoyo):
                 sizes[sp].append(siz)
     for k, v in sizes.items():
         out.write("{} - {}\n".format(k, v))
-    
+
 
 def parse_command_line():
     """ Parse CLI args. Only three options now. """
@@ -944,7 +944,7 @@ def parse_command_line():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""\n
-  * Example command-line usage: 
+  * Example command-line usage:
 
     gimmeSAD -n 100000                  ## Run the simulation for 100000 steps
 
@@ -969,7 +969,7 @@ def parse_command_line():
 
    """)
 
-    ## add model arguments 
+    ## add model arguments
     parser.add_argument('-a', dest="octaves", action='store_true',
         help="Print species abundances in octaves")
 
@@ -1022,7 +1022,7 @@ def parse_command_line():
 
     parser.add_argument('-e', dest="exponential", action='store_true',
         help="Do exponential growth, otherwise constant")
-    
+
     parser.add_argument('-b', metavar='bottleneck', dest="bottleneck", type=float,
         default=1.,
         help="Strength of the bottleneck")
@@ -1089,6 +1089,7 @@ if __name__ == "__main__":
 
     ## Set model parameters
     data.set_metacommunity(args.meta)
+    print(data.species_death_probability)
     data.prepopulate(mode=args.mode)
 
     ## Setup output directory and files
@@ -1175,7 +1176,7 @@ if __name__ == "__main__":
 
             ## Test for equilibrium
             founder_flags = [x[1] for x in data.local_community]
-            percent_equil = float(founder_flags.count(False))/len(founder_flags)            
+            percent_equil = float(founder_flags.count(False))/len(founder_flags)
             if do_equilibrium:
                 if (not any(founder_flags)) and reached_equilib:
                     print("\nReached second equilibrium")
@@ -1204,7 +1205,7 @@ if __name__ == "__main__":
         else:
             recording_period = args.recording_period
         ## Recording data every once in a while
-        if not i % recording_period and not i == 0: 
+        if not i % recording_period and not i == 0:
             ## Every once in a while write out useful info
             data.simulate_seqs()
             sp_through_time[i] = data.get_species()
@@ -1254,7 +1255,7 @@ if __name__ == "__main__":
         founder_flags = [x[1] for x in data.local_community]
         percent_equil = float(founder_flags.count(False))/len(founder_flags)
         print("How close to equilibrium? {}".format(percent_equil))
-    
+
     ## When finished simulate the final set of sequences
     data.simulate_seqs()
     sp_through_time[i] = data.get_species()
@@ -1301,4 +1302,3 @@ if __name__ == "__main__":
                     stats_models=args.plot_models, as_curve=args.curves, one_d=True, verbose=args.verbose)
         plot_abundance_vs_colonization_time(args.outdir, sp_through_time, equilibria,\
                     stats_models=args.plot_models, as_curve=args.curves)
-

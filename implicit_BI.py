@@ -96,7 +96,7 @@ class implicit_BI(object):
         self.competitive_strength = 0
 
         ## Toggle environmental filtering
-        self.environmental_filtering = False
+        self.environmental_filtering = True
         self.environmental_optimum = 0
         self.environmental_strength = 0
 
@@ -179,7 +179,8 @@ class implicit_BI(object):
             self.environmental_optimum = np.random.uniform(-scale, scale)
 
             #determine strength of environment
-            self.environmental_strength = float(np.random.uniform(0.1,100))
+            self.environmental_strength = 50
+            #self.environmental_strength = float(np.random.uniform(0.1,100))
             self.weight = self.trait_evolution_rate_parameter * self.metcommunity_tree_height * (self.environmental_strength ** 2)
 
             for i in range(len(self.species)):
@@ -188,7 +189,8 @@ class implicit_BI(object):
 
         if self.competitive_exclusion:
             #determine strength of competition
-            self.competitive_strength = float(np.random.uniform(0.1,100))
+            self.competitive_strength = 0.1
+            #self.competitive_strength = float(np.random.uniform(0.1,100))
             self.weight = self.trait_evolution_rate_parameter * self.metcommunity_tree_height * (self.competitive_strength ** 2)
 
 
@@ -500,6 +502,7 @@ class implicit_BI(object):
 
     def simulate_seqs(self):
         self.species_objects = []
+
         ## Setting colonization_time as a scaling factor rather than as a raw tdiv
         ## The old way of doing this is `self.current_time - tdiv`
         #self.species_objects = [species(UUID=UUID, colonization_time=1/float(tdiv), abundance=self.local_community.count(UUID),\
@@ -508,7 +511,8 @@ class implicit_BI(object):
                 meta_abundance = -1
                 for x in self.species:
                     if UUID[0] == x:
-                        meta_abundance = self.abundances[int(x[1:])]
+                        meta_abundance = self.abundances[self.species.index(x)]
+                        #meta_abundance = self.abundances[int(x[1:])]
                 #meta_abundance = [x[1] for x in self.abundances if x[0] == UUID[0]]
                 #meta_abundance = self.abundances[self.species.index(UUID[0])]
                 abundance = self.local_community.count(UUID)
@@ -538,11 +542,12 @@ class implicit_BI(object):
 
 if __name__ == "__main__":
     data = implicit_BI(allow_multiple_colonizations=True)
-    #data.set_metacommunity("uniform")
+
     #data.environmental_filtering = True
-    #data.competitive_exclusion = True
-    data.set_metacommunity("uniform")
+    data.competitive_exclusion = True
+    data.set_metacommunity("SpInfo.txt")
     data.prepopulate(mode="landbridge")
+
 
     for i in range(10000):
         if not i % 100:
