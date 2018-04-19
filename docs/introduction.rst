@@ -29,10 +29,9 @@ Example API::
   ## Run the simulation for x number of generations
   data.step(generations=100000)
   ## Alternatively simulate until some proportion of equilibrium is reached
-  data.step(lambda=0.7)
+  results = data.simulate(lambda=0.7)
   
-  ## Some functions to get information about local community status
-  mess.get_local_community("Island1")
+  print(results)
   
 Example CLI::
 
