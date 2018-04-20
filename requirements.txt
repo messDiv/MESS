@@ -1,12 +1,10 @@
 pip
-sphinx
 cython
 ipython
 ipyparallel>=6.0.2
 scipy>0.10
 numpy>=1.9
 pandas>=0.16
-h5py
 setuptools
 msprime
 macroeco
