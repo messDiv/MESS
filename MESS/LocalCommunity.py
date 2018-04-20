@@ -664,7 +664,6 @@ class LocalCommunity(object):
         fullstats.to_csv(megalog, index_label=False)
 
         ## If you ever want to pretty print results
-        #print(tabulate(fullstats, list(fullstats), floatfmt=".4f"))
         return self.stats
 
 

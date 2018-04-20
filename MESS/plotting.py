@@ -4,7 +4,6 @@ import matplotlib
 matplotlib.use("agg")
 import matplotlib.patheffects as PathEffects
 import matplotlib.pyplot as plt
-from tabulate import tabulate
 import numpy as np
 import pandas as pd
 import math
