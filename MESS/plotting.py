@@ -1,6 +1,5 @@
 
 from __future__ import print_function
-from ascii_graph import Pyasciigraph
 import matplotlib
 matplotlib.use("agg")
 import matplotlib.patheffects as PathEffects
