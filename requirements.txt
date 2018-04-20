@@ -1,4 +1,3 @@
-pip
 cython
 ipython
 ipyparallel>=6.0.2
