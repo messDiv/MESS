@@ -8,6 +8,5 @@ numpy>=1.9
 pandas>=0.16
 h5py
 setuptools
-ascii_graph
 msprime
 macroeco
