@@ -3,7 +3,7 @@ package:
   version: "1.0.1"
 
 source:
-  git_url: https://github.com/jkitzes/macroeco/
+  git_url: https://github.com/jkitzes/macroeco.git
 
 build:
   number: 0
