@@ -37,9 +37,13 @@ class Metacommunity(object):
         self.paramsdict = OrderedDict([
                         ("metacommunity_type", meta_type),
                         ("nspecies", 1000),
+                        ("J", 1000000),
+                        ("birth_rate", 2),
+                        ("death_proportion", 0.5),
                         ("uniform_abund", 1000000),
                         ("logser_shape", 0.98),
-                        ("J", 1000000),
+                        ("trait_rate", 5),
+                        ("trait_strength", 1),
         ])
 
         self.community = np.zeros([self.paramsdict["nspecies"]], dtype=METACOMMUNITY_DTYPE)
@@ -104,6 +108,18 @@ class Metacommunity(object):
             elif param == "logser_shape":
                 self.paramsdict[param] = float(newvalue)
 
+            elif param == "birth_rate":
+                self.paramsdict[param] = float(newvalue)
+
+            elif param == "death_proportion":
+                self.paramsdict[param] = float(newvalue)
+
+            elif param == "trait_rate":
+                self.paramsdict[param] = float(newvalue)
+
+            elif param == "trait_strength":
+                self.paramsdict[param] = float(newvalue)
+
             elif param == "J":
                 ## Do nothing. J is calculated from the data and not set, for now.
                 pass
@@ -119,7 +135,7 @@ class Metacommunity(object):
         Normally this isn't called directly, but by the main
         simulation engine.
 
-        append 
+        append
         """
         if outfile is None:
             raise MESSError("Metacommunity.write_params outfile must be specified.")
@@ -136,7 +152,7 @@ class Metacommunity(object):
                 header = "------- MESS params file (v.{})".format(MESS.__version__)
                 header += ("-"*(80-len(header)))
                 paramsfile.write(header)
-            
+
             header = "------- Metacommunity params: "
             header += ("-"*(80-len(header)))
             paramsfile.write(header)
@@ -159,7 +175,7 @@ class Metacommunity(object):
                 paramsfile.write("\n" + paramvalue + padding + \
                                         paramindex + name + description)
 
-            paramsfile.write("\n")        
+            paramsfile.write("\n")
 
 
     def set_metacommunity(self, random=False):
@@ -239,7 +255,7 @@ class Metacommunity(object):
         self.community["abundances"] = np.array(abundances)
         self.community["ids"] = ids
         self.community['trait_values'] = np.array(trait_values)
-        
+
         ## Calculate immigration probabilities
         self.paramsdict["J"] = np.sum(self.community["abundances"])
         LOGGER.debug("Size of metacommunity - {}".format(self.paramsdict["J"]))
@@ -279,7 +295,7 @@ class Metacommunity(object):
         return new_species
 
     def get_migrant(self):
-        """ Return one 
+        """ Return one
         """
         migrant_draw = np.random.multinomial(1, self.community["immigration_probabilities"], size=1).argmax()
         new_species = self.community["ids"][migrant_draw]
@@ -305,11 +321,14 @@ class Metacommunity(object):
 LOCAL_PARAMS = {
     "metacommunity_type" : "Options: uniform/logser/<filename>",\
     "nspecies" : "Number of species in the regional pool",\
+    "J" : "Total # of individuals in the regional pool (calculated)",\
+    "birth_rate" : "Speciation rate of metacommunity",\
+    "death_proportion" : "Proportion of speciation rate to be extinction rate",\
     "uniform_abund" : "If uniform: abundance per species",\
     "logser_shape" : "If logser: Shape parameter of the distribution",\
-    "J" : "Total # of individuals in the regional pool (calculated)",
+    "trait_rate" : "Trait evolution rate parameter",\
+    "trait_strength" : "Strength of community assembly process on phenotypic change",\
 }
-
 
 
 if __name__ == "__main__":
