@@ -433,6 +433,8 @@ class Region(object):
             except Exception as inst:
                 print("    Exception in fancy_plots() - {}".format(inst))
 
+    def get_trait(self, loc_id):
+        return self.metacommunity.community['trait_values'][self.metacommunity.community["ids"] == loc_id]
 
 def simulate(data, time=time, quiet=True):
     import os

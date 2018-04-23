@@ -48,34 +48,6 @@ class Metacommunity(object):
 
         self.community = np.zeros([self.paramsdict["nspecies"]], dtype=METACOMMUNITY_DTYPE)
 
-        ###########################################################
-        ## Variables for non-neutral assembly processes
-        ## Note all non-neutral assembly value defaults result
-        ## in neutral processes.
-        ###########################################################
-
-        ## Fundamental parameters of the metacommunity tree
-        self.metcommunity_tree_height = 0
-        self.trait_evolution_rate_parameter = 0
-
-        ## An ID by trait value dictionary
-        self.species_trait_values = {}
-
-        ## Toggle competitive exclusion
-        self.competitive_exclusion = False
-        self.competitive_strength = 0
-
-        ## Toggle environmental filtering
-        self.environmental_filtering = False
-        self.environmental_optimum = 0
-        self.environmental_strength = 0
-
-        ## Toggle params for holeing species death probabilities
-        self.species_death_probability = {}
-        #species death probability will be an unchanging dictionary for enviormental environmental_filtering
-        #but will have to be updated for competitive exlcusion models
-        self.individual_death_probabilites = []
-
         ## Populate community with default values
         self.set_metacommunity()
 
