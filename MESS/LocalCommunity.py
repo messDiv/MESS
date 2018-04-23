@@ -135,45 +135,6 @@ class LocalCommunity(object):
         self.survived_invasives = 0
         self.invasion_time = -1
 
-        ###########################################################
-        ## Variables for non-neutral assembly processes
-        ## Note all non-neutral assembly value defaults result
-        ## in neutral processes.
-        ###########################################################
-
-        ## Fundamental parameters of the metacommunity tree
-        self.metcommunity_tree_height = 0
-        self.trait_evolution_rate_parameter = 0
-
-        ## An ID by trait value dictionary
-        self.species_trait_values = {}
-
-        ## Keep track of rejections
-        self.rejection = 0
-
-        ## Toggle competitive exclusion
-        self.competitive_exclusion = False
-        if self.competitive_exclusion:
-            #determine strength of competition
-            self.competitive_strength = float(np.random.uniform(0.1,100))
-            self.weight = self.trait_evolution_rate_parameter * self.metcommunity_tree_height * (self.competitive_strength ** 2)
-        else:
-            self.competitive_strength = 0
-
-        ## Toggle environmental filtering
-        self.environmental_filtering = True
-        if self.environmental_filtering:
-            scale = float(4 * self.trait_evolution_rate_parameter * self.metcommunity_tree_height)
-            self.environmental_optimum = np.random.uniform(-scale, scale)
-
-            self.environmental_strength = float(np.random.uniform(0.1,100))
-            self.weight = self.trait_evolution_rate_parameter * self.metcommunity_tree_height * (self.environmental_strength ** 2)
-
-        else:
-            self.environmental_optimum = 0
-            self.environmental_strength = 0
-
-
     def _copy(self):
         """ Create a new clean copy of this LocalCommunity."""
         LOGGER.debug("Copying LocalCommunity - {}".format(self.name))
@@ -367,7 +328,7 @@ class LocalCommunity(object):
         ## Select the individual to die
 
         ##currently this will fail under volcanic model because the entire local community will go extinct
-        if self.environmental_filtering:
+        if self.region.paramsdict["allow_multiple_colonizations"]:
             death_Probability = 0
 
             while death_Probability < np.random.uniform(0,1):
@@ -638,6 +599,7 @@ LOCAL_PARAMS = {
     "colrate" : "Colonization rate into local community",\
     "mig_clust_size" : "# of individuals per colonization event",\
     "age" : "Local community age",\
+    "filtering_optimum" : "optimum trait value under environmental filtering model",\
 }
 
 
