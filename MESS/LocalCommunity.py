@@ -424,7 +424,6 @@ class LocalCommunity(object):
                 self.invasive = -1
 
 
-    ## Not updated
     def migrate_no_dupes_step(self):
         ## Loop until you draw species unique in the local community
         ## The flag to tell 'while when we're done, set when you successfully
@@ -458,7 +457,6 @@ class LocalCommunity(object):
         return new_species
 
 
-    ## Not updated
     def migrate_step(self):
         """ Allow multiple colonizations. In this case we return the sampled species
         as well as a bool reporting whether or not this is the first colonization of

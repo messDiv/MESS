@@ -262,37 +262,6 @@ class Metacommunity(object):
         self.community['immigration_probabilities'] = self.community["abundances"]/float(self.paramsdict["J"])
         LOGGER.debug("Metacommunity info: shape {}\n[:10] {}".format(self.community.shape, self.community[:10]))
 
-    def migrate_no_dupes_step(self):
-        ## Loop until you draw species unique in the local community
-        ## The flag to tell 'while when we're done, set when you successfully
-        ## draw a non-local-doop from the metacommunity
-        unique = 0
-
-        ## If you set your carrying capacity too high relative to the size of your
-        ## metacommunity then you'll get stuck drawing duplicates over and over
-        idiot_count = 0
-        while not unique:
-            ## Sample from the metacommunity
-            migrant_draw = np.random.multinomial(1, self.immigration_probabilities, size=1)
-            #print("Immigration event - {}".format(np.where(migrant_draw == 1)))
-            #print("Immigrant - {}".format(self.species[np.where(migrant_draw == 1)[1][0]]))
-            new_species = self.species[np.where(migrant_draw == 1)[1][0]]
-            ##TODO: Should set a flag to guard whether or not to allow multiple colonizations
-            #print(new_species)
-            if new_species not in [x[0] for x in self.local_community]:
-                ## Got a species not in the local community
-                unique = 1
-            else:
-                #print("multiple colonization forbidden: sp id {}".format(new_species[0]))
-                idiot_count +=1
-            if idiot_count > MAX_DUPLICATE_REDRAWS_FROM_METACOMMUNITY:
-               msg = """\nMetacommunity is exhausted w/ respect to local
-               community. Either expand the size of the metacommunity,
-               decrease the carrying capacity, or switch on multiple
-               migration (unimplemented)."""
-               sys.exit(msg)
-
-        return new_species
 
     def get_migrant(self):
         """ Return one
