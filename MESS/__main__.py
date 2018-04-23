@@ -148,7 +148,7 @@ def parse_command_line():
 
     ## create the parser
     parser = argparse.ArgumentParser(
-        add_help=False,
+        add_help=True,
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""\n
   * Example command-line usage: 
