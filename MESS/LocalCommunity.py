@@ -328,7 +328,7 @@ class LocalCommunity(object):
         ## Select the individual to die
 
         ##currently this will fail under volcanic model because the entire local community will go extinct
-        if self.region.paramsdict["allow_multiple_colonizations"]:
+        if self.region.paramsdict["community_assembly_model"] == 2:
             death_Probability = 0
 
             while death_Probability < np.random.uniform(0,1):
