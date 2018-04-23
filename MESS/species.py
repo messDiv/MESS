@@ -298,7 +298,6 @@ def get_dxy(ihaps_t, mhaps_t):
 
 
 if __name__ == "__main__":
-    from tabulate import tabulate
     import MESS
     sp = species("wat", abundance=100, meta_abundance=1000, colonization_time=1000000)
     sp.simulate_seqs()

@@ -221,7 +221,7 @@ class Region(object):
     ## Model functions/API
     ########################
     def add_local_community(self, name, K, c, quiet=False):
-        loc = MESS.LocalCommunity(name, K, c, quiet)
+        loc = MESS.LocalCommunity(name=name, K=K, colrate=c, quiet=quiet)
         ## TODO: Ensure island names aren't dupes
         self._link_local(loc)
 
@@ -388,7 +388,7 @@ class Region(object):
             ## This is not ideal functionality, but it at least gives you a sense of progress
             ## Especially don't do this on ipyparallel engines, because it floods the pipe.
             if not quiet:
-                progressbar(100, 100, "{}%".format(self.islands.values()[0]._lambda()))
+                progressbar(100, 100, "{0:.4f}%".format(self.islands.values()[0]._lambda()))
             for island in self.islands.values():
                 island.step()
             step += 1
@@ -414,7 +414,8 @@ class Region(object):
             try:
                 MESS.plotting.plot_rank_abundance_through_time(outdir,
                                                         island.species_through_time,
-                                                        island.lambda_through_time)
+                                                        island.lambda_through_time,
+                                                        verbose=False)
                 MESS.plotting.normalized_pi_dxy_heatmaps(outdir,
                                                         island.species_through_time,
                                                         island.lambda_through_time)

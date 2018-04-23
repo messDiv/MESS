@@ -298,6 +298,12 @@ class LocalCommunity(object):
             self.simulate_seqs()
             self.species_through_time[self.current_time] = self.species
 
+        ## Every once in a while test to be sure our community is the same size
+        ## as we think it should be.
+        if not len(self.local_community) == self.paramsdict["K"]:
+            msg = "k = {} r = {}".format(len(self.local_community),\
+                                                len(set(self.local_community)))
+            raise MESSError("  Community size violation - {}".format(msg))
         ## Always log size changes through time
 
     def __str__(self):
@@ -498,8 +504,8 @@ class LocalCommunity(object):
                         self.invasion_time = self.current_time
 
                 ## Add the colonizer to the local community, record the colonization time
-                self.local_community.append(new_species)
-                self.founder_flags.append(False)
+                self.local_community.extend([new_species] * self.paramsdict["mig_clust_size"])
+                self.founder_flags.extend([False] * self.paramsdict["mig_clust_size"])
                 self.colonizations += 1
             else:
                 self.death_step()
@@ -617,7 +623,6 @@ class LocalCommunity(object):
         #fullstats.to_csv(megalog, index_label=False)
 
         ## If you ever want to pretty print results
-        #print(tabulate(fullstats, list(fullstats), floatfmt=".4f"))
         return self.stats
 
 
@@ -658,10 +663,10 @@ if __name__ == "__main__":
 
     loc.paramsdict["mode"] = "volcanic"
     loc.prepopulate()
-    loc.step(10000)
+    loc.step(100000)
     print(len(set(loc.local_community)))
+    print(len(loc.local_community))
     print(loc.local_info.shape)
     print("getting stats")
-    print(loc.get_stats())
     print(loc)
     print(loc.paramsdict)
