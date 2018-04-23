@@ -91,12 +91,12 @@ class species(object):
         ## is only ever unidirectional from the mainland to the island
         migmat = [[0, self.stats["migration_rate"]],
                     [0, 0]]
-        
+
         pop_local = msprime.PopulationConfiguration(\
                         sample_size = self.paramsdict["sample_size_local"],\
                         initial_size = self.stats["Ne_local"],
                         growth_rate = self.stats["growth_rate"])
-        
+
         pop_meta = msprime.PopulationConfiguration(\
                         sample_size=self.paramsdict["sample_size_meta"],\
                         initial_size=self.stats["Ne_meta"])
@@ -114,7 +114,7 @@ class species(object):
                                             population_id = 0)
 
         ## TODO: Could mess with 'initial_size' here, but you don't want
-        ## to sample too much from the metacommunity or the local pi 
+        ## to sample too much from the metacommunity or the local pi
         ## goes way up.
         local_size_change = msprime.PopulationParametersChange(\
                                             time = self.stats["coltime"] - 1,\
@@ -176,7 +176,7 @@ class species(object):
         ihaps_t = np.transpose(np.array([map(int, list(x)) for x in island_haps]))
         mhaps_t = np.transpose(np.array([map(int, list(x)) for x in meta_haps]))
 
-        ## Counter makes a dict, so just get the counts for 2, which indicates 
+        ## Counter makes a dict, so just get the counts for 2, which indicates
         ## sites segregating in the pop
         ## S will not always == S_local + S_meta. If a site is fixed in one pop and not
         ## present in the other then S will be less than the total. If a site is segragating
@@ -307,4 +307,3 @@ if __name__ == "__main__":
     #data = MESS.Region("wat")
     #data.add_local_community("tmp", 500, 0.5)
     #data.simulate(_lambda=0.5)
-    

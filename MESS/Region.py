@@ -141,7 +141,7 @@ class Region(object):
 
             elif param == "allow_multiple_colonizations":
                 self.paramsdict[param] = newvalue.lower() in ["true"]
-                
+
             else:
                 self.paramsdict[param] = newvalue
         except Exception as inst:
@@ -227,7 +227,7 @@ class Region(object):
 
 
     def set_metacommunity(self, meta_type):
-        pass    
+        pass
 
 
     def set_colonization_matrix(self, matrix):
@@ -256,7 +256,7 @@ class Region(object):
     def get_most_abundant(self):
         """Just get the most abundant species from the metacommunity"""
         max_idx = self.metacommunity.community["abundances"].argmax()
-        new_species = self.metacommunity.community["ids"][max_idx] 
+        new_species = self.metacommunity.community["ids"][max_idx]
         trait_value = self.metacommunity.community["trait_values"][max_idx]
         return new_species, trait_value
 
@@ -394,7 +394,7 @@ class Region(object):
             step += 1
             if not step % self.paramsdict["recording_period"]:
                for island in self.islands.values():
-                    island._log(full=log_full) 
+                    island._log(full=log_full)
         ## TODO: Combine stats across local communities if more than one
         for name, island in self.islands.items():
             statsdf = island.get_stats()
@@ -455,11 +455,11 @@ REGION_PARAMS = {
 ## Global error messages
 #############################
 BAD_MESS_NAME = """\
-    No spaces or special characters of any kind are allowed in the simulation 
-    name. Special characters include all punctuation except dash '-' and 
+    No spaces or special characters of any kind are allowed in the simulation
+    name. Special characters include all punctuation except dash '-' and
     underscore '_'. A good practice is to replace spaces with underscores '_'.
-    An example of a good simulation name is: hawaiian_arthropods 
-    
+    An example of a good simulation name is: hawaiian_arthropods
+
     Here's what you put:
     {}
     """
@@ -475,7 +475,7 @@ NO_OUTDIR = """
 
 REQUIRE_NAME = """\
     Simulation scenario name _must_ be set. This is the first parameter in the
-    params.txt file, and will be used as a prefix for output files. It should be a 
+    params.txt file, and will be used as a prefix for output files. It should be a
     short string with no special characters, i.e., not a path (no \"/\" characters).
     If you need a suggestion, name it after the location you're working on.
     """

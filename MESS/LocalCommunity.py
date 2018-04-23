@@ -58,7 +58,7 @@ class LocalCommunity(object):
 
         ## Dictionary of 'secret' parameters that most people won't want to mess with
         ##  * allow_empty is a switch on whether to fully populate local community
-        ##      with one species for 'volcanic' mode or to introduce just one 
+        ##      with one species for 'volcanic' mode or to introduce just one
         ##      individual and populate the rest of K with 'empty' demes.
         ##  * outdir is inherited from the Region.simulate() command, so users
         ##      should normally not mess with this.
@@ -75,7 +75,7 @@ class LocalCommunity(object):
         self.founder_flags = []
 
         ## np array for storing info about each species in the local community. This is for
-        ## info that would be annoying or impossible to keep track of "per individual". 
+        ## info that would be annoying or impossible to keep track of "per individual".
         ## The array is of length == len(Counter(local_community))
         ##  * "ids" - species identifiers present in local community
         ##  * "colonization_times" - Colonization times per species
@@ -147,20 +147,30 @@ class LocalCommunity(object):
         ## An ID by trait value dictionary
         self.species_trait_values = {}
 
+        ## Keep track of rejections
+        self.rejection = 0
+
         ## Toggle competitive exclusion
         self.competitive_exclusion = False
-        self.competitive_strength = 0
+        if self.competitive_exclusion:
+            #determine strength of competition
+            self.competitive_strength = float(np.random.uniform(0.1,100))
+            self.weight = self.trait_evolution_rate_parameter * self.metcommunity_tree_height * (self.competitive_strength ** 2)
+        else:
+            self.competitive_strength = 0
 
         ## Toggle environmental filtering
-        self.environmental_filtering = False
-        self.environmental_optimum = 0
-        self.environmental_strength = 0
+        self.environmental_filtering = True
+        if self.environmental_filtering:
+            scale = float(4 * self.trait_evolution_rate_parameter * self.metcommunity_tree_height)
+            self.environmental_optimum = np.random.uniform(-scale, scale)
 
-        ## Toggle params for holeing species death probabilities
-        self.species_death_probability = {}
-        #species death probability will be an unchanging dictionary for enviormental environmental_filtering
-        #but will have to be updated for competitive exlcusion models
-        self.individual_death_probabilites = []
+            self.environmental_strength = float(np.random.uniform(0.1,100))
+            self.weight = self.trait_evolution_rate_parameter * self.metcommunity_tree_height * (self.environmental_strength ** 2)
+
+        else:
+            self.environmental_optimum = 0
+            self.environmental_strength = 0
 
 
     def _copy(self):
@@ -235,7 +245,7 @@ class LocalCommunity(object):
         Normally this isn't called directly, but by the main
         simulation engine.
 
-        append 
+        append
         """
         if outfile is None:
             raise MESSError("LocalCommunity.write_params outfile must be specified.")
@@ -252,7 +262,7 @@ class LocalCommunity(object):
                 header = "------- MESS params file (v.{})".format(MESS.__version__)
                 header += ("-"*(80-len(header)))
                 paramsfile.write(header)
-            
+
             header = "------- LocalCommunity params: {}".format(self.name)
             header += ("-"*(80-len(header)))
             paramsfile.write(header)
@@ -275,7 +285,7 @@ class LocalCommunity(object):
                 paramsfile.write("\n" + paramvalue + padding + \
                                         paramindex + name + description)
 
-            paramsfile.write("\n")        
+            paramsfile.write("\n")
 
 
     def _log(self, full=False):
@@ -292,28 +302,6 @@ class LocalCommunity(object):
 
     def __str__(self):
         return "<LocalCommunity {}: Shannon's Entropy {}>".format(self.name, shannon(self.get_abundances()))
-
-
-    ## Not done
-    def calculate_death_probabilities(self):
-        if self.environmental_filtering:
-            #environmental optimum is a random value between (-rate of BM * tree depth, rate of BM * tree depth)
-            scale = float(4 * self.trait_evolution_rate_parameter * self.metcommunity_tree_height)
-            self.environmental_optimum = np.random.uniform(-scale, scale)
-
-            #determine strength of environment
-            self.environmental_strength = float(np.random.uniform(0.1,100))
-            self.weight = self.trait_evolution_rate_parameter * self.metcommunity_tree_height * (self.environmental_strength ** 2)
-
-            for i in range(len(self.species)):
-                deathProb = 1 - (np.exp(-((self.species_trait_values[self.species[i]] - self.environmental_optimum) ** 2)/self.weight))
-                self.species_death_probability[self.species[i]] = deathProb
-
-        if self.competitive_exclusion:
-            #determine strength of competition
-            self.competitive_strength = float(np.random.uniform(0.1,100))
-            self.weight = self.trait_evolution_rate_parameter * self.metcommunity_tree_height * (self.competitive_strength ** 2)
-
 
     def prepopulate(self, quiet=False):
         LOGGER.debug("prepopulating local_community - {}".format(self))
@@ -356,16 +344,13 @@ class LocalCommunity(object):
                                                      "post_colonization_migrants"])
         self.local_info = self.local_info.fillna(0)
         self.founder_flags = [True] * len(self.local_community)
-        
-        if self.environmental_filtering | self.competitive_exclusion:
-            self.calculate_death_probabilities()
 
         if not quiet:
             print("    Initializing local community:")
             print("      N species = {}".format(len(set(self.local_community))))
             print("      N individuals = {}".format(len(self.local_community)))
         LOGGER.debug("Done prepopulating - {}".format(self))
-                            
+
 
     ## Not updated
     def death_step(self):
@@ -373,52 +358,26 @@ class LocalCommunity(object):
 
         ##currently this will fail under volcanic model because the entire local community will go extinct
         if self.environmental_filtering:
-            species_inLocal = [x[0] for x in self.local_community if x[0] != None]
-            #wont need if statement after volcanic model changed
-            #print(species_inLocal)
-            death_probabilites = []
-            for i in range(len(species_inLocal)):
-                death_probabilites.append(self.species_death_probability[species_inLocal[i]])
-            #print(death_probabilites)
+            death_Probability = 0
 
-            self.individual_death_probabilites = death_probabilites / sum(death_probabilites)
-            #print(self.individual_death_probabilites)
-            #print(sum(self.individual_death_probabilites))
-            #index = np.arange(0,len(self.individual_death_probabilites),1)
-            sample = np.random.multinomial(1, self.individual_death_probabilites)
-            #print(sample)
-            #self.local_community[victim_index==1]
-            victim_index = int(np.arange(0,len(self.individual_death_probabilites),1)[sample==1])
-            #print(victim_index)
-            #print(self.local_community[victim_index])
-            victim = self.local_community[victim_index]
+            while death_Probability < np.random.uniform(0,1):
+                self.rejection += 1
+                victim = random.choice(self.local_community)
+                death_Probability = 1 - (np.exp(-((self.species_trait_values[victim] - self.environmental_optimum) ** 2)/self.weight))
 
-        elif self.competitive_exclusion:
-            species_inLocal = [x[0] for x in self.local_community if x[0] != None]
+        if self.competitive_exclusion:
+            death_Probability = 0
 
             local_traits = []
             for i in range(len(species_inLocal)):
-                local_traits.append(self.species_trait_values[species_inLocal[i]])
+                local_traits.append(self.species_trait_values[self.local_community[i]])
+
             mean_local_trait = np.mean(local_traits)
 
-            for i in range(len(self.species)):
-                deathProb = (np.exp(-((self.species_trait_values[self.species[i]] - mean_local_trait) ** 2)/self.weight))
-                self.species_death_probability[self.species[i]] = deathProb
-            #print(species_inLocal)
-            #print(self.species_death_probability)
-
-            death_probabilites = []
-            for i in range(len(species_inLocal)):
-                death_probabilites.append(self.species_death_probability[species_inLocal[i]])
-
-            self.individual_death_probabilites = death_probabilites / sum(death_probabilites)
-            #print(np.sum(self.individual_death_probabilites))
-            sample = np.random.multinomial(1, self.individual_death_probabilites)
-            #print(sample)
-            victim_index = int(np.arange(0,len(self.individual_death_probabilites),1)[sample==1])
-            #print(victim_index)
-            #print(self.local_community[victim_index])
-            victim = self.local_community[victim_index]
+            while death_Probability < np.random.uniform(0,1):
+                self.rejection += 1
+                victim = random.choice(self.local_community)
+                death_Probability = (np.exp(-((self.species_trait_values[victim] - mean_local_trait) ** 2)/self.weight))
 
         else:
             ## If not trait based just select one individual randomly (neutral0
@@ -593,7 +552,7 @@ class LocalCommunity(object):
             try:
                 meta_abund = self.region.get_abundance(name)
                 local_abund = self.local_community.count(name)
-                tdiv = self.current_time - coltime 
+                tdiv = self.current_time - coltime
                 sp = species(UUID=name,
                              colonization_time = tdiv,\
                              growth = self.region.paramsdict["population_growth"],\
@@ -647,15 +606,15 @@ class LocalCommunity(object):
         self.stats.sgd = SGD(pis, dxys)
 
         ## Log to file
-        statsfile = os.path.join(self._hackersonly["outdir"],
-                                 self.paramsdict["name"] + "-simout.txt")
-        self.stats.to_csv(statsfile, na_rep=0, float_format='%.5f')
+        #statsfile = os.path.join(self._hackersonly["outdir"],
+        #                         self.paramsdict["name"] + "-simout.txt")
+        #self.stats.to_csv(statsfile, na_rep=0, float_format='%.5f')
 
-        megalog = os.path.join(self._hackersonly["outdir"],
-                                 self.paramsdict["name"] + "-megalog.txt")
+        #megalog = os.path.join(self._hackersonly["outdir"],
+        #                         self.paramsdict["name"] + "-megalog.txt")
         ## concatenate all species results and transpose the data frame so rows are species
         fullstats = pd.concat([sp.stats for sp in self.species], axis=1).T
-        fullstats.to_csv(megalog, index_label=False)
+        #fullstats.to_csv(megalog, index_label=False)
 
         ## If you ever want to pretty print results
         #print(tabulate(fullstats, list(fullstats), floatfmt=".4f"))
