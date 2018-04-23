@@ -53,6 +53,7 @@ class Region(object):
                        ("recording_period", 10000),
                        ("population_growth", "constant"),
                        ("allow_multiple_colonizations", True),
+                       ("community_assembly_model", 1),
         ])
 
         ## Track local communities in this model and colonization rates among them
@@ -141,6 +142,9 @@ class Region(object):
 
             elif param == "allow_multiple_colonizations":
                 self.paramsdict[param] = newvalue.lower() in ["true"]
+
+            elif param == "community_assembly_model":
+                self.paramsdict[param] = int(float(newvalue))
 
             else:
                 self.paramsdict[param] = newvalue
@@ -449,6 +453,7 @@ REGION_PARAMS = {
     "recording_period" : "Number of forward-time generations between samples for logging",\
     "population_growth" : "Rate of growth since colonization: exponential/constant",\
     "allow_multiple_colonizations" : "Toggle allowing post colonization migration",\
+    "community_assembly_model" : "Neutral:1, Habitat Filtering:2, Competitive Exclusion:3",\
 }
 
 

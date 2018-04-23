@@ -47,6 +47,7 @@ class LocalCommunity(object):
                         ("colrate", colrate),
                         ("age", 100000),
                         ("mig_clust_size", mig_clust_size),
+                        ("filtering_optimum", 100)
         ])
 
         ## A dictionary for holding prior ranges for values we're interested in
@@ -230,6 +231,9 @@ class LocalCommunity(object):
             elif param == "mode":
                 ## Must reup the local community if you change the mode
                 self.paramsdict[param] = newvalue
+
+            elif param == "filtering_optimum":
+                self.paramsdict[param] = float(newvalue)
 
             else:
                 self.paramsdict[param] = newvalue
