@@ -15,21 +15,16 @@
 ## run on install....
 
 echo "Running ${PKG_NAME} post-link in PREFIX=${PREFIX}"
-export CFLAGS=`gsl-config --cflags`
-export LDFLAGS=`gsl-config --libs`
 
 Rcode="
 checkinstall <-function(package){\n
   if (!package %in% installed.packages()) {\n
-    if (package == \"pika\") { install_github(\"ajrominger/pika\") }\n
-    else { install.packages(package, repos=\"http://cran.us.r-project.org\") }\n
+    install.packages(package, repos=\"http://cran.us.r-project.org\")
   }\n
 }\n
 checkinstall(\"ape\")\n
 checkinstall(\"TreeSim\")\n
-checkinstall(\"devtools\")\n
-library(devtools)\n
-checkinstall(\"pika\")
+checkinstall(\"sads\")
 "
 
 echo -e $Rcode > /tmp/rpt.r
