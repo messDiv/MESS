@@ -2,7 +2,7 @@
 ## required packages:
 ##    ape,
 ##    TreeSim,
-##    sads
+##    pika
 ## arguments:
 #' @param Jm the number of individuals in the meta community
 #' @param S the number of species in the meta community
@@ -24,7 +24,7 @@ makeMeta <- function(Jm, S, lambda, deathFrac, sigma2) {
     b <- -log(p)
     
     ## the abundances
-    abund <- sads::rls(length(trt), length(trt), 0.01)
+    abund <- pika::rfish(length(trt), 0.01)
     
     ## return it all in a list
     return(list(phylo = tre, traits = trt, abundance = abund))
