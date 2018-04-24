@@ -9,12 +9,16 @@
 ## libssl-dev    (package on e.g. Debian and Ubuntu)
 ## openssl-devel (package on e.g. Fedora, CentOS and RHEL)
 ## openssl       (Homebrew package on OS X)
+##
+## There is some magic for how this is incorporated into conda
+## packages that I don't understand yet bcz this isn't getting
+## run on install....
 
 echo "Running ${PKG_NAME} post-link in PREFIX=${PREFIX}"
 export CFLAGS=`gsl-config --cflags`
 export LDFLAGS=`gsl-config --libs`
+
 Rcode="
-print(wat)\n
 checkinstall <-function(package){\n
   if (!package %in% installed.packages()) {\n
     if (package == \"pika\") { install_github(\"ajrominger/pika\") }\n
