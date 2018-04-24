@@ -436,6 +436,16 @@ class Region(object):
     def get_trait(self, loc_id):
         return self.metacommunity.community['trait_values'][self.metacommunity.community["ids"] == loc_id]
 
+    def get_local_trait_mean(self, local_com):
+        local_traits = []
+        for id in local_com:
+            local_traits.append(self.metacommunity.community["trait_values"][self.metacommunity.community["ids"] == id])
+        return np.mean(local_traits)
+
+    def get_weight(self):
+        return self.metacommunity.paramsdict["trait_strength"] * self.metacommunity.paramsdict["trait_rate"]
+
+
 def simulate(data, time=time, quiet=True):
     import os
     LOGGER.debug("Entering sim - {} on pid {}\n{}".format(data, os.getpid(), data.paramsdict))

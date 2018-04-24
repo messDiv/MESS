@@ -138,6 +138,7 @@ class LocalCommunity(object):
         self.survived_invasives = 0
         self.invasion_time = -1
 
+
     def _copy(self):
         """ Create a new clean copy of this LocalCommunity."""
         LOGGER.debug("Copying LocalCommunity - {}".format(self.name))
@@ -338,26 +339,25 @@ class LocalCommunity(object):
             ## While the death probability is less than random uniform numeber between 0 and 1,
             ## keep selecting a new victime to potentially die
             while death_Probability < np.random.uniform(0,1):
-                reject+= 1
+                reject = reject + 1
                 victim = random.choice(self.local_community)
                 victim_trait = self.region.get_trait(victim)
-                death_Probability = 1 - (np.exp(-((victim_trait - self.paramsdict["filtering_optimum"]) ** 2)/self.weight))
+                death_Probability = 1 - (np.exp(-((victim_trait - self.paramsdict["filtering_optimum"]) ** 2)/self.region.get_weight()))
 
             self.rejections.append(reject)
 
         if self.region.paramsdict["community_assembly_model"] == 3:
             death_Probability = 0
-
-            local_traits = []
-            for i in range(len(species_inLocal)):
-                local_traits.append(self.species_trait_values[self.local_community[i]])
-
-            mean_local_trait = np.mean(local_traits)
+            reject = 0
+            mean_local_trait = self.region.get_local_trait_mean(self.local_community)
 
             while death_Probability < np.random.uniform(0,1):
-                self.rejection += 1
+                reject = reject + 1
                 victim = random.choice(self.local_community)
-                death_Probability = (np.exp(-((self.species_trait_values[victim] - mean_local_trait) ** 2)/self.weight))
+                victim_trait = self.region.get_trait(victim)
+                death_Probability = (np.exp(-((victim_trait - mean_local_trait) ** 2)/self.region.get_weight()))
+
+            self.rejections.append(reject)
 
         else:
             ## If not trait based just select one individual randomly (neutral0
