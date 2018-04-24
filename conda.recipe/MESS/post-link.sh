@@ -2,17 +2,6 @@
 ## Complete hackish bullshit to get required r packages
 ## installed for the makeMeta.r function.
 ##
-## This is a mess right now. pika needs devtools installed and
-## devtools needs git2r which needs libssl, which there's no
-## straightforward way to install automatically. ARG!
-##
-## libssl-dev    (package on e.g. Debian and Ubuntu)
-## openssl-devel (package on e.g. Fedora, CentOS and RHEL)
-## openssl       (Homebrew package on OS X)
-##
-## There is some magic for how this is incorporated into conda
-## packages that I don't understand yet bcz this isn't getting
-## run on install....
 
 echo "Running ${PKG_NAME} post-link in PREFIX=${PREFIX}"
 
@@ -24,8 +13,11 @@ checkinstall <-function(package){\n
 }\n
 checkinstall(\"ape\")\n
 checkinstall(\"TreeSim\")\n
-checkinstall(\"sads\")
+checkinstall(\"meteR\")
 "
 
 echo -e $Rcode > /tmp/rpt.r
+## Not sure how i feel about this, messages.txt gets piped to stdout
+## in the event nothing bad happens so it shits all over the screen,
+## somewhat annoying.
 Rscript /tmp/rpt.r >> $PREFIX/.messages.txt 2>&1 

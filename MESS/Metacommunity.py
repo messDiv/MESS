@@ -59,6 +59,54 @@ class Metacommunity(object):
                                                         self.paramsdict["nspecies"])
 
 
+    def _simulate_metacommunity(self, Jm, S, birth_rate, death_proportion, trait_rate):
+        import rpy2.robjects as robjects
+        from rpy2.robjects import r, pandas2ri
+
+        make_meta = """## function to make the mainland meta community with a phylo, traits, and abundances
+        ## required packages:
+        ##    ape,
+        ##    TreeSim,
+        ##    pika
+        ## arguments:
+        #' @param Jm the number of individuals in the meta community
+        #' @param S the number of species in the meta community
+        #' @param lambda the speciation rate
+        #' @param deathFrac the proportional extinction rate
+        #' @param sigma2 the rate of brownian motion
+
+        makeMeta <- function(Jm, S, lambda, deathFrac, sigma2) {
+          ## the tree
+          tre <- TreeSim::sim.bd.taxa(S, numbsim = 1, lambda = lambda, mu = lambda * deathFrac,
+                                      complete = FALSE)[[1]]
+
+          ## the traits
+          trt <- ape::rTraitCont(tre, sigma = sqrt(sigma2))
+          trt <- data.frame(name = names(trt), value = as.numeric(trt))
+
+          ## parameters for the log-series
+          nBar <- Jm / S
+          p <- 1 - 1/nBar
+          b <- -log(p)
+
+          ## the abundances
+          #abund <- pika::rfish(length(trt), 0.01)
+          abund <- sads::rls(length(trt), length(trt), 0.01)
+
+          ## return it all in a list
+          tre <- ape::write.tree(tre)
+          return(list(phylo = tre, traits = trt, abundance = abund))
+        }"""
+
+        make_meta_func = robjects.r(make_meta)
+        res = pandas2ri.ri2py(make_meta_func(1000, 10, 1, 1, 1))
+        tree = res[0][0]
+        traits = pandas2ri.ri2py(res[1])
+        abunds = rpyn.ri2py(res[2])
+        print(tree, abunds, traits)
+        return tree, abunds, traits
+
+
     def _paramschecker(self, param, newvalue, quiet=False):
         """ Raises exceptions when params are set to values they should not be"""
         ## TODO: This should actually check the values and make sure they make sense
