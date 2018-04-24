@@ -128,6 +128,9 @@ class LocalCommunity(object):
         self.lambda_through_time = OrderedDict({})
         self.species_through_time = OrderedDict({})
 
+        ## Track number of rejections per death step
+        self.rejections = []
+
         ## The invasive species identity
         self.invasive = -1
         self.invasiveness = 0
@@ -328,15 +331,21 @@ class LocalCommunity(object):
         ## Select the individual to die
 
         ##currently this will fail under volcanic model because the entire local community will go extinct
-        if self.region.paramsdict["allow_multiple_colonizations"]:
+        if self.region.paramsdict["community_assembly_model"] == 2:
             death_Probability = 0
+            reject = 0
 
+            ## While the death probability is less than random uniform numeber between 0 and 1,
+            ## keep selecting a new victime to potentially die
             while death_Probability < np.random.uniform(0,1):
-                self.rejection += 1
+                reject+= 1
                 victim = random.choice(self.local_community)
-                death_Probability = 1 - (np.exp(-((self.species_trait_values[victim] - self.environmental_optimum) ** 2)/self.weight))
+                victim_trait = self.region.get_trait(victim)
+                death_Probability = 1 - (np.exp(-((victim_trait - self.paramsdict["filtering_optimum"]) ** 2)/self.weight))
 
-        if self.competitive_exclusion:
+            self.rejections.append(reject)
+
+        if self.region.paramsdict["community_assembly_model"] == 3:
             death_Probability = 0
 
             local_traits = []
@@ -599,7 +608,7 @@ LOCAL_PARAMS = {
     "colrate" : "Colonization rate into local community",\
     "mig_clust_size" : "# of individuals per colonization event",\
     "age" : "Local community age",\
-    "filtering_optimum" : "optimum trait value under environmental filtering model",\
+    "filtering_optimum" : "optimum trait value, only used during environmental filtering model",\
 }
 
 
