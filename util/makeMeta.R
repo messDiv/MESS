@@ -25,8 +25,8 @@ makeMeta <- function(Jm, S, lambda, deathFrac, sigma2) {
   b <- -log(p)
 
   ## the abundances
-  #abund <- pika::rfish(length(trt), 0.01)
-  abund <- sads::rls(length(trt), length(trt), 0.01)
+  #abund <- sads::rls(length(trt), length(trt), 0.01)
+  abund <- meteR::sad(meteR::meteESF(S0 = S, N0 = Jm))$r(S)
 
   ## return it all in a list
   tre <- ape::write.tree(tre)
