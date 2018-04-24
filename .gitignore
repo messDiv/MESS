@@ -5,3 +5,10 @@
 .Rhistory
 .RData
 output
+build
+dist
+mess_log.txt
+*.egg-info
+params*
+*.swp
+default_MESS/

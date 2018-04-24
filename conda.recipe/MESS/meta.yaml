@@ -1,0 +1,52 @@
+package:
+  name: mess
+  version: "0.0.99"
+
+source:
+  git_url: https://github.com/messDiv/MESS
+  git_tag: refactoring
+
+build:
+  number: 2
+
+requirements:
+  build:
+    - python
+    - setuptools
+    - msprime
+    - macroeco
+    - ipyparallel >=6.0.2
+    - scipy >=0.16
+    - cython
+    - numpy >=1.7
+    - ipython
+    - numpy
+    - pandas
+    - svgwrite
+    - mpmath
+    - certifi
+    - rpy2
+  run:
+    - setuptools
+    - ipython >=5.0.0
+    - ipyparallel >=6.0.2
+    - cython
+    - scipy >=0.16
+    - nbconvert
+    - jupyter_client
+    - jupyter
+    - notebook >=5.0
+    - pandas
+    - numpy >=1.7
+    - msprime
+    - macroeco
+    - mpmath
+    - rpy2
+
+  commands:
+    - MESS -v
+
+about:
+  home: https://github.com/messDiv/MESS
+  license: GPLv3
+  summary: Massive Eco-Evolutionary Synthesis Simulations

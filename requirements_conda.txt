@@ -1,0 +1,7 @@
+cython
+ipython
+ipyparallel>=6.0.2
+scipy
+numpy
+pandas
+setuptools
