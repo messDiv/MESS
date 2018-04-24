@@ -18,13 +18,8 @@ makeMeta <- function(Jm, S, lambda, deathFrac, sigma2) {
     ## the traits
     trt <- ape::rTraitCont(tre, sigma = sqrt(sigma2))
     
-    ## parameters for the log-series
-    nBar <- Jm / S
-    p <- 1 - 1/nBar
-    b <- -log(p)
-    
     ## the abundances
-    abund <- pika::rfish(length(trt), 0.01)
+    abund <- meteR::sad(meteR::meteESF(S0 = S, N0 = Jm))$r(S)
     
     ## return it all in a list
     return(list(phylo = tre, traits = trt, abundance = abund))
