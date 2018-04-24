@@ -110,7 +110,9 @@ class LocalCommunity(object):
                    "median_dxy",
                    "iqr_dxy",
                    "sgd",
-                   "trees"]).astype(np.object)
+                   "trees",
+                   "mean_tr",
+                   "var_tr"]).astype(np.object)
 
         ## List for storing species that have had sequence
         ## simulated and sumstats calculated
@@ -349,7 +351,7 @@ class LocalCommunity(object):
         if self.region.paramsdict["community_assembly_model"] == 3:
             death_Probability = 0
             reject = 0
-            mean_local_trait = self.region.get_local_trait_mean(self.local_community)
+            mean_local_trait = self.region.get_local_trait_mean(self.local_community)[0]
 
             while death_Probability < np.random.uniform(0,1):
                 reject = reject + 1
@@ -378,6 +380,7 @@ class LocalCommunity(object):
         idx = self.local_community.index(victim)
         self.local_community.pop(idx)
         self.founder_flags.pop(idx)
+
 
         ## Record local extinction events
         if not victim in self.local_community:
@@ -497,7 +500,6 @@ class LocalCommunity(object):
             ## update current time
             self.current_time += 1
 
-
     def get_abundances(self, octaves=False):
         return SAD(self.local_community)
 
@@ -558,6 +560,9 @@ class LocalCommunity(object):
 
 
     def get_stats(self):
+        if self.rejections:
+            LOGGER.debug("Average number of rejections - {}".format(np.mean(self.rejections)))
+
         LOGGER.debug("Entering get_stats()")
         self.simulate_seqs()
 
@@ -582,6 +587,9 @@ class LocalCommunity(object):
         self.stats.iqr_dxy = iqr(dxys)
 
         self.stats.sgd = SGD(pis, dxys)
+
+        self.stats.mean_tr = self.region.get_local_trait_mean(self.local_community)[0]
+        self.stats.var_tr = self.region.get_local_trait_mean(self.local_community)[1]
 
         ## Log to file
         #statsfile = os.path.join(self._hackersonly["outdir"],

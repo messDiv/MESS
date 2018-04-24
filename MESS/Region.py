@@ -392,7 +392,7 @@ class Region(object):
             ## This is not ideal functionality, but it at least gives you a sense of progress
             ## Especially don't do this on ipyparallel engines, because it floods the pipe.
             if not quiet:
-                progressbar(100, 100, "{0:.4f}%".format(self.islands.values()[0]._lambda()))
+                progressbar(100, 100, "{0:.4f}".format(self.islands.values()[0]._lambda()))
             for island in self.islands.values():
                 island.step()
             step += 1
@@ -438,9 +438,9 @@ class Region(object):
 
     def get_local_trait_mean(self, local_com):
         local_traits = []
-        for id in local_com:
+        for id in np.unique(local_com):
             local_traits.append(self.metacommunity.community["trait_values"][self.metacommunity.community["ids"] == id])
-        return np.mean(local_traits)
+        return [np.mean(local_traits), np.var(local_traits)]
 
     def get_weight(self):
         return self.metacommunity.paramsdict["trait_strength"] * self.metacommunity.paramsdict["trait_rate"]
