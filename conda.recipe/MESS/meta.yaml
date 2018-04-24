@@ -25,6 +25,7 @@ requirements:
     - svgwrite
     - mpmath
     - certifi
+    - rpy2
   run:
     - setuptools
     - ipython >=5.0.0
@@ -40,6 +41,7 @@ requirements:
     - msprime
     - macroeco
     - mpmath
+    - rpy2
 
   commands:
     - MESS -v
