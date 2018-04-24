@@ -40,7 +40,6 @@ class Metacommunity(object):
                         ("J", 1000000),
                         ("birth_rate", 2),
                         ("death_proportion", 0.5),
-                        ("uniform_abund", 1000000),
                         ("logser_shape", 0.98),
                         ("trait_rate", 5),
                         ("trait_strength", 1),
@@ -59,7 +58,7 @@ class Metacommunity(object):
                                                         self.paramsdict["nspecies"])
 
 
-    def _simulate_metacommunity(self, Jm, S, birth_rate, death_proportion, trait_rate):
+    def _simulate_metacommunity(self, J, S, birth_rate, death_proportion, trait_rate):
         import rpy2.robjects as robjects
         from rpy2.robjects import r, pandas2ri
 
@@ -103,7 +102,6 @@ class Metacommunity(object):
         tree = res[0][0]
         traits = pandas2ri.ri2py(res[1])
         abunds = pandas2ri.ri2py(res[2])
-        print(tree, abunds, traits)
         return tree, abunds, traits
 
 
@@ -120,9 +118,6 @@ class Metacommunity(object):
                 self.paramsdict[param] = newvalue
 
             elif param == "nspecies":
-                self.paramsdict[param] = int(float(newvalue))
-
-            elif param == "uniform_abund":
                 self.paramsdict[param] = int(float(newvalue))
 
             elif param == "logser_shape":
@@ -221,7 +216,7 @@ class Metacommunity(object):
             abundances = logser.rvs(self.paramsdict["logser_shape"],\
                                         size=self.paramsdict["nspecies"])
         elif meta_type == "uniform":
-            abundances = [self.paramsdict["uniform_abund"]]\
+            abundances = [self.paramsdict["J"] / self.paramsdict["nspecies"]]\
                                * self.paramsdict["nspecies"]
         elif os.path.isfile(meta_type):
             try:
@@ -312,7 +307,6 @@ LOCAL_PARAMS = {
     "J" : "Total # of individuals in the regional pool (calculated)",\
     "birth_rate" : "Speciation rate of metacommunity",\
     "death_proportion" : "Proportion of speciation rate to be extinction rate",\
-    "uniform_abund" : "If uniform: abundance per species",\
     "logser_shape" : "If logser: Shape parameter of the distribution",\
     "trait_rate" : "Trait evolution rate parameter",\
     "trait_strength" : "Strength of community assembly process on phenotypic change",\
