@@ -90,8 +90,8 @@ class Metacommunity(object):
           b <- -log(p)
 
           ## the abundances
-          #abund <- pika::rfish(length(trt), 0.01)
-          abund <- sads::rls(length(trt), length(trt), 0.01)
+          #abund <- sads::rls(length(trt), length(trt), 0.01)
+          abund <- meteR::sad(meteR::meteESF(S0 = S, N0 = Jm))$r(S)
 
           ## return it all in a list
           tre <- ape::write.tree(tre)
@@ -102,7 +102,7 @@ class Metacommunity(object):
         res = pandas2ri.ri2py(make_meta_func(1000, 10, 1, 1, 1))
         tree = res[0][0]
         traits = pandas2ri.ri2py(res[1])
-        abunds = rpyn.ri2py(res[2])
+        abunds = pandas2ri.ri2py(res[2])
         print(tree, abunds, traits)
         return tree, abunds, traits
 
@@ -328,6 +328,8 @@ if __name__ == "__main__":
     print("{} {}".format(data, data.community[:10]))
     data = Metacommunity("../metacommunity_LS4.txt")
     print("{} {}".format(data, data.community[:10]))
+
+    data._simulate_metacommunity(10000, 100, 0.5, 0.2, 1)
 
     for x in xrange(10):
         print(data.get_migrant())
