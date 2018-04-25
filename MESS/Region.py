@@ -95,6 +95,11 @@ class Region(object):
         LOGGER.debug("Linking metacommunity - {}".format(metacommunity))
         self.metacommunity = metacommunity
 
+        self.metacommunity.set_metacommunity()
+
+        for locname in self.islands.keys():
+            self.islands[locname].prepopulate()
+
 
     def _get_simulation_outdir(self, prefix=""):
         """ Construct an output directory for a simulation run.
