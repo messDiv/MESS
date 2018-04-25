@@ -77,7 +77,7 @@ class LocalCommunity(object):
 
         ## pandas Data Frame for storing info about each species in the local community. This is for
         ## info that would be annoying or impossible to keep track of "per individual".
-        ## The column headers are species ids, and the dataframe is always of length == 
+        ## The column headers are species ids, and the dataframe is always of length ==
         ## len(Counter(local_community)), because we prune extinct.
         ## Fields:
         ##  * "colonization_times" - Colonization times per species
@@ -322,7 +322,6 @@ class LocalCommunity(object):
             ## from the metacommunity
             ## TODO: The _ is a standin for trait values, have to do something with them
             new_species, _ = self.region.get_most_abundant()
-
             ## prepopulate volcanic either with all the most abundant species in the metacommunity
             ## or with one sample of this species and a bunch of "emtpy deme space". The empty
             ## demes screw up competition/environmental filtering models
