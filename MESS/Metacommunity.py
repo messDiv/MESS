@@ -56,9 +56,6 @@ class Metacommunity(object):
         ## probabilities and trait values
         self.community = np.zeros([self.paramsdict["nspecies"]], dtype=METACOMMUNITY_DTYPE)
 
-        ## Populate community with default values
-        self.set_metacommunity()
-
         LOGGER.debug("Metacommunity paramsdict - {}".format(self.paramsdict))
 
 
@@ -128,6 +125,7 @@ class Metacommunity(object):
 
             elif param == "nspecies":
                 self.paramsdict[param] = int(float(newvalue))
+                print(self.paramsdict["nspecies"])
 
             elif param == "logser_shape":
                 self.paramsdict[param] = float(newvalue)
@@ -147,6 +145,8 @@ class Metacommunity(object):
             elif param == "J":
                 ## Do nothing. J is calculated from the data and not set, for now.
                 pass
+
+
 
         except Exception as inst:
             ## Do something intelligent here?
@@ -228,6 +228,7 @@ class Metacommunity(object):
             abundances = lognorm.rvs(self._hackersonly["lognorm_shape"],\
                                         loc=1,
                                         size=self.paramsdict["nspecies"])
+
         elif meta_type == "uniform":
             abundances = np.array([self.paramsdict["J"] / self.paramsdict["nspecies"]]\
                                * self.paramsdict["nspecies"])

@@ -60,6 +60,7 @@ class Region(object):
 
         ## Track local communities in this model and colonization rates among them
         self.metacommunity = MESS.Metacommunity()
+        ## dictionary of local community names and local community objects
         self.islands = {}
         self.colonization_matrix = []
 
@@ -437,6 +438,8 @@ class Region(object):
 
     def get_trait(self, loc_id):
         return self.metacommunity.community['trait_values'][self.metacommunity.community["ids"] == loc_id]
+        self.local_info
+
 
     def get_trait_stats(self, local_com):
         local_traits = []
@@ -453,8 +456,8 @@ class Region(object):
 
     def get_weight(self):
         weight =   (self.metacommunity.paramsdict["trait_strength"] *
-                    self.metacommunity.paramsdict["trait_rate"] *
-                    self.metacommunity.metcommunity_tree_height)
+                    self.metacommunity.paramsdict["trait_rate"])
+                    #* self.metacommunity.metcommunity_tree_height)
         return weight
 
 def simulate(data, time=time, quiet=True):
