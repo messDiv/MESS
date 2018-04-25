@@ -415,9 +415,9 @@ class LocalCommunity(object):
                 ## Remove the species from the local_info array
                 self.extinction_times.append(self.current_time - self.local_info[victim]["colonization_times"])
                 vic_info = self.local_info.pop(victim)
-                LOGGER.debug("Extinction victim info \n{}".format(vic_info))
-                ##del self.local_info[victim]
+                LOGGER.debug("Extinction victim info \n{}\n{}".format(victim, vic_info))
             except Exception as inst:
+                LOGGER.debug(self.local_info)
                 raise MESSError("Exception during recording extinction - {}".format(inst))
                 pass
             ## If the invasive prematurely goes extinct just pick a new one
@@ -569,7 +569,6 @@ class LocalCommunity(object):
                 sp.simulate_seqs()
                 sp.get_sumstats()
                 self.species.append(sp)
-                LOGGER.debug(sp)
                 ## For debugging invasives
                 #if s.abundance > 1000:
                 #    print("\n{}".format(s))
@@ -592,7 +591,7 @@ class LocalCommunity(object):
 
         LOGGER.debug("Entering get_stats()")
         self.simulate_seqs()
-
+        LOGGER.debug("First 5 species - \n{}".format(self.species[:5]))
         self.stats._lambda = self._lambda()
         self.stats.generation = self.current_time
         self.stats.K = self.paramsdict["K"]
