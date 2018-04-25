@@ -125,7 +125,6 @@ class Metacommunity(object):
 
             elif param == "nspecies":
                 self.paramsdict[param] = int(float(newvalue))
-                print(self.paramsdict["nspecies"])
 
             elif param == "logser_shape":
                 self.paramsdict[param] = float(newvalue)
