@@ -621,8 +621,8 @@ class LocalCommunity(object):
         self.stats.var_rtr = self.region.get_trait_stats(self.local_community)[3]
         self.stats.mean_dif = self.region.get_trait_stats(self.local_community)[4]
         self.stats.var_dif = self.region.get_trait_stats(self.local_community)[5]
-        self.stats.kurtosis = self.region.get_trait_stats(self.local_community)[6]
-        self.stats.skewness = self.region.get_trait_stats(self.local_community)[7]
+        self.stats.kurtosis = self.region.get_trait_stats(self.local_community)[6][0]
+        self.stats.skewness = self.region.get_trait_stats(self.local_community)[7][0]
 
         ## Log to file
         #statsfile = os.path.join(self._hackersonly["outdir"],
