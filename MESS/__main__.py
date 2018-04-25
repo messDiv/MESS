@@ -43,7 +43,7 @@ def parse_params(args):
 
     ## Get metacommunity params and make a dict
     items = [i.split("##")[0].strip() for i in plines[1].split("\n")[1:] if not i.strip() == ""]
-    keys = MESS.Metacommunity(quiet=True).paramsdict.keys()
+    keys = MESS.Metacommunity(meta_type="uniform", quiet=True).paramsdict.keys()
     meta_params = {str(i):j for i, j in zip(keys, items)}
     LOGGER.debug("Metacommunity params - {}".format(meta_params))
 
@@ -83,7 +83,9 @@ def getregion(args, region_params, meta_params, island_params):
             print(inst)
             sys.exit(-1)
 
-    meta = MESS.Metacommunity()
+    ## We get a uniform metacommunity here because it's very fast, the default
+    ## simulates a large tree, so it's laggy
+    meta = MESS.Metacommunity(meta_type="uniform")
     for param in meta_params:
         try:
             meta = set_params(meta, param, meta_params[param], quiet=args.quiet)
