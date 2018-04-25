@@ -565,7 +565,8 @@ class LocalCommunity(object):
                              growth = self.region.paramsdict["population_growth"],\
                              abundance = local_abund,\
                              meta_abundance = meta_abund,
-                             migration_rate = self.local_info[name]["post_colonization_migrants"]/float(tdiv))
+                             migration_rate = self.local_info[name]["post_colonization_migrants"]/float(tdiv),\
+                             abundance_through_time = self.local_info[name]["abundances_through_time"].values())
                 sp.simulate_seqs()
                 sp.get_sumstats()
                 self.species.append(sp)
