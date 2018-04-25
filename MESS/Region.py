@@ -2,6 +2,8 @@ from util import *
 from collections import OrderedDict
 import datetime
 import numpy as np
+from scipy.stats import kurtosis
+from scipy.stats import skew
 import time
 import string
 import os
@@ -439,15 +441,24 @@ class Region(object):
     def get_trait(self, loc_id):
         return self.metacommunity.community['trait_values'][self.metacommunity.community["ids"] == loc_id]
 
-    def get_local_trait_mean(self, local_com):
+    def get_trait_stats(self, local_com):
         local_traits = []
         for id in np.unique(local_com):
             local_traits.append(self.metacommunity.community["trait_values"][self.metacommunity.community["ids"] == id])
-        return [np.mean(local_traits), np.var(local_traits)]
+        return [np.mean(local_traits),
+                np.var(local_traits),
+                np.mean(self.metacommunity.community["trait_values"]),
+                np.var(self.metacommunity.community["trait_values"]),
+                np.mean(self.metacommunity.community["trait_values"]) - np.mean(local_traits),
+                np.var(self.metacommunity.community["trait_values"]) - np.var(local_traits),
+                kurtosis(local_traits),
+                skew(local_traits)]
 
     def get_weight(self):
-        return self.metacommunity.paramsdict["trait_strength"] * self.metacommunity.paramsdict["trait_rate"]
-
+        weight =   (self.metacommunity.paramsdict["trait_strength"] *
+                    self.metacommunity.paramsdict["trait_rate"] *
+                    self.metacommunity.metcommunity_tree_height)
+        return weight
 
 def simulate(data, time=time, quiet=True):
     import os

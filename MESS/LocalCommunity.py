@@ -113,8 +113,14 @@ class LocalCommunity(object):
                    "iqr_dxy",
                    "sgd",
                    "trees",
-                   "mean_tr",
-                   "var_tr"]).astype(np.object)
+                   "mean_ltr",
+                   "var_ltr",
+                   "mean_rtr",
+                   "var_rtr",
+                   "mean_dif",
+                   "var_dif",
+                   "kurtosis",
+                   "skewness"]).astype(np.object)
 
         ## List for storing species that have had sequence
         ## simulated and sumstats calculated
@@ -370,7 +376,7 @@ class LocalCommunity(object):
         if self.region.paramsdict["community_assembly_model"] == 3:
             death_Probability = 0
             reject = 0
-            mean_local_trait = self.region.get_local_trait_mean(self.local_community)[0]
+            mean_local_trait = self.region.get_trait_stats(self.local_community)[0]
 
             while death_Probability < np.random.uniform(0,1):
                 reject = reject + 1
@@ -609,8 +615,14 @@ class LocalCommunity(object):
 
         self.stats.sgd = SGD(pis, dxys)
 
-        self.stats.mean_tr = self.region.get_local_trait_mean(self.local_community)[0]
-        self.stats.var_tr = self.region.get_local_trait_mean(self.local_community)[1]
+        self.stats.mean_ltr = self.region.get_trait_stats(self.local_community)[0]
+        self.stats.var_ltr = self.region.get_trait_stats(self.local_community)[1]
+        self.stats.mean_rtr = self.region.get_trait_stats(self.local_community)[2]
+        self.stats.var_rtr = self.region.get_trait_stats(self.local_community)[3]
+        self.stats.mean_dif = self.region.get_trait_stats(self.local_community)[4]
+        self.stats.var_dif = self.region.get_trait_stats(self.local_community)[5]
+        self.stats.kurtosis = self.region.get_trait_stats(self.local_community)[6]
+        self.stats.skewness = self.region.get_trait_stats(self.local_community)[7]
 
         ## Log to file
         #statsfile = os.path.join(self._hackersonly["outdir"],
