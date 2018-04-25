@@ -1,6 +1,6 @@
 #!/usr/bin/env python2.7
 
-from scipy.stats import logser
+from scipy.stats import lognorm
 from collections import OrderedDict
 import collections
 import pandas as pd
@@ -40,11 +40,20 @@ class Metacommunity(object):
                         ("J", 1000000),
                         ("birth_rate", 2),
                         ("death_proportion", 0.5),
-                        ("logser_shape", 0.98),
                         ("trait_rate", 5),
                         ("trait_strength", 1),
         ])
 
+        ## elite hackers only internal dictionary, normally you shouldn't mess with this
+        self._hackersonly= OrderedDict([
+                        ("lognorm_shape", 1.98),
+        ])
+
+        ## The Newick formatted tree for the metacommunity
+        self.metacommunity_tree = ""
+
+        ## A structured numpy array for holding tip labels, abundances, colonization
+        ## probabilities and trait values
         self.community = np.zeros([self.paramsdict["nspecies"]], dtype=METACOMMUNITY_DTYPE)
 
         ## Populate community with default values
@@ -58,7 +67,7 @@ class Metacommunity(object):
                                                         self.paramsdict["nspecies"])
 
 
-    def _simulate_metacommunity(self, J, S, birth_rate, death_proportion, trait_rate):
+    def _simulate_metacommunity(self, J, nspecies, birth_rate, death_proportion, trait_rate):
         import rpy2.robjects as robjects
         from rpy2.robjects import r, pandas2ri
 
@@ -68,11 +77,11 @@ class Metacommunity(object):
         ##    TreeSim,
         ##    pika
         ## arguments:
-        #' @param Jm the number of individuals in the meta community
-        #' @param S the number of species in the meta community
-        #' @param lambda the speciation rate
-        #' @param deathFrac the proportional extinction rate
-        #' @param sigma2 the rate of brownian motion
+        #' @param J the number of individuals in the meta community
+        #' @param nspecies the number of species in the meta community
+        #' @param birth_rate the speciation rate
+        #' @param death_proportion the proportional extinction rate
+        #' @param trait_rate the rate of brownian motion
 
         makeMeta <- function(Jm, S, lambda, deathFrac, sigma2) {
           ## the tree
@@ -98,7 +107,7 @@ class Metacommunity(object):
         }"""
 
         make_meta_func = robjects.r(make_meta)
-        res = pandas2ri.ri2py(make_meta_func(1000, 10, 1, 1, 1))
+        res = pandas2ri.ri2py(make_meta_func(J, nspecies, birth_rate, death_proportion, trait_rate))
         tree = res[0][0]
         traits = pandas2ri.ri2py(res[1])
         abunds = pandas2ri.ri2py(res[2])
@@ -207,23 +216,49 @@ class Metacommunity(object):
 
         ## Accumulators for bringing in all the values. These will
         ## eventually all get shoved into self.community
-        abundances = []
-        ids = []
-        trait_values = []
+        abundances = np.array([])
+        ids = np.array([])
+        trait_values = np.array([])
 
-        ## Get Abundances
-        if meta_type == "logser":
-            abundances = logser.rvs(self.paramsdict["logser_shape"],\
+        ## Two distributions are being left in here as hidden options, the ids and trait values
+        ## will get populated below
+        ##
+        ## These are for testing purposes and should normally be ignored
+        if meta_type == "lognorm":
+            abundances = lognorm.rvs(self._hackersonly["lognorm_shape"],\
+                                        loc=1,
                                         size=self.paramsdict["nspecies"])
         elif meta_type == "uniform":
-            abundances = [self.paramsdict["J"] / self.paramsdict["nspecies"]]\
-                               * self.paramsdict["nspecies"]
+            abundances = np.array([self.paramsdict["J"] / self.paramsdict["nspecies"]]\
+                               * self.paramsdict["nspecies"])
+
+        ## Get Abundances by simulating a tree, evolving traits on it, and sprinkling abundances
+        ## This is the primary means of setting the metacommunity that is driven by Andy's
+        ## R code.
+        elif meta_type == "logser":
+            tree, abunds, traits = self._simulate_metacommunity(self.paramsdict["J"],\
+                                                                self.paramsdict["nspecies"],\
+                                                                self.paramsdict["birth_rate"],\
+                                                                self.paramsdict["death_proportion"],\
+                                                                self.paramsdict["trait_rate"])
+            self.metacommunity_tree = tree
+            abundances = abunds
+            ## TODO: This is dumb
+            tups = zip(traits["name"], traits["value"])
+            ids = np.array([x[0] for x in tups])
+            trait_values = np.array([x[1] for x in tups])
+
+        ## Attempt to read tree/ids/abunds/traits from a file. If it fails, fall back to just
+        ## try reading the old list of abundances format.
+        ##
+        ## TODO: This input file format doesn't include a tree, should we just delete this option?
+        ## Both of these input file formats should be considered deprecated for the most part.
         elif os.path.isfile(meta_type):
             try:
                 with open(meta_type, 'r') as infile:
                     lines = infile.readlines()
                     self.metcommunity_tree_height = float(lines[0].split()[0])
-                    self.trait_evolution_rate_parameter = float(lines[1].split()[0])
+                    self.paramsdict["trait_rate"] = float(lines[1].split()[0])
 
                     for i in range(2,len(lines)):
                         info = lines[i].split()
@@ -232,9 +267,9 @@ class Metacommunity(object):
                         ## file that is only a list of abundances. If you do the
                         ## ids[0] first it'll succeed and then fuck up the ids col
                         ## downstream.
-                        trait_values.append(float(info[1]))
-                        abundances.append(int(info[2]))
-                        ids.append(info[0])
+                        np.append(trait_values, float(info[1]))
+                        np.append(abundances, int(info[2]))
+                        np.append(ids, info[0])
             except IndexError as inst:
                 ## Could be an old style file just containing abundances, one per row
                 try:
@@ -253,18 +288,20 @@ class Metacommunity(object):
         else:
             raise MESSError("  Unrecognized metacommunity input - {}".format(meta_type))
 
-        ## Get trait values per species
-        ## TODO: Megan, is this supposed to be doing the same thing whether or not the
-        ## random flag is set? seems lol
-        ## Don't do random if we read in from the full_monty file
-        if random and not trait_values:
-            trait_values = np.random.rand(self.paramsdict["nspecies"])
-        else:
+        ## This next set of conditionals is responsible for filling in trait values and ids
+        ## for the abundance only file and the 2 distributions specified at the beginning.
+        ## TODO: optionally set random trait values?
+        if random or not trait_values.size:
             trait_values = np.random.rand(self.paramsdict["nspecies"])
 
         ## If ids haven't been assigned yet, do that here
-        if not ids:
+        if not ids.size:
             ids = np.array(["t"+str(x) for x in range(0, self.paramsdict["nspecies"])])
+
+        ## TODO: You can use msprime to simulate a random coalescent tree and get a newick from it.
+        ## Is this worth doing?
+        if not self.metacommunity_tree:
+            pass
 
         ## Populate the metacommunity ndarray
         self.community["abundances"] = np.array(abundances)
@@ -314,16 +351,21 @@ LOCAL_PARAMS = {
 
 
 if __name__ == "__main__":
+    print("Test logser")
     data = Metacommunity("logser")
     print("{} {}".format(data, data.community[:10]))
+    print("Test uniform")
     data = Metacommunity("uniform")
     print("{} {}".format(data, data.community[:10]))
+    print("Test lognorm")
+    data = Metacommunity("lognorm")
+    print("{} {}".format(data, data.community[:10]))
+    print("Test full file")
     data = Metacommunity("../SpInfo.txt")
     print("{} {}".format(data, data.community[:10]))
+    print("Test abunds only file")
     data = Metacommunity("../metacommunity_LS4.txt")
     print("{} {}".format(data, data.community[:10]))
-
-    data._simulate_metacommunity(10000, 100, 0.5, 0.2, 1)
 
     for x in xrange(10):
         print(data.get_migrant())
