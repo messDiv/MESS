@@ -61,7 +61,8 @@ class Region(object):
         ## Track local communities in this model and colonization rates among them
         ## TODO: I think we want the default metacommunity type to be 'logser', but
         ## the new _sim_metacommunity function takes a little time, so startup is laggy.
-        self.metacommunity = MESS.Metacommunity(meta_type="logser")
+        self.metacommunity = MESS.Metacommunity(meta_type="uniform")
+
         self.islands = {}
         self.colonization_matrix = []
 
