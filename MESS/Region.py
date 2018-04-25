@@ -93,6 +93,11 @@ class Region(object):
         """ Just import a metacommunity object that's been created externally."""
         LOGGER.debug("Linking metacommunity - {}".format(metacommunity))
         self.metacommunity = metacommunity
+        self.metacommunity.set_metacommunity()
+
+        ## Repopulate linked local communities
+        for locname, loc in self.islands.items():
+            loc.prepopulate(quiet=True)
 
 
     def _get_simulation_outdir(self, prefix=""):

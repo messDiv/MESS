@@ -84,6 +84,9 @@ class species(object):
             except Exception as inst:
                 LOGGER.debug("Failed harmonic mean for {}".format(self))
                 raise inst
+        ## Do piecewise constant population size changes through time
+        elif growth == "piecewise":
+            pass
         else:
             raise MESSError("Unrecognized population growth parameter - {}".format(growth))
 

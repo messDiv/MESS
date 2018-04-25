@@ -54,10 +54,7 @@ class Metacommunity(object):
 
         ## A structured numpy array for holding tip labels, abundances, colonization
         ## probabilities and trait values
-        self.community = np.zeros([self.paramsdict["nspecies"]], dtype=METACOMMUNITY_DTYPE)
-
-        ## Populate community with default values
-        self.set_metacommunity()
+        self.community = []#np.zeros([self.paramsdict["nspecies"]], dtype=METACOMMUNITY_DTYPE)
 
         LOGGER.debug("Metacommunity paramsdict - {}".format(self.paramsdict))
 
@@ -284,7 +281,6 @@ class Metacommunity(object):
             ## and reup the community ndarray
             LOGGER.debug("Read nspecies from file - {}".format(len(abundances)))
             self.paramsdict["nspecies"] = len(abundances)
-            self.community = np.zeros([self.paramsdict["nspecies"]], dtype=METACOMMUNITY_DTYPE)
         else:
             raise MESSError("  Unrecognized metacommunity input - {}".format(meta_type))
 
@@ -303,6 +299,7 @@ class Metacommunity(object):
         if not self.metacommunity_tree:
             pass
 
+        self.community = np.zeros([self.paramsdict["nspecies"]], dtype=METACOMMUNITY_DTYPE)
         ## Populate the metacommunity ndarray
         self.community["abundances"] = np.array(abundances)
         self.community["ids"] = ids
