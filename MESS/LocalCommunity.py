@@ -321,7 +321,10 @@ class LocalCommunity(object):
             ## If not landbridge then doing volcanic, so sample just the most abundant
             ## from the metacommunity
             ## TODO: The _ is a standin for trait values, have to do something with them
-            new_species, _ = self.region.get_most_abundant()
+            try:
+                new_species, _ = self.region.get_most_abundant()
+            except Exception as inst:
+                raise MESSException("Error in prepopulate - {}".format(inst))
 
             ## prepopulate volcanic either with all the most abundant species in the metacommunity
             ## or with one sample of this species and a bunch of "emtpy deme space". The empty
