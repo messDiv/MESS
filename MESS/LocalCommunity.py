@@ -75,13 +75,15 @@ class LocalCommunity(object):
         self.local_community = []
         self.founder_flags = []
 
-        ## np array for storing info about each species in the local community. This is for
+        ## pandas Data Frame for storing info about each species in the local community. This is for
         ## info that would be annoying or impossible to keep track of "per individual".
-        ## The array is of length == len(Counter(local_community))
-        ##  * "ids" - species identifiers present in local community
+        ## The column headers are species ids, and the dataframe is always of length == 
+        ## len(Counter(local_community)), because we prune extinct.
+        ## Fields:
         ##  * "colonization_times" - Colonization times per species
         ##  * "post_colonization_migrants" - Count of post colonization migrants per species
-        self.local_info = []
+        ##  * "abundance_through_time" - A record of abundance through time for this species
+        self.local_info = pd.DataFrame([])
 
         ## The regional pool that this local community belongs to
         ## this is updated by Region._link_local(), so don't set it by hand
@@ -124,6 +126,7 @@ class LocalCommunity(object):
         ## simulated and sumstats calculated
         self.species = []
 
+        ## Various counters for counting stuff that happens
         self.extinctions = 0
         self.colonizations = 0
         self.current_time = 0
@@ -132,6 +135,7 @@ class LocalCommunity(object):
         ## We can plot this and average it to figure out how long
         ## species hang around in the local community
         self.extinction_times = []
+
         ## Dicts for tracking esoteric shit if _log() is called
         self.lambda_through_time = OrderedDict({})
         self.species_through_time = OrderedDict({})
@@ -139,6 +143,7 @@ class LocalCommunity(object):
         ## Track number of rejections per death step
         self.rejections = []
 
+        ## Invasiveness is unimplemented and may not make it into MESS proper.
         ## The invasive species identity
         self.invasive = -1
         self.invasiveness = 0
@@ -281,10 +286,20 @@ class LocalCommunity(object):
             msg = "k = {} r = {}".format(len(self.local_community),\
                                                 len(set(self.local_community)))
             raise MESSError("  Community size violation - {}".format(msg))
-        ## Always log size changes through time
+
+        try:
+            ## Always log size changes through time
+            abunds = collections.Counter(self.local_community)
+            LOGGER.debug("_log \n{}".format(self.local_info))
+            LOGGER.debug("abunds \n{}".format(abunds))
+            for species in self.local_info:
+                self.local_info[species]["abundances_through_time"][self.current_time] = abunds[species]
+        except Exception as inst:
+            raise MESSError("Error in _log() - {}".format(inst))
 
     def __str__(self):
         return "<LocalCommunity {}: Shannon's Entropy {}>".format(self.name, shannon(self.get_abundances()))
+
 
     def prepopulate(self, quiet=False):
         LOGGER.debug("prepopulating local_community - {}".format(self))
@@ -324,8 +339,12 @@ class LocalCommunity(object):
         ids = list(set(self.local_community))
         self.local_info = pd.DataFrame([], columns = ids,\
                                             index = ["colonization_times",\
-                                                     "post_colonization_migrants"])
+                                                     "post_colonization_migrants",\
+                                                     "abundances_through_time"])
         self.local_info = self.local_info.fillna(0)
+        for sp in self.local_info:
+            self.local_info[sp] = [0, 0, OrderedDict()]
+
         self.founder_flags = [True] * len(self.local_community)
 
         if not quiet:
@@ -396,9 +415,9 @@ class LocalCommunity(object):
                 ## Remove the species from the local_info array
                 self.extinction_times.append(self.current_time - self.local_info[victim]["colonization_times"])
                 vic_info = self.local_info.pop(victim)
-                LOGGER.debug("Extinction victim info {}".format(vic_info))
-                ##del self.local_info[victim]
+                LOGGER.debug("Extinction victim info \n{}\n{}".format(victim, vic_info))
             except Exception as inst:
+                LOGGER.debug(self.local_info)
                 raise MESSError("Exception during recording extinction - {}".format(inst))
                 pass
             ## If the invasive prematurely goes extinct just pick a new one
@@ -434,9 +453,10 @@ class LocalCommunity(object):
                sys.exit(msg)
 
         ## This is a new migrant so init local_info for it
-        self.local_info[new_species] = 0
-        self.local_info[new_species]["post_colonization_migrants"] = 0
-        self.local_info[new_species]["colonization_times"] = self.current_time
+        self.local_info[new_species] = [self.current_time,\
+                                        0,\
+                                        OrderedDict([(self.current_time,self.paramsdict["mig_clust_size"])])]
+
         return new_species
 
 
@@ -454,8 +474,9 @@ class LocalCommunity(object):
             self.local_info[new_species]["post_colonization_migrants"] += 1
         else:
             ## This is a new migrant so init local_info for it
-            self.local_info[new_species] = 0
-            self.local_info[new_species]["colonization_times"] = self.current_time
+            self.local_info[new_species] = [self.current_time,\
+                                            0,\
+                                            OrderedDict([(self.current_time,self.paramsdict["mig_clust_size"])])]
 
         return new_species
 
@@ -544,11 +565,11 @@ class LocalCommunity(object):
                              growth = self.region.paramsdict["population_growth"],\
                              abundance = local_abund,\
                              meta_abundance = meta_abund,
-                             migration_rate = self.local_info[name]["post_colonization_migrants"]/float(tdiv))
+                             migration_rate = self.local_info[name]["post_colonization_migrants"]/float(tdiv),\
+                             abundance_through_time = self.local_info[name]["abundances_through_time"].values())
                 sp.simulate_seqs()
                 sp.get_sumstats()
                 self.species.append(sp)
-                LOGGER.debug(sp)
                 ## For debugging invasives
                 #if s.abundance > 1000:
                 #    print("\n{}".format(s))
@@ -571,7 +592,7 @@ class LocalCommunity(object):
 
         LOGGER.debug("Entering get_stats()")
         self.simulate_seqs()
-
+        LOGGER.debug("First 5 species - \n{}".format(self.species[:5]))
         self.stats._lambda = self._lambda()
         self.stats.generation = self.current_time
         self.stats.K = self.paramsdict["K"]

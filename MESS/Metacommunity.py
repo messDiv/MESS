@@ -315,6 +315,7 @@ class Metacommunity(object):
         self.community['immigration_probabilities'] = self.community["abundances"]/float(self.paramsdict["J"])
         LOGGER.debug("Metacommunity info: shape {}\n[:10] {}".format(self.community.shape, self.community[:10]))
 
+
     def get_migrant(self):
         """ Return one
         """

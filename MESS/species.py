@@ -1,5 +1,6 @@
 #!/usr/bin/env python2.7
 
+from scipy.stats import hmean
 import numpy as np
 import pandas as pd
 import collections      # For Counter
@@ -19,7 +20,8 @@ LOGGER = logging.getLogger(__name__)
 class species(object):
 
     def __init__(self, UUID = "", growth="constant", abundance = 1,
-                meta_abundance = 1, colonization_time = 0, migration_rate=0):
+                meta_abundance = 1, colonization_time = 0, migration_rate=0,
+                abundance_through_time=[]):
 
         ## I'm calling anything that is invariant across species
         ## a 'parameter' even though I know migration rate is a
@@ -64,15 +66,24 @@ class species(object):
         self.tree_sequence = []
 
         ## Calculate the growth rate and the initial population size
-        ## if doing exponential
         if growth == "exponential":
             ## TODO: Add a hackersonly param to tune the number of founders
             ## or maybe just use mig_clust_size?
             initial_size = 1.
             self.stats["growth_rate"] = -np.log(initial_size/self.stats["local_Ne"])/self.stats["coltime"]
+        ## Instantaneous expansion to current size and constant size through time
         elif growth == "constant":
             initial_size = self.stats["Ne_local"]
             self.stats["growth_rate"] = 0
+        ## Take the harmonic mean of the abundance trajectory through time
+        elif growth == "harmonic":
+            try:
+                initial_size = hmean(abundance_through_time)
+                #LOGGER.debug("sp {}\tinit_size {}\tabunds {}".format(self.name, initial_size, abundance_through_time))
+                self.stats["growth_rate"] = 0
+            except Exception as inst:
+                LOGGER.debug("Failed harmonic mean for {}".format(self))
+                raise inst
         else:
             raise MESSError("Unrecognized population growth parameter - {}".format(growth))
 
