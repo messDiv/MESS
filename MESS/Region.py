@@ -54,7 +54,6 @@ class Region(object):
                        ("generations", 0),
                        ("recording_period", 10000),
                        ("population_growth", "constant"),
-                       ("allow_multiple_colonizations", True),
                        ("community_assembly_model", 1),
         ])
 
@@ -152,9 +151,6 @@ class Region(object):
                     self.paramsdict[param] = tuple([low, high])
                 else:
                     self.paramsdict[param] = int(float(newvalue))
-
-            elif param == "allow_multiple_colonizations":
-                self.paramsdict[param] = newvalue.lower() in ["true"]
 
             elif param == "community_assembly_model":
                 self.paramsdict[param] = int(float(newvalue))
@@ -488,7 +484,6 @@ REGION_PARAMS = {
     "generations" : "Duration of simulations. Specify int range or 0 for lambda.",\
     "recording_period" : "Number of forward-time generations between samples for logging",\
     "population_growth" : "Rate of growth since colonization: exponential/constant",\
-    "allow_multiple_colonizations" : "Toggle allowing post colonization migration",\
     "community_assembly_model" : "Neutral:1, Habitat Filtering:2, Competitive Exclusion:3",\
 }
 
