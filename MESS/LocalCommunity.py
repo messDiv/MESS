@@ -61,16 +61,10 @@ class LocalCommunity(object):
         ##  * allow_empty is a switch on whether to fully populate local community
         ##      with one species for 'volcanic' mode or to introduce just one
         ##      individual and populate the rest of K with 'empty' demes.
-        ##  * allow_multiple_colonizations toggles whether post colonization
-        ##      migration is allowed or not. If it's switched off, then potential
-        ##      colonists are tested for presence in the local community, and if
-        ##      they already exist there then they are tossed out and another
-        ##      colonist is chosen. 'False' generates gimmeSAD v1 behavior.
         ##  * outdir is inherited from the Region.simulate() command, so users
         ##      should normally not mess with this.
         self._hackersonly = dict([
                         ("allow_empty", False),
-                        ("allow_multiple_colonizations", True),
                         ("outdir", []),
         ])
 
@@ -369,7 +363,7 @@ class LocalCommunity(object):
         ## Select the individual to die
 
         ##currently this will fail under volcanic model because the entire local community will go extinct
-        if self.region.paramsdict["community_assembly_model"] == 2:
+        if self.region.paramsdict["community_assembly_model"] == "filtering":
             death_Probability = 0
             reject = 0
 
@@ -382,8 +376,9 @@ class LocalCommunity(object):
                 death_Probability = 1 - (np.exp(-((victim_trait - self.paramsdict["filtering_optimum"]) ** 2)/self.region.get_weight()))
 
             self.rejections.append(reject)
+            print(self.rejections)
 
-        if self.region.paramsdict["community_assembly_model"] == 3:
+        if self.region.paramsdict["community_assembly_model"] == "competition":
             death_Probability = 0
             reject = 0
             mean_local_trait = self.region.get_trait_stats(self.local_community)[0]
@@ -494,10 +489,7 @@ class LocalCommunity(object):
     ## Not updated
     def step(self, nsteps=1):
         for step in range(nsteps):
-
-            ############################################
-            ## Check for colonization event
-            ############################################
+            ## Check probability of an immigration event
             if np.random.random_sample() < self.paramsdict["colrate"]:
                 ## If clustered migration remove the necessary number of additional individuals
                 for _ in range(self.paramsdict["mig_clust_size"]):
@@ -505,7 +497,7 @@ class LocalCommunity(object):
 
                 ## Grab the new colonizing species
                 ## the init_colonization flag is used to test whether to update the divergence time
-                if self._hackersonly["allow_multiple_colonizations"]:
+                if self.region.paramsdict["allow_multiple_colonizations"]:
                     new_species = self.migrate_step()
                 else:
                     new_species = self.migrate_no_dupes_step()
@@ -522,9 +514,6 @@ class LocalCommunity(object):
                 self.local_community.extend([new_species] * self.paramsdict["mig_clust_size"])
                 self.founder_flags.extend([False] * self.paramsdict["mig_clust_size"])
                 self.colonizations += 1
-            ##############################################
-            ## If not colonization, then do local dynamics
-            ##############################################
             else:
                 self.death_step()
                 ## Sample all available from local community (community grows slow in volcanic model)
@@ -534,9 +523,11 @@ class LocalCommunity(object):
                 idx = self.local_community.index(chx)
                 self.founder_flags.append(self.founder_flags[idx])
 
-            ##############################################
-            ## Speciation process
-            ##############################################
+                ## Sample only from available extant species (early pops grow quickly in the volcanic model)
+                ## If you do this, the original colonizer just overwhelms everything else
+                ## This is more similar to the Rosindell and Harmon model, in which they simply
+                ## prepopulate the island entirely with one species. This is effectively the same
+                #self.local_community.append(random.choice([x for x in self.local_community if not x == None]))
 
             ## update current time
             self.current_time += 1
@@ -598,6 +589,7 @@ class LocalCommunity(object):
                                                                                                          self.local_info[name],
                                                                                                          inst)
                 raise MESSError(msg)
+
 
 
     def get_stats(self):
