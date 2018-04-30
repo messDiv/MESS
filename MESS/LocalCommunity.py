@@ -45,6 +45,7 @@ class LocalCommunity(object):
                         ("mode", "volcanic"),
                         ("K", K),
                         ("colrate", colrate),
+                        ("speciation_probability", 0),
                         ("age", 100000),
                         ("mig_clust_size", mig_clust_size),
                         ("filtering_optimum", 100)
@@ -85,10 +86,16 @@ class LocalCommunity(object):
         ## info that would be annoying or impossible to keep track of "per individual".
         ## The column headers are species ids, and the dataframe is always of length ==
         ## len(Counter(local_community)), because we prune extinct.
+        ##
+        ## NB: If you add another field you need to change the initialization inside
+        ##     prepopulate, and also the behavior in _add_local_info()
+        ##
         ## Fields:
         ##  * "colonization_times" - Colonization times per species
         ##  * "post_colonization_migrants" - Count of post colonization migrants per species
         ##  * "abundance_through_time" - A record of abundance through time for this species
+        ##  * "ancestor" - The species name of the immediate ancestor if local speciation
+        ##                 happened, otherwise "".
         self.local_info = pd.DataFrame([])
 
         ## The regional pool that this local community belongs to
@@ -188,6 +195,22 @@ class LocalCommunity(object):
         return percent_equil
 
 
+    def _add_local_info(self, sname, ancestor=""):
+        ## Construct a new local_info record for new_species. The fields are:
+        ## colonization time - in the forward time model. This gets converted to
+        ##      divergence time for the backward time model.
+        ## post_colonization_migrants - The count of migrants that have come in
+        ##      that are the same species as this one, since colonization
+        ## abundance_through_time - Dictionary containing history of population
+        ##      size change through time
+        ## ancestor - If the species was introduced by speciation rather than
+        ##      colonization, then it'll have an ancestral species.
+        self.local_info[sname] = [self.current_time,\
+                                        0,\
+                                        OrderedDict([(self.current_time,self.paramsdict["mig_clust_size"])]),\
+                                        ancestor]
+
+
     def _paramschecker(self, param, newvalue, quiet=False):
         """ Raises exceptions when params are set to values they should not be"""
         ## TODO: This should actually check the values and make sure they make sense
@@ -211,6 +234,9 @@ class LocalCommunity(object):
                     self.paramsdict[param] = sample_param_range(tup)[0]
                 else:
                     self.paramsdict[param] = tup
+
+            elif param == "speciation_probability":
+                self.paramsdict[param] = float(newvalue)
 
             elif param == "mode":
                 ## Must reup the local community if you change the mode
@@ -303,6 +329,7 @@ class LocalCommunity(object):
         except Exception as inst:
             raise MESSError("Error in _log() - {}".format(inst))
 
+
     def __str__(self):
         return "<LocalCommunity {}: Shannon's Entropy {}>".format(self.name, shannon(self.get_abundances()))
 
@@ -350,10 +377,11 @@ class LocalCommunity(object):
         self.local_info = pd.DataFrame([], columns = ids,\
                                             index = ["colonization_times",\
                                                      "post_colonization_migrants",\
-                                                     "abundances_through_time"])
+                                                     "abundances_through_time",\
+                                                     "ancestor"])
         self.local_info = self.local_info.fillna(0)
         for sp in self.local_info:
-            self.local_info[sp] = [0, 0, OrderedDict()]
+            self.local_info[sp] = [0, 0, OrderedDict(), ""]
 
         self.founder_flags = [True] * len(self.local_community)
 
@@ -364,10 +392,10 @@ class LocalCommunity(object):
         LOGGER.debug("Done prepopulating - {}".format(self))
 
 
-    ## Not updated
     def death_step(self):
         ## Select the individual to die
 
+        ## TODO: Is this still true?
         ##currently this will fail under volcanic model because the entire local community will go extinct
         if self.region.paramsdict["community_assembly_model"] == 2:
             death_Probability = 0
@@ -383,7 +411,7 @@ class LocalCommunity(object):
 
             self.rejections.append(reject)
 
-        if self.region.paramsdict["community_assembly_model"] == 3:
+        elif self.region.paramsdict["community_assembly_model"] == 3:
             death_Probability = 0
             reject = 0
             mean_local_trait = self.region.get_trait_stats(self.local_community)[0]
@@ -416,7 +444,11 @@ class LocalCommunity(object):
         self.local_community.pop(idx)
         self.founder_flags.pop(idx)
 
+        ## If the species of the victim went locally extinct then clean up local_info
+        self._test_local_extinction(victim)
 
+
+    def _test_local_extinction(self, victim):
         ## Record local extinction events
         if not victim in self.local_community:
             self.extinctions += 1
@@ -463,9 +495,7 @@ class LocalCommunity(object):
                sys.exit(msg)
 
         ## This is a new migrant so init local_info for it
-        self.local_info[new_species] = [self.current_time,\
-                                        0,\
-                                        OrderedDict([(self.current_time,self.paramsdict["mig_clust_size"])])]
+        self._add_local_info(sname = new_species)
 
         return new_species
 
@@ -484,14 +514,11 @@ class LocalCommunity(object):
             self.local_info[new_species]["post_colonization_migrants"] += 1
         else:
             ## This is a new migrant so init local_info for it
-            self.local_info[new_species] = [self.current_time,\
-                                            0,\
-                                            OrderedDict([(self.current_time,self.paramsdict["mig_clust_size"])])]
+            self._add_local_info(sname = new_species)
 
         return new_species
 
 
-    ## Not updated
     def step(self, nsteps=1):
         for step in range(nsteps):
 
@@ -537,17 +564,73 @@ class LocalCommunity(object):
             ##############################################
             ## Speciation process
             ##############################################
+            if self.region.paramsdict["speciation_model"] != "none" and\
+               np.random.random_sample() < self.paramsdict["speciation_probability"]:
+                self.speciate()
 
             ## update current time
             self.current_time += 1
+
 
     def get_abundances(self, octaves=False):
         return SAD(self.local_community)
 
 
+    def speciate(self):
+        """ Occassionally initiate the speciation process. In all modes, one
+            one individual is randomly selected to undergo speciation.
+            Speciation does not change the founder_flag state.
+
+            Currently there are 3 modes implemented:
+            - point_mutation: The randomly selected individual becomes a new
+                species of its own, of abundance 1.
+            - random_fission: The species of the randomly selected individual
+                undergoes random fission. In this mode the abundance of the
+                new species is determined by randomly splitting off a chunk
+                of the individuals from the parent species. All fission
+                sizes are equally likely.
+            - protracted:
+        """
+        LOGGER.debug("Initiate speciation process")
+
+        ## Sample the individual to undergo speciation
+        chx = random.choice(self.local_community)
+        idx = self.local_community.index(chx)
+
+        ## Construct the new species name.
+        ## We want the new name to be globally unique but we don't
+        ## want to waste a bunch of time keeping track of it in the
+        ## region, so we can do something like this:
+        sname = chx + "-{}-{}".format(self.name, self.current_time)
+        self._add_local_info(sname = sname, ancestor = chx)
+
+        if self.region.paramsdict["speciation_model"] == "point_mutation":
+            ## Replace the individual in the local_community with the new species
+            self.local_community[idx] = sname
+
+            ## Inform the regional pool that we have a new species
+            trt = self.region.get_trait(chx)
+            self.region._record_local_speciation(sname, trt)
+
+            ## If the new individual removes the last member of the ancestor
+            ## species, then you need to do some housekeeping.
+            ## TODO: is this really an "extinction" event? we need to clean up
+            ## the local_info regardless, but we may not want to increment the
+            ## extinctions counter.
+            self._test_local_extinction(chx)
+            ## TODO: TODO: TODO: Still have to do ancestor inheritance
+
+        elif self.region.paramsdict["speciation_model"] == "random_fission":
+            pass
+        elif self.region.paramsdict["speciation_model"] == "protracted":
+            pass
+        else:
+            raise MESSError("Unrecognized speciation model - {}".format(self.region.paramsdict["speciation_model"]))
+
+
+    ## TODO: Unused and not updated to current MESS structure
     ## How strong is the bottleneck? Strength should be interpreted as percent of local
     ## community to retain
-    ## Not done
     def bottleneck(self, strength=1):
         reduction = int(round(self.paramsdict["K"] * strength))
         self.local_community = self.local_community[:reduction]
@@ -567,14 +650,37 @@ class LocalCommunity(object):
                 self.species[i] = s
 
 
+    ################################################
+    ## Functions for driving the backward time model
+    ################################################
+    ## I always forget how to do this in pandas: self.local_info.iloc[:, idxs]
+    def _get_singleton_species(self):
+        ## A function to return any species that are not involved in a speciation
+        ## event. These are "easier" to handle individually, so we'll do them separately.
+        ## First get the candidate list of species.
+        idxs = np.where(self.local_info.loc["ancestor"] == "")[0]
+        names = self.local_info.columns[idxs]
+        ## Get just the species that don't occur as ancestors in the local community
+        singletons = set(names).difference(set(self.local_info.loc["ancestor"]))
+        ## Return the dataframe with just those individuals without
+        return self.local_info[list(singletons)]
+
+
+    def _get_clades(self):
+        ## We need to get all the groups of species that descended from a common
+        ## local anscestor so we can run the backwards time model for all of them
+        ## combined in a coherent fashion.
+        pass
+
     def simulate_seqs(self):
         self.species = []
-        for name, coltime in self.local_info.loc["colonization_times"].iteritems():
+        for name, coltime in self._get_singleton_species().loc["colonization_times"].iteritems():
+##        for name, coltime in self.local_info.loc["colonization_times"].iteritems():
             try:
                 meta_abund = self.region.get_abundance(name)
                 local_abund = self.local_community.count(name)
                 tdiv = self.current_time - coltime
-                sp = species(UUID=name,
+                sp = species(UUID = name,
                              colonization_time = tdiv,\
                              growth = self.region.paramsdict["population_growth"],\
                              abundance = local_abund,\
@@ -628,28 +734,32 @@ class LocalCommunity(object):
         self.stats.iqr_dxy = iqr(dxys)
 
         self.stats.sgd = SGD(pis, dxys)
+        LOGGER.debug("SGD - {}".format(self.stats.sgd))
 
-        self.stats.mean_ltr = self.region.get_trait_stats(self.local_community)[0]
-        self.stats.var_ltr = self.region.get_trait_stats(self.local_community)[1]
-        self.stats.mean_rtr = self.region.get_trait_stats(self.local_community)[2]
-        self.stats.var_rtr = self.region.get_trait_stats(self.local_community)[3]
-        self.stats.mean_dif = self.region.get_trait_stats(self.local_community)[4]
-        self.stats.var_dif = self.region.get_trait_stats(self.local_community)[5]
-        self.stats.kurtosis = self.region.get_trait_stats(self.local_community)[6][0]
-        self.stats.skewness = self.region.get_trait_stats(self.local_community)[7][0]
+        try:
+            self.stats.mean_ltr = self.region.get_trait_stats(self.local_community)[0]
+            self.stats.var_ltr = self.region.get_trait_stats(self.local_community)[1]
+            self.stats.mean_rtr = self.region.get_trait_stats(self.local_community)[2]
+            self.stats.var_rtr = self.region.get_trait_stats(self.local_community)[3]
+            self.stats.mean_dif = self.region.get_trait_stats(self.local_community)[4]
+            self.stats.var_dif = self.region.get_trait_stats(self.local_community)[5]
+            self.stats.kurtosis = self.region.get_trait_stats(self.local_community)[6][0]
+            self.stats.skewness = self.region.get_trait_stats(self.local_community)[7][0]
 
-        ## Log to file
-        #statsfile = os.path.join(self._hackersonly["outdir"],
-        #                         self.paramsdict["name"] + "-simout.txt")
-        #self.stats.to_csv(statsfile, na_rep=0, float_format='%.5f')
+            ## Log to file
+            #statsfile = os.path.join(self._hackersonly["outdir"],
+            #                         self.paramsdict["name"] + "-simout.txt")
+            #self.stats.to_csv(statsfile, na_rep=0, float_format='%.5f')
 
-        #megalog = os.path.join(self._hackersonly["outdir"],
-        #                         self.paramsdict["name"] + "-megalog.txt")
-        ## concatenate all species results and transpose the data frame so rows are species
-        fullstats = pd.concat([sp.stats for sp in self.species], axis=1).T
-        #fullstats.to_csv(megalog, index_label=False)
+            #megalog = os.path.join(self._hackersonly["outdir"],
+            #                         self.paramsdict["name"] + "-megalog.txt")
+            ## concatenate all species results and transpose the data frame so rows are species
+            fullstats = pd.concat([sp.stats for sp in self.species], axis=1).T
+            #fullstats.to_csv(megalog, index_label=False)
+        except Exception as inst:
+            LOGGER.error("Error in get_stats() - {}".format(inst))
+            raise
 
-        ## If you ever want to pretty print results
         return self.stats
 
 
@@ -661,6 +771,7 @@ LOCAL_PARAMS = {
     "mode" : "Local community formation mode (volcanic/landbridge)",\
     "K" : "Local carrying capacity",\
     "colrate" : "Colonization rate into local community",\
+    "speciation_probability" : "Probability of forming a new species per forward time step",\
     "mig_clust_size" : "# of individuals per colonization event",\
     "age" : "Local community age",\
     "filtering_optimum" : "optimum trait value, only used during environmental filtering model",\
