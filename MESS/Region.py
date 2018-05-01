@@ -471,16 +471,23 @@ class Region(object):
             except Exception as inst:
                 LOGGER.error("Error in get_trait_stats {}".format(inst))
                 raise
-        print(local_traits)
 
-        return [np.mean(local_traits),
-                np.var(local_traits),
-                np.mean(self.metacommunity.community["trait_values"]),
-                np.var(self.metacommunity.community["trait_values"]),
-                np.mean(self.metacommunity.community["trait_values"]) - np.mean(local_traits),
-                np.var(self.metacommunity.community["trait_values"]) - np.var(local_traits),
-                kurtosis(local_traits),
-                skew(local_traits)]
+        trts = []
+        try:
+            trts = [np.mean(local_traits),
+                    np.var(local_traits),
+                    np.mean(self.metacommunity.community["trait_values"]),
+                    np.var(self.metacommunity.community["trait_values"]),
+                    np.mean(self.metacommunity.community["trait_values"]) - np.mean(local_traits),
+                    np.var(self.metacommunity.community["trait_values"]) - np.var(local_traits),
+                    kurtosis(local_traits),
+                    skew(local_traits)]
+        except:
+            LOGGER.error("Error calculating trait values")
+            raise
+
+        return trts
+
 
     def get_weight(self):
         weight =   (self.metacommunity.paramsdict["trait_strength"] *
