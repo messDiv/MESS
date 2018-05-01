@@ -461,7 +461,6 @@ class LocalCommunity(object):
             except Exception as inst:
                 LOGGER.debug(self.local_info)
                 raise MESSError("Exception during recording extinction - {}".format(inst))
-                pass
             ## If the invasive prematurely goes extinct just pick a new one
             if victim[0] == self.invasive:
                 LOGGER.info("invasive went extinct")
@@ -601,7 +600,7 @@ class LocalCommunity(object):
         ## We want the new name to be globally unique but we don't
         ## want to waste a bunch of time keeping track of it in the
         ## region, so we can do something like this:
-        sname = chx + "-{}-{}".format(self.name, self.current_time)
+        sname = chx + ":{}-{}".format(self.name, self.current_time)
         self._add_local_info(sname = sname, ancestor = chx)
 
         if self.region.paramsdict["speciation_model"] == "point_mutation":
@@ -670,7 +669,28 @@ class LocalCommunity(object):
         ## We need to get all the groups of species that descended from a common
         ## local anscestor so we can run the backwards time model for all of them
         ## combined in a coherent fashion.
-        pass
+
+        ## Sort them by colonization time
+        self.local_info.sort_values("colonization_times", axis=1, inplace=True)
+
+        ## Clades will all be descended from one unique ancestor in the metacommunity
+        ## so we will just group them by this identifier. Species names have this
+        ## format: t0:<local_name>-<split_time>, so the zeroth element of the split
+        ## on ':' will always be the metacommunity species id.
+        clades = {x:[] for x in set([y.split(":")[0] for y in self.local_info])}
+
+        for idx in self.local_info:
+            clades[idx.split(":")[0]].append(idx)
+
+        LOGGER.debug("Clades - {}".format(clades))
+
+        return clades
+
+
+    def sim_seqs(self):
+        self.species = []
+        for clade in self.get_clades():
+            pass
 
     def simulate_seqs(self):
         self.species = []
