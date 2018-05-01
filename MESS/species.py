@@ -99,22 +99,22 @@ class species(object):
         return self.__str__()
 
 
-    def simulate_seqs(self):
-
-        ## TODO: Here we are assuming only one island and that the migration
-        ## is only ever unidirectional from the mainland to the island
-        migmat = [[0, self.stats["migration_rate"]],
-                    [0, 0]]
-
+    def _get_local_configuration(self):
         pop_local = msprime.PopulationConfiguration(\
                         sample_size = self.paramsdict["sample_size_local"],\
                         initial_size = self.stats["Ne_local"],
                         growth_rate = self.stats["growth_rate"])
+        return pop_local
 
+
+    def _get_meta_configuration(self):
         pop_meta = msprime.PopulationConfiguration(\
                         sample_size=self.paramsdict["sample_size_meta"],\
                         initial_size=self.stats["Ne_meta"])
+        return pop_meta
 
+
+    def _get_local_meta_split(self):
         ## Going backwards in time, at colonization time throw all lineages from
         ## the local community back into the metacommunity
         split_event = msprime.MassMigration(time = self.stats["coltime"],\
@@ -139,33 +139,42 @@ class species(object):
                                             time = self.stats["coltime"] - 1,\
                                             rate = 0)
 
+        return [migrate_change, local_size_change, local_rate_change, split_event]
+
+
+    def simulate_seqs(self):
+
+        ## TODO: Here we are assuming only one island and that the migration
+        ## is only ever unidirectional from the mainland to the island
+        migmat = [[0, self.stats["migration_rate"]],
+                    [0, 0]]
+
+        pop_local = self._get_local_configuration()
+        pop_meta = self._get_meta_configuration()
+
+        split_events = self._get_local_meta_split()
+
         ## Useful for debugging demographic events.
-        debug = msprime.DemographyDebugger( population_configurations = [pop_local, pop_meta],\
-                                            migration_matrix = migmat,\
-                                            demographic_events=[local_rate_change,\
-                                                                local_size_change,\
-                                                                migrate_change,\
-                                                                split_event])
+        if LOGGER.getEffectiveLevel() == 10:
+            debug = msprime.DemographyDebugger(population_configurations = [pop_local, pop_meta],\
+                                               migration_matrix = migmat,\
+                                               demographic_events = split_events)
 
-        ## Enable this at your own peril, it will dump a ton of shit to stdout
-        #debug.print_history()
-        ## I briefly toyed with the idea of logging this to a file, but you really
-        ## don't need it that often, and it'd be a pain to get the outdir in here.
-        #if LOGGER.getEffectiveLevel() == 10:
-        #    debugfile = os.path.join(self._hackersonly["outdir"],
-        #                        self.paramsdict["name"] + "-simout.txt")
-        #    with open(debugfile, 'a') as outfile:
-        #        outfile.write(debug.print_history())
+            ## Enable this at your own peril, it will dump a ton of shit to stdout
+            #debug.print_history()
+            ## I briefly toyed with the idea of logging this to a file, but you really
+            ## don't need it that often, and it'd be a pain to get the outdir in here.
+            #debugfile = os.path.join(self._hackersonly["outdir"],
+            #                    self.paramsdict["name"] + "-simout.txt")
+            #with open(debugfile, 'a') as outfile:
+            #    outfile.write(debug.print_history())
 
-        self.tree_sequence = msprime.simulate( length = self.paramsdict["sequence_length"],\
-                                                Ne = self.stats["Ne_local"],\
-                                                mutation_rate = self.paramsdict["mutation_rate"],\
-                                                population_configurations = [pop_local, pop_meta],\
-                                                migration_matrix = migmat,\
-                                                demographic_events=[local_rate_change,\
-                                                                    local_size_change,\
-                                                                    migrate_change,\
-                                                                    split_event])
+        self.tree_sequence = msprime.simulate(length = self.paramsdict["sequence_length"],\
+                                              Ne = self.stats["Ne_local"],\
+                                              mutation_rate = self.paramsdict["mutation_rate"],\
+                                              population_configurations = [pop_local, pop_meta],\
+                                              migration_matrix = migmat,\
+                                              demographic_events = split_events)
         self.get_sumstats()
 
 
