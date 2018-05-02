@@ -19,7 +19,7 @@ LOGGER = logging.getLogger(__name__)
 
 class species(object):
 
-    def __init__(self, UUID = "", growth="constant", abundance = 1,
+    def __init__(self, name = "", growth="constant", abundance = 1,
                 meta_abundance = 1, colonization_time = 0, migration_rate=0,
                 abundance_through_time=[]):
 
@@ -32,6 +32,7 @@ class species(object):
                             ("mutation_rate", 0.000000022),
                             ("sample_size_local", 100),
                             ("sample_size_meta", 100),
+                            ("abundance_through_time", abundance_through_time),
         ])
 
         ## Stats for this species in a nice pd series
@@ -54,7 +55,7 @@ class species(object):
                     "dxy",
                     "tajd_local"]).astype(np.object)
 
-        self.stats["name"] = UUID
+        self.stats["name"] = name
         self.stats["coltime"] = colonization_time
         self.stats["migration_rate"] = migration_rate
         self.stats["Ne_local"] = abundance * self.paramsdict["alpha"]
@@ -91,6 +92,33 @@ class species(object):
             raise MESSError("Unrecognized population growth parameter - {}".format(growth))
 
 
+    @classmethod
+    def from_df(self, df):
+        """ Class method for making creating a species object somewhat less annoying.
+            The dataframe passed in must contain at least the following information.
+            Colonization times and times of abundances through time need to be in
+            backward time units.
+
+            colonization_times               13623
+            post_colonization_migrants           0
+            abundances_through_time     {13623: 1}
+            ancestor                              
+            meta_abund                        1000
+            local_abund                          2"""
+
+        ## TODO: this doesn't pull in the growth model so will always be constant
+        ## I guess you can set it yourself downstream
+        name = df.columns[0]
+        sp_info = df[name]
+        sp = species(name = name,
+                     colonization_time = sp_info["colonization_times"],\
+                     abundance = sp_info["local_abund"],\
+                     meta_abundance = sp_info["meta_abund"],\
+                     migration_rate = sp_info["post_colonization_migrants"]/float(sp_info["colonization_times"]),\
+                     abundance_through_time = sp_info["abundances_through_time"])
+        return sp
+
+
     def __str__(self):
         return self.stats.to_string()
 
@@ -112,6 +140,20 @@ class species(object):
                         sample_size=self.paramsdict["sample_size_meta"],\
                         initial_size=self.stats["Ne_meta"])
         return pop_meta
+
+
+    def _get_size_changes_through_time(self, pop_id = 0):
+        size_change_events = []
+
+        for time, size in self.paramsdict["abundance_through_time"].items():
+
+            local_size_change = msprime.PopulationParametersChange(\
+                                            time = time,\
+                                            initial_size = size,\
+                                            population_id = pop_id)
+            size_change_events.append(local_size_change)
+
+        return size_change_events
 
 
     def _get_local_meta_split(self):
@@ -235,6 +277,9 @@ class species(object):
         self.stats["Ne_local"] = abund * self.paramsdict["alpha"]
 
 
+#######################################
+## Various summary statistics
+#######################################
 def tajD_island(haplotypes, S):
     if len(haplotypes) == 0:
         return 0
@@ -259,8 +304,10 @@ def pairwise_diffs(haplotypes):
     ## Number of comparisons is count + 1 bcz enumerate starts at 0
     return tot/float(count+1)
 
+
 def watt_theta(n, S):
     return S/sum([1./x for x in xrange(1,n)])
+
 
 ## Fuckin helps if you do it right. This page has a nice worked example with values for each
 ## subfunction so you can check your equations:
@@ -276,6 +323,7 @@ def tajD_denom(n, S):
     e2 = c2/(a1**2+a2)
     ddenom = math.sqrt(e1*S + e2*S*(S-1))
     return ddenom
+
 
 def get_pi(haplotypes):
     ## If no seg sites in a pop then haplotypes will be 0 length
@@ -318,6 +366,24 @@ def get_dxy(ihaps_t, mhaps_t):
         dxy += (nonzeros_island * zeros_meta \
                 + zeros_island * nonzeros_meta) / float(n_comparisons)
     return dxy
+
+
+####################################################
+## Function to build the msprime model for clades of
+## species related in the local community.
+## TODO: This lives here now because I can't think
+## of a better place to put it...
+####################################################
+def sim_clade(forward_info):
+    ## Build the nasty msprime command for species all related
+    ## by local speciation. Run the msprime, and gather summary
+    ## statistics
+
+    ## Get species objects for each species in this clade
+    clade_species = [species.from_df(pd.DataFrame(forward_info[x])) for x in forward_info]
+    LOGGER.debug("Got clade_species:\n{}".format(clade_species))
+
+    
 
 
 if __name__ == "__main__":
