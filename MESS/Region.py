@@ -290,7 +290,7 @@ class Region(object):
         """Return abundance of a species in the regional pool."""
         ## This is dumb, metacommunity should be pd
         return self.metacommunity.community["abundances"]\
-                [np.where(self.metacommunity.community["ids"] == "t1")][0]
+                [np.where(self.metacommunity.community["ids"] == species)][0]
 
 
     ## Main function for managing cluster parallelized simulations
