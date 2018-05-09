@@ -2,8 +2,6 @@
 
 from scipy.stats import lognorm
 from collections import OrderedDict
-#from Bio import Phylo
-#from cStringIO import StringIO
 import dendropy
 import collections
 import pandas as pd

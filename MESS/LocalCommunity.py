@@ -376,7 +376,7 @@ class LocalCommunity(object):
                 death_Probability = 1 - (np.exp(-((victim_trait - self.paramsdict["filtering_optimum"]) ** 2)/self.region.get_weight()))
 
             self.rejections.append(reject)
-            print(self.rejections)
+
 
         if self.region.paramsdict["community_assembly_model"] == "competition":
             death_Probability = 0
@@ -497,10 +497,11 @@ class LocalCommunity(object):
 
                 ## Grab the new colonizing species
                 ## the init_colonization flag is used to test whether to update the divergence time
-                if self.region.paramsdict["allow_multiple_colonizations"]:
-                    new_species = self.migrate_step()
-                else:
-                    new_species = self.migrate_no_dupes_step()
+                ## Removed the if statement because multiple colonizations are always allowed
+                #if self.region.paramsdict["allow_multiple_colonizations"]:
+                new_species = self.migrate_step()
+                #else:
+                #    new_species = self.migrate_no_dupes_step()
 
                 ## Only set the invasive species once at the time of next migration post invasion time
                 ## If invasion time is < 0 this means "Don't do invasive"

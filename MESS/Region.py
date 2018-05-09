@@ -4,7 +4,6 @@ import datetime
 import numpy as np
 from scipy.stats import kurtosis
 from scipy.stats import skew
-#from Bio import Phylo
 import time
 import string
 import os
