@@ -2,8 +2,7 @@ from util import *
 from collections import OrderedDict
 import datetime
 import numpy as np
-from scipy.stats import kurtosis
-from scipy.stats import skew
+from scipy.stats import kurtosis, skew
 import time
 import string
 import os
@@ -54,7 +53,12 @@ class Region(object):
                        ("generations", 0),
                        ("recording_period", 10000),
                        ("population_growth", "constant"),
+<<<<<<< HEAD
                        ("community_assembly_model", "neutral"),
+=======
+                       ("community_assembly_model", 1),
+                       ("speciation_model", "point_mutation"),
+>>>>>>> 18c399f5dbc92da27e47d57d2ec1829c11ae7662
         ])
 
         ## Track local communities in this model and colonization rates among them
@@ -154,11 +158,23 @@ class Region(object):
             elif param == "community_assembly_model":
                 self.paramsdict[param] = newvalue
 
+            elif param == "speciation_model":
+                self.paramsdict[param] = newvalue
+
             else:
                 self.paramsdict[param] = newvalue
         except Exception as inst:
             ## Do something intelligent here?
             raise
+
+
+    def _record_local_speciation(self, sname, trait_value):
+        """ Local speciation events need to be recorded, for
+        example the trait value needs to get added to the
+        metacommunity trait value list. Maybe other stuff needs
+        to happen at speciation time, so we create a function.
+        This function is called by LocalCommunity.speciate()"""
+        self.metacommunity.update_species_pool(sname, trait_value)
 
 
     def _reset_local_communities(self):
@@ -277,7 +293,7 @@ class Region(object):
         """Return abundance of a species in the regional pool."""
         ## This is dumb, metacommunity should be pd
         return self.metacommunity.community["abundances"]\
-                [np.where(self.metacommunity.community["ids"] == "t1")][0]
+                [np.where(self.metacommunity.community["ids"] == species)][0]
 
 
     ## Main function for managing cluster parallelized simulations
@@ -448,16 +464,33 @@ class Region(object):
 
     def get_trait_stats(self, local_com):
         local_traits = []
-        for id in np.unique(local_com):
-            local_traits.append(self.metacommunity.community["trait_values"][self.metacommunity.community["ids"] == id])
-        return [np.mean(local_traits),
-                np.var(local_traits),
-                np.mean(self.metacommunity.community["trait_values"]),
-                np.var(self.metacommunity.community["trait_values"]),
-                np.mean(self.metacommunity.community["trait_values"]) - np.mean(local_traits),
-                np.var(self.metacommunity.community["trait_values"]) - np.var(local_traits),
-                kurtosis(local_traits),
-                skew(local_traits)]
+        for idx in np.unique(local_com):
+            try:
+                trt = self.metacommunity.community["trait_values"][self.metacommunity.community["ids"] == idx]
+                if trt.any():
+                    local_traits.append(trt)
+                else:
+                    raise MESSError("Error formatting trait_stats, empty trait value.")
+            except Exception as inst:
+                LOGGER.error("Error in get_trait_stats {}".format(inst))
+                raise
+
+        trts = []
+        try:
+            trts = [np.mean(local_traits),
+                    np.var(local_traits),
+                    np.mean(self.metacommunity.community["trait_values"]),
+                    np.var(self.metacommunity.community["trait_values"]),
+                    np.mean(self.metacommunity.community["trait_values"]) - np.mean(local_traits),
+                    np.var(self.metacommunity.community["trait_values"]) - np.var(local_traits),
+                    kurtosis(local_traits),
+                    skew(local_traits)]
+        except:
+            LOGGER.error("Error calculating trait values")
+            raise
+
+        return trts
+
 
     def get_weight(self):
         weight =   (self.metacommunity.paramsdict["trait_strength"] *
@@ -485,7 +518,12 @@ REGION_PARAMS = {
     "generations" : "Duration of simulations. Specify int range or 0 for lambda.",\
     "recording_period" : "Number of forward-time generations between samples for logging",\
     "population_growth" : "Rate of growth since colonization: exponential/constant",\
+<<<<<<< HEAD
     "community_assembly_model" : "Model of Community Assembly: neutral, filtering, competition",\
+=======
+    "community_assembly_model" : "Neutral:1, Habitat Filtering:2, Competitive Exclusion:3",\
+    "speciation_model" : "Type of speciation process: none, point_mutation, protracted, random_fission",\
+>>>>>>> 18c399f5dbc92da27e47d57d2ec1829c11ae7662
 }
 
 

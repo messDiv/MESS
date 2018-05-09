@@ -20,10 +20,12 @@ LOGGER = logging.getLogger(__name__)
 ## multiple migration, error out and warn if exceeded
 MAX_DUPLICATE_REDRAWS_FROM_METACOMMUNITY = 1500
 
-METACOMMUNITY_DTYPE = np.dtype([('ids', '|S10'),
+## id is a variable length string so we set the dtype as "object"
+## to allow for reference pointing to string objects
+METACOMMUNITY_DTYPE = np.dtype([('ids', object),
                                 ('immigration_probabilities', 'f8'),
-                                ('abundances', 'i4'),
-                                ('trait_values', 'f4')])
+                                ('abundances', 'i8'),
+                                ('trait_values', 'f8')])
 
 class Metacommunity(object):
 
@@ -145,8 +147,6 @@ class Metacommunity(object):
             elif param == "J":
                 ## Do nothing. J is calculated from the data and not set, for now.
                 pass
-
-
 
         except Exception as inst:
             ## Do something intelligent here?
@@ -321,6 +321,27 @@ class Metacommunity(object):
         LOGGER.debug("Metacommunity info: shape {}\n[:10] {}".format(self.community.shape, self.community[:10]))
 
 
+    def update_species_pool(self, sname, trait_value):
+        """ Add a new species to the species pool. This is on account of
+        speciation in the local communities and we need to keep track of
+        the trait values globally. New species are appended to the end
+        and given dummy values for their immigration probability and regional
+        abundance. There are no dynamics in the metacommunity so these
+        new species will never act as colonists from the metacommunity.
+        The form of this call is ugly for stupid reasons"""
+        try:
+            LOGGER.debug("Adding species/trait_value - {}/{}".format(sname, trait_value))
+            self.community = np.hstack((self.community,\
+                                        np.array([tuple([sname, 0, 0, trait_value])], dtype=METACOMMUNITY_DTYPE)))
+        except Exception as inst:
+            LOGGER.error("Error in Metacommunity.update_species_pool - {}".format(inst))
+            LOGGER.error("sname/trait_value - {}/{}".format(sname, trait_value))
+            raise
+
+
+    ##################################
+    ## Publicly useful methods
+    ##################################
     def get_migrant(self):
         """ Return one
         """

@@ -19,7 +19,7 @@ LOGGER = logging.getLogger(__name__)
 
 class species(object):
 
-    def __init__(self, UUID = "", growth="constant", abundance = 1,
+    def __init__(self, name = "", growth="constant", abundance = 1,
                 meta_abundance = 1, colonization_time = 0, migration_rate=0,
                 abundance_through_time=[]):
 
@@ -32,6 +32,7 @@ class species(object):
                             ("mutation_rate", 0.000000022),
                             ("sample_size_local", 100),
                             ("sample_size_meta", 100),
+                            ("abundance_through_time", abundance_through_time),
         ])
 
         ## Stats for this species in a nice pd series
@@ -54,7 +55,7 @@ class species(object):
                     "dxy",
                     "tajd_local"]).astype(np.object)
 
-        self.stats["name"] = UUID
+        self.stats["name"] = name
         self.stats["coltime"] = colonization_time
         self.stats["migration_rate"] = migration_rate
         self.stats["Ne_local"] = abundance * self.paramsdict["alpha"]
@@ -91,6 +92,33 @@ class species(object):
             raise MESSError("Unrecognized population growth parameter - {}".format(growth))
 
 
+    @classmethod
+    def from_df(self, df):
+        """ Class method for making creating a species object somewhat less annoying.
+            The dataframe passed in must contain at least the following information.
+            Colonization times and times of abundances through time need to be in
+            backward time units.
+
+            colonization_times               13623
+            post_colonization_migrants           0
+            abundances_through_time     {13623: 1}
+            ancestor                              
+            meta_abund                        1000
+            local_abund                          2"""
+
+        ## TODO: this doesn't pull in the growth model so will always be constant
+        ## I guess you can set it yourself downstream
+        name = df.columns[0]
+        sp_info = df[name]
+        sp = species(name = name,
+                     colonization_time = sp_info["colonization_times"],\
+                     abundance = sp_info["local_abund"],\
+                     meta_abundance = sp_info["meta_abund"],\
+                     migration_rate = sp_info["post_colonization_migrants"]/float(sp_info["colonization_times"]),\
+                     abundance_through_time = sp_info["abundances_through_time"])
+        return sp
+
+
     def __str__(self):
         return self.stats.to_string()
 
@@ -99,22 +127,36 @@ class species(object):
         return self.__str__()
 
 
-    def simulate_seqs(self):
-
-        ## TODO: Here we are assuming only one island and that the migration
-        ## is only ever unidirectional from the mainland to the island
-        migmat = [[0, self.stats["migration_rate"]],
-                    [0, 0]]
-
+    def _get_local_configuration(self):
         pop_local = msprime.PopulationConfiguration(\
                         sample_size = self.paramsdict["sample_size_local"],\
                         initial_size = self.stats["Ne_local"],
                         growth_rate = self.stats["growth_rate"])
+        return pop_local
 
+
+    def _get_meta_configuration(self):
         pop_meta = msprime.PopulationConfiguration(\
                         sample_size=self.paramsdict["sample_size_meta"],\
                         initial_size=self.stats["Ne_meta"])
+        return pop_meta
 
+
+    def _get_size_changes_through_time(self, pop_id = 0):
+        size_change_events = []
+
+        for time, size in self.paramsdict["abundance_through_time"].items():
+
+            local_size_change = msprime.PopulationParametersChange(\
+                                            time = time,\
+                                            initial_size = size,\
+                                            population_id = pop_id)
+            size_change_events.append(local_size_change)
+
+        return size_change_events
+
+
+    def _get_local_meta_split(self):
         ## Going backwards in time, at colonization time throw all lineages from
         ## the local community back into the metacommunity
         split_event = msprime.MassMigration(time = self.stats["coltime"],\
@@ -139,33 +181,42 @@ class species(object):
                                             time = self.stats["coltime"] - 1,\
                                             rate = 0)
 
+        return [migrate_change, local_size_change, local_rate_change, split_event]
+
+
+    def simulate_seqs(self):
+
+        ## TODO: Here we are assuming only one island and that the migration
+        ## is only ever unidirectional from the mainland to the island
+        migmat = [[0, self.stats["migration_rate"]],
+                    [0, 0]]
+
+        pop_local = self._get_local_configuration()
+        pop_meta = self._get_meta_configuration()
+
+        split_events = self._get_local_meta_split()
+
         ## Useful for debugging demographic events.
-        debug = msprime.DemographyDebugger( population_configurations = [pop_local, pop_meta],\
-                                            migration_matrix = migmat,\
-                                            demographic_events=[local_rate_change,\
-                                                                local_size_change,\
-                                                                migrate_change,\
-                                                                split_event])
+        if LOGGER.getEffectiveLevel() == 10:
+            debug = msprime.DemographyDebugger(population_configurations = [pop_local, pop_meta],\
+                                               migration_matrix = migmat,\
+                                               demographic_events = split_events)
 
-        ## Enable this at your own peril, it will dump a ton of shit to stdout
-        #debug.print_history()
-        ## I briefly toyed with the idea of logging this to a file, but you really
-        ## don't need it that often, and it'd be a pain to get the outdir in here.
-        #if LOGGER.getEffectiveLevel() == 10:
-        #    debugfile = os.path.join(self._hackersonly["outdir"],
-        #                        self.paramsdict["name"] + "-simout.txt")
-        #    with open(debugfile, 'a') as outfile:
-        #        outfile.write(debug.print_history())
+            ## Enable this at your own peril, it will dump a ton of shit to stdout
+            #debug.print_history()
+            ## I briefly toyed with the idea of logging this to a file, but you really
+            ## don't need it that often, and it'd be a pain to get the outdir in here.
+            #debugfile = os.path.join(self._hackersonly["outdir"],
+            #                    self.paramsdict["name"] + "-simout.txt")
+            #with open(debugfile, 'a') as outfile:
+            #    outfile.write(debug.print_history())
 
-        self.tree_sequence = msprime.simulate( length = self.paramsdict["sequence_length"],\
-                                                Ne = self.stats["Ne_local"],\
-                                                mutation_rate = self.paramsdict["mutation_rate"],\
-                                                population_configurations = [pop_local, pop_meta],\
-                                                migration_matrix = migmat,\
-                                                demographic_events=[local_rate_change,\
-                                                                    local_size_change,\
-                                                                    migrate_change,\
-                                                                    split_event])
+        self.tree_sequence = msprime.simulate(length = self.paramsdict["sequence_length"],\
+                                              Ne = self.stats["Ne_local"],\
+                                              mutation_rate = self.paramsdict["mutation_rate"],\
+                                              population_configurations = [pop_local, pop_meta],\
+                                              migration_matrix = migmat,\
+                                              demographic_events = split_events)
         self.get_sumstats()
 
 
@@ -226,6 +277,9 @@ class species(object):
         self.stats["Ne_local"] = abund * self.paramsdict["alpha"]
 
 
+#######################################
+## Various summary statistics
+#######################################
 def tajD_island(haplotypes, S):
     if len(haplotypes) == 0:
         return 0
@@ -250,8 +304,10 @@ def pairwise_diffs(haplotypes):
     ## Number of comparisons is count + 1 bcz enumerate starts at 0
     return tot/float(count+1)
 
+
 def watt_theta(n, S):
     return S/sum([1./x for x in xrange(1,n)])
+
 
 ## Fuckin helps if you do it right. This page has a nice worked example with values for each
 ## subfunction so you can check your equations:
@@ -267,6 +323,7 @@ def tajD_denom(n, S):
     e2 = c2/(a1**2+a2)
     ddenom = math.sqrt(e1*S + e2*S*(S-1))
     return ddenom
+
 
 def get_pi(haplotypes):
     ## If no seg sites in a pop then haplotypes will be 0 length
@@ -309,6 +366,24 @@ def get_dxy(ihaps_t, mhaps_t):
         dxy += (nonzeros_island * zeros_meta \
                 + zeros_island * nonzeros_meta) / float(n_comparisons)
     return dxy
+
+
+####################################################
+## Function to build the msprime model for clades of
+## species related in the local community.
+## TODO: This lives here now because I can't think
+## of a better place to put it...
+####################################################
+def sim_clade(forward_info):
+    ## Build the nasty msprime command for species all related
+    ## by local speciation. Run the msprime, and gather summary
+    ## statistics
+
+    ## Get species objects for each species in this clade
+    clade_species = [species.from_df(pd.DataFrame(forward_info[x])) for x in forward_info]
+    LOGGER.debug("Got clade_species:\n{}".format(clade_species))
+
+    
 
 
 if __name__ == "__main__":
