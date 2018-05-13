@@ -79,8 +79,7 @@ class species(object):
         ## Take the harmonic mean of the abundance trajectory through time
         elif growth == "harmonic":
             try:
-                initial_size = hmean(abundance_through_time)
-                #LOGGER.debug("sp {}\tinit_size {}\tabunds {}".format(self.name, initial_size, abundance_through_time))
+                initial_size = hmean(abundance_through_time.values())
                 self.stats["growth_rate"] = 0
             except Exception as inst:
                 LOGGER.debug("Failed harmonic mean for {}".format(self))
@@ -185,7 +184,7 @@ class species(object):
 
 
     def simulate_seqs(self):
-
+        LOGGER.debug("Entering simulate_seqs - {}".format(self))
         ## TODO: Here we are assuming only one island and that the migration
         ## is only ever unidirectional from the mainland to the island
         migmat = [[0, self.stats["migration_rate"]],
@@ -211,6 +210,7 @@ class species(object):
             #with open(debugfile, 'a') as outfile:
             #    outfile.write(debug.print_history())
 
+        LOGGER.debug("Executing msprime - {}".format(self))
         self.tree_sequence = msprime.simulate(length = self.paramsdict["sequence_length"],\
                                               Ne = self.stats["Ne_local"],\
                                               mutation_rate = self.paramsdict["mutation_rate"],\
@@ -222,6 +222,7 @@ class species(object):
 
     def get_sumstats(self):
 
+        LOGGER.debug("Entering get_sumstats - {}".format(self))
         ## pairwise diversity per base
         self.stats["pi_tot"] = self.tree_sequence.get_pairwise_diversity()\
                                 / self.paramsdict["sequence_length"]
