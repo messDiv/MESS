@@ -2,6 +2,7 @@
 
 from scipy.stats import lognorm
 from collections import OrderedDict
+import dendropy
 import collections
 import pandas as pd
 import numpy as np
@@ -241,7 +242,12 @@ class Metacommunity(object):
                                                                 self.paramsdict["birth_rate"],\
                                                                 self.paramsdict["death_proportion"],\
                                                                 self.paramsdict["trait_rate"])
-            self.metacommunity_tree = tree
+            #handle = Phylo.read(StringIO(tree), "newick")
+            handle = dendropy.Tree.get(data=tree, schema="newick")
+            self.metacommunity_tree = handle
+
+            #print(self.get_phy_stats(self.metacommunity_tree))
+
             abundances = abunds
             ## TODO: This is dumb
             tups = zip(traits["name"], traits["value"])
@@ -346,6 +352,12 @@ class Metacommunity(object):
         LOGGER.debug("Migrant idx {}\tid {}\t trait_val {}".format(migrant_draw, new_species, trait_value))
         return new_species, trait_value
 
+    def get_phy_stats(self, tree):
+        total = []
+        for edge in tree.postorder_edge_iter():
+            if edge.length is not None:
+                total.append(edge.length)
+        return [np.mean(total), np.var(total), len(total), sum(total)]
 
     def get_nmigrants(self, nmigrants=1):
         migrants = []

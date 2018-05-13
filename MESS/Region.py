@@ -53,14 +53,14 @@ class Region(object):
                        ("generations", 0),
                        ("recording_period", 10000),
                        ("population_growth", "constant"),
-                       ("community_assembly_model", 1),
+                       ("community_assembly_model", "neutral"),
                        ("speciation_model", "point_mutation"),
         ])
 
         ## Track local communities in this model and colonization rates among them
         ## TODO: I think we want the default metacommunity type to be 'logser', but
         ## the new _sim_metacommunity function takes a little time, so startup is laggy.
-        self.metacommunity = MESS.Metacommunity(meta_type="uniform")
+        self.metacommunity = MESS.Metacommunity()
         ## Populate the default metacommunity
         self.metacommunity.set_metacommunity()
 
@@ -95,7 +95,6 @@ class Region(object):
         """ Just import a metacommunity object that's been created externally."""
         LOGGER.debug("Linking metacommunity - {}".format(metacommunity))
         self.metacommunity = metacommunity
-
         self.metacommunity.set_metacommunity()
 
         for locname in self.islands.keys():
@@ -153,7 +152,7 @@ class Region(object):
                     self.paramsdict[param] = int(float(newvalue))
 
             elif param == "community_assembly_model":
-                self.paramsdict[param] = int(float(newvalue))
+                self.paramsdict[param] = newvalue
 
             elif param == "speciation_model":
                 self.paramsdict[param] = newvalue
@@ -496,6 +495,9 @@ class Region(object):
         return weight
 
 
+    #def get_local_phy(self):
+
+
 def simulate(data, time=time, quiet=True):
     import os
     LOGGER.debug("Entering sim - {} on pid {}\n{}".format(data, os.getpid(), data.paramsdict))
@@ -514,7 +516,7 @@ REGION_PARAMS = {
     "generations" : "Duration of simulations. Specify int range or 0 for lambda.",\
     "recording_period" : "Number of forward-time generations between samples for logging",\
     "population_growth" : "Rate of growth since colonization: exponential/constant",\
-    "community_assembly_model" : "Neutral:1, Habitat Filtering:2, Competitive Exclusion:3",\
+    "community_assembly_model" : "Model of Community Assembly: neutral, filtering, competition",\
     "speciation_model" : "Type of speciation process: none, point_mutation, protracted, random_fission",\
 }
 
