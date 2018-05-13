@@ -689,7 +689,12 @@ class LocalCommunity(object):
 
     def sim_seqs(self):
         self.species = []
-        for clade in self.get_clades():
+
+        self.local_info.loc["meta_abund"] = [self.region.get_abundance(x) for x in self.local_info]
+        self.local_info.loc["local_abund"] = [self.local_community.count(x) for x in self.local_info]
+        self.local_info.loc["colonization_times"] = self.current_time - self.local_info.loc["colonization_times"]
+
+        for cname, species_list in self.get_clades():
             pass
 
     def simulate_seqs(self):
@@ -700,13 +705,15 @@ class LocalCommunity(object):
                 meta_abund = self.region.get_abundance(name)
                 local_abund = self.local_community.count(name)
                 tdiv = self.current_time - coltime
-                sp = species(UUID = name,
+                ## Rescale abundances through time so they are "backwards" values
+                abundances_through_time = {self.current_time - x:y for x, y in self.local_info[name]["abundances_through_time"].items()} 
+                sp = species(name = name,
                              colonization_time = tdiv,\
                              growth = self.region.paramsdict["population_growth"],\
                              abundance = local_abund,\
                              meta_abundance = meta_abund,
                              migration_rate = self.local_info[name]["post_colonization_migrants"]/float(tdiv),\
-                             abundance_through_time = self.local_info[name]["abundances_through_time"].values())
+                             abundance_through_time = abundances_through_time)
                 sp.simulate_seqs()
                 sp.get_sumstats()
                 self.species.append(sp)
@@ -771,11 +778,11 @@ class LocalCommunity(object):
             #                         self.paramsdict["name"] + "-simout.txt")
             #self.stats.to_csv(statsfile, na_rep=0, float_format='%.5f')
 
-            #megalog = os.path.join(self._hackersonly["outdir"],
-            #                         self.paramsdict["name"] + "-megalog.txt")
+            megalog = os.path.join(self._hackersonly["outdir"],
+                                     self.paramsdict["name"] + "-megalog.txt")
             ## concatenate all species results and transpose the data frame so rows are species
             fullstats = pd.concat([sp.stats for sp in self.species], axis=1).T
-            #fullstats.to_csv(megalog, index_label=False)
+            fullstats.to_csv(megalog, index_label=False)
         except Exception as inst:
             LOGGER.error("Error in get_stats() - {}".format(inst))
             raise

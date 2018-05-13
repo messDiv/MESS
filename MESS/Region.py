@@ -495,6 +495,7 @@ class Region(object):
                     #* self.metacommunity.metcommunity_tree_height)
         return weight
 
+
 def simulate(data, time=time, quiet=True):
     import os
     LOGGER.debug("Entering sim - {} on pid {}\n{}".format(data, os.getpid(), data.paramsdict))

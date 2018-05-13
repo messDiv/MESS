@@ -27,11 +27,11 @@ class species(object):
         ## a 'parameter' even though I know migration rate is a
         ## parameter too
         self.paramsdict = dict([
-                            ("alpha", 100),
+                            ("alpha", 1),
                             ("sequence_length", 570),
-                            ("mutation_rate", 0.000000022),
-                            ("sample_size_local", 100),
-                            ("sample_size_meta", 100),
+                            ("mutation_rate", 0.0000022),
+                            ("sample_size_local", 10),
+                            ("sample_size_meta", 10),
                             ("abundance_through_time", abundance_through_time),
         ])
 
@@ -156,16 +156,16 @@ class species(object):
         return size_change_events
 
 
-    def _get_local_meta_split(self):
+    def _get_local_meta_split(self, founder_idx = 0, meta_idx = 1):
         ## Going backwards in time, at colonization time throw all lineages from
         ## the local community back into the metacommunity
-        split_event = msprime.MassMigration(time = self.stats["coltime"],\
-                                            source = 0,\
-                                            destination = 1,\
+        split_event = msprime.MassMigration(time = self.stats["coltime"] + 1,\
+                                            source = founder_idx,\
+                                            destination = meta_idx,\
                                             proportion = 1)
 
         local_rate_change = msprime.PopulationParametersChange(\
-                                            time = self.stats["coltime"] - 1,\
+                                            time = self.stats["coltime"],\
                                             growth_rate = 0,\
                                             population_id = 0)
 
@@ -173,12 +173,12 @@ class species(object):
         ## to sample too much from the metacommunity or the local pi
         ## goes way up.
         local_size_change = msprime.PopulationParametersChange(\
-                                            time = self.stats["coltime"] - 1,\
-                                            initial_size = 1,\
-                                            population_id = 0)
+                                            time = self.stats["coltime"],\
+                                            initial_size = .01,\
+                                            population_id = founder_idx)
 
         migrate_change = msprime.MigrationRateChange(
-                                            time = self.stats["coltime"] - 1,\
+                                            time = self.stats["coltime"],\
                                             rate = 0)
 
         return [migrate_change, local_size_change, local_rate_change, split_event]
@@ -378,6 +378,10 @@ def sim_clade(forward_info):
     ## Build the nasty msprime command for species all related
     ## by local speciation. Run the msprime, and gather summary
     ## statistics
+
+    ## Here local info has to be transformed so that all time
+    ## values are backards in time.
+    ## TODO:
 
     ## Get species objects for each species in this clade
     clade_species = [species.from_df(pd.DataFrame(forward_info[x])) for x in forward_info]
