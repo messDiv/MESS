@@ -1,5 +1,5 @@
 #!/usr/bin/env python2
-""" the main CLI for calling ipyrad """
+""" the main CLI for calling MESS """
 
 from __future__ import print_function, division  # Requires Python 2.7+
 
@@ -116,13 +116,13 @@ def _check_version():
     from distutils.version import LooseVersion
 
     try:
-        htmldat = urllib2.urlopen("https://anaconda.org/ipyrad/ipyrad").readlines()
+        htmldat = urllib2.urlopen("https://anaconda.org/MESS/mess").readlines()
         curversion = next((x for x in htmldat if "subheader" in x), None).split(">")[1].split("<")[0]
         if LooseVersion(MESS.__version__) < LooseVersion(curversion):
             msg = """
-  A new version of ipyrad is available (v.{}). To upgrade run:
+  A new version of MESS is available (v.{}). To upgrade run:
 
-    conda install -c ipyrad ipyrad\n""".format(curversion)
+    conda install -c mess mess\n""".format(curversion)
             print(MESS_HEADER + "\n" + msg)
         else:
             pass
@@ -189,7 +189,7 @@ def parse_command_line():
         help="do not print to stderror or stdout.")
 
     parser.add_argument('-d', action='store_true', dest="debug",
-        help="print lots more info to ipyrad_log.txt.")
+        help="print lots more info to mess_log.txt.")
 
     parser.add_argument('-v', action='version', 
         version=str(pkg_resources.get_distribution('mess')),
