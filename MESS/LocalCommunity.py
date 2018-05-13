@@ -1,5 +1,7 @@
 #!/usr/bin/env python2.7
 
+from __future__ import print_function
+
 from scipy.stats import logser
 from collections import OrderedDict
 from scipy.stats import iqr
@@ -12,9 +14,9 @@ import sys
 import os
 import MESS
 
-from util import MESSError, _tuplecheck, sample_param_range
-from stats import shannon, SAD, SGD
-from species import species
+from .util import MESSError, _tuplecheck, sample_param_range
+from .stats import shannon, SAD, SGD
+from .species import species
 
 import logging
 LOGGER = logging.getLogger(__name__)
@@ -275,7 +277,7 @@ class LocalCommunity(object):
             header += ("-"*(80-len(header)))
             paramsfile.write(header)
 
-            for key, val in self.paramsdict.iteritems():
+            for key, val in self.paramsdict.items():
                 ## If multiple elements, write them out comma separated
                 if isinstance(val, list) or isinstance(val, tuple):
                     paramvalue = ", ".join([str(i) for i in val])
@@ -283,7 +285,7 @@ class LocalCommunity(object):
                     paramvalue = str(val)
 
                 padding = (" "*(20-len(paramvalue)))
-                paramkey = self.paramsdict.keys().index(key)
+                paramkey = list(self.paramsdict.keys()).index(key)
                 paramindex = " ## [{}] ".format(paramkey)
                 LOGGER.debug("{} {} {}".format(key, val, paramindex))
                 #name = "[{}]: ".format(paramname(paramkey))
@@ -405,12 +407,8 @@ class LocalCommunity(object):
 
             self.rejections.append(reject)
 
-<<<<<<< HEAD
 
         if self.region.paramsdict["community_assembly_model"] == "competition":
-=======
-        elif self.region.paramsdict["community_assembly_model"] == 3:
->>>>>>> 18c399f5dbc92da27e47d57d2ec1829c11ae7662
             death_Probability = 0
             reject = 0
             mean_local_trait = self.region.get_trait_stats(self.local_community)[0]
@@ -554,20 +552,12 @@ class LocalCommunity(object):
                 idx = self.local_community.index(chx)
                 self.founder_flags.append(self.founder_flags[idx])
 
-<<<<<<< HEAD
-                ## Sample only from available extant species (early pops grow quickly in the volcanic model)
-                ## If you do this, the original colonizer just overwhelms everything else
-                ## This is more similar to the Rosindell and Harmon model, in which they simply
-                ## prepopulate the island entirely with one species. This is effectively the same
-                #self.local_community.append(random.choice([x for x in self.local_community if not x == None]))
-=======
             ##############################################
             ## Speciation process
             ##############################################
             if self.region.paramsdict["speciation_model"] != "none" and\
                np.random.random_sample() < self.paramsdict["speciation_probability"]:
-                self.speciate()
->>>>>>> 18c399f5dbc92da27e47d57d2ec1829c11ae7662
+               self.speciate()
 
             ## update current time
             self.current_time += 1
@@ -701,14 +691,14 @@ class LocalCommunity(object):
 
     def simulate_seqs(self):
         self.species = []
-        for name, coltime in self._get_singleton_species().loc["colonization_times"].iteritems():
+        for name, coltime in self._get_singleton_species().loc["colonization_times"].items():
 ##        for name, coltime in self.local_info.loc["colonization_times"].iteritems():
             try:
                 meta_abund = self.region.get_abundance(name)
                 local_abund = self.local_community.count(name)
                 tdiv = self.current_time - coltime
                 ## Rescale abundances through time so they are "backwards" values
-                abundances_through_time = {self.current_time - x:y for x, y in self.local_info[name]["abundances_through_time"].items()} 
+                abundances_through_time = {self.current_time - x:y for x, y in list(self.local_info[name]["abundances_through_time"].items())} 
                 sp = species(name = name,
                              colonization_time = tdiv,\
                              growth = self.region.paramsdict["population_growth"],\
