@@ -53,12 +53,8 @@ class Region(object):
                        ("generations", 0),
                        ("recording_period", 10000),
                        ("population_growth", "constant"),
-<<<<<<< HEAD
                        ("community_assembly_model", "neutral"),
-=======
-                       ("community_assembly_model", 1),
                        ("speciation_model", "point_mutation"),
->>>>>>> 18c399f5dbc92da27e47d57d2ec1829c11ae7662
         ])
 
         ## Track local communities in this model and colonization rates among them
@@ -103,6 +99,8 @@ class Region(object):
 
         for locname in self.islands.keys():
             self.islands[locname].prepopulate()
+
+        #print(self.get_phy_stats(self.metacommunity.metacommunity_tree))
 
 
     def _get_simulation_outdir(self, prefix=""):
@@ -491,6 +489,12 @@ class Region(object):
 
         return trts
 
+    def get_phy_stats(self, tree):
+        total = []
+        for edge in tree.postorder_edge_iter():
+            if edge.length is not None:
+                total.append(edge.length)
+        return [np.mean(total), np.var(total), len(total), sum(total)]
 
     def get_weight(self):
         weight =   (self.metacommunity.paramsdict["trait_strength"] *
@@ -518,12 +522,8 @@ REGION_PARAMS = {
     "generations" : "Duration of simulations. Specify int range or 0 for lambda.",\
     "recording_period" : "Number of forward-time generations between samples for logging",\
     "population_growth" : "Rate of growth since colonization: exponential/constant",\
-<<<<<<< HEAD
     "community_assembly_model" : "Model of Community Assembly: neutral, filtering, competition",\
-=======
-    "community_assembly_model" : "Neutral:1, Habitat Filtering:2, Competitive Exclusion:3",\
     "speciation_model" : "Type of speciation process: none, point_mutation, protracted, random_fission",\
->>>>>>> 18c399f5dbc92da27e47d57d2ec1829c11ae7662
 }
 
 
