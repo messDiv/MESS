@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 import collections
 import numpy as np
@@ -7,7 +8,7 @@ import math
 ## This is the typical format returned by LocalCommunity.get_abundances(octaves=False)
 def shannon(abundances):
     ## Unpack the abundance dist
-    abunds = [v for v in abundances.values()]
+    abunds = [v for v in list(abundances.values())]
     tot = np.sum(abunds)
     return -1 * np.sum([x/float(tot) * math.log(x/float(tot)) for x in abunds  if x > 0])
 
@@ -40,7 +41,7 @@ def SAD(community, from_abundances=False, octaves=False):
 
     ## Now for each abundance class you have to go through and
     ## count the number of species at that abundance.
-    abundance_distribution = collections.Counter(abundances.values())
+    abundance_distribution = collections.Counter(list(abundances.values()))
     abundance_distribution = collections.OrderedDict(sorted(abundance_distribution.items()))
     if octaves:
         dist_in_octaves = collections.OrderedDict()
@@ -52,7 +53,7 @@ def SAD(community, from_abundances=False, octaves=False):
             count = 0
             ## Here `i` is the abundance class and
             ## `j` is the count for that class
-            for i, j in abundance_distribution.items():
+            for i, j in list(abundance_distribution.items()):
                 if (i < maxval) and (i >= minval):
                     count += j
             dist_in_octaves[minval] = count

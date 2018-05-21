@@ -1,5 +1,7 @@
 #!/usr/bin/env python2.7
 
+from __future__ import print_function
+
 from scipy.stats import lognorm
 from collections import OrderedDict
 import dendropy
@@ -181,7 +183,7 @@ class Metacommunity(object):
             header += ("-"*(80-len(header)))
             paramsfile.write(header)
 
-            for key, val in self.paramsdict.iteritems():
+            for key, val in self.paramsdict.items():
                 ## If multiple elements, write them out comma separated
                 if isinstance(val, list) or isinstance(val, tuple):
                     paramvalue = ", ".join([str(i) for i in val])
@@ -189,7 +191,7 @@ class Metacommunity(object):
                     paramvalue = str(val)
 
                 padding = (" "*(20-len(paramvalue)))
-                paramkey = self.paramsdict.keys().index(key)
+                paramkey = list(self.paramsdict.keys()).index(key)
                 paramindex = " ## [{}] ".format(paramkey)
                 LOGGER.debug("{} {} {}".format(key, val, paramindex))
                 #name = "[{}]: ".format(paramname(paramkey))
@@ -250,7 +252,7 @@ class Metacommunity(object):
 
             abundances = abunds
             ## TODO: This is dumb
-            tups = zip(traits["name"], traits["value"])
+            tups = list(zip(traits["name"], traits["value"]))
             ids = np.array([x[0] for x in tups])
             trait_values = np.array([x[1] for x in tups])
 
@@ -402,7 +404,7 @@ if __name__ == "__main__":
     data = Metacommunity("../metacommunity_LS4.txt")
     print("{} {}".format(data, data.community[:10]))
 
-    for x in xrange(10):
+    for x in range(10):
         print(data.get_migrant())
 
     data = set_params(data, "metacommunity_type", "logser")

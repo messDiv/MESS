@@ -1,5 +1,7 @@
 #!/usr/bin/env python2.7
 
+from __future__ import print_function
+
 from scipy.stats import logser
 from collections import OrderedDict
 from scipy.stats import iqr
@@ -12,9 +14,9 @@ import sys
 import os
 import MESS
 
-from util import MESSError, _tuplecheck, sample_param_range
-from stats import shannon, SAD, SGD
-from species import species
+from .util import MESSError, _tuplecheck, sample_param_range
+from .stats import shannon, SAD, SGD
+from .species import species
 
 import logging
 LOGGER = logging.getLogger(__name__)
@@ -275,7 +277,7 @@ class LocalCommunity(object):
             header += ("-"*(80-len(header)))
             paramsfile.write(header)
 
-            for key, val in self.paramsdict.iteritems():
+            for key, val in self.paramsdict.items():
                 ## If multiple elements, write them out comma separated
                 if isinstance(val, list) or isinstance(val, tuple):
                     paramvalue = ", ".join([str(i) for i in val])
@@ -283,7 +285,7 @@ class LocalCommunity(object):
                     paramvalue = str(val)
 
                 padding = (" "*(20-len(paramvalue)))
-                paramkey = self.paramsdict.keys().index(key)
+                paramkey = list(self.paramsdict.keys()).index(key)
                 paramindex = " ## [{}] ".format(paramkey)
                 LOGGER.debug("{} {} {}".format(key, val, paramindex))
                 #name = "[{}]: ".format(paramname(paramkey))
@@ -555,7 +557,11 @@ class LocalCommunity(object):
             ##############################################
             if self.region.paramsdict["speciation_model"] != "none" and\
                np.random.random_sample() < self.paramsdict["speciation_probability"]:
+<<<<<<< HEAD
                 self.speciate()
+=======
+               self.speciate()
+>>>>>>> f58f1b4c0d98147f3b3c476549d8654f589d6f38
 
             ## update current time
             self.current_time += 1
@@ -679,24 +685,31 @@ class LocalCommunity(object):
 
     def sim_seqs(self):
         self.species = []
-        for clade in self.get_clades():
+
+        self.local_info.loc["meta_abund"] = [self.region.get_abundance(x) for x in self.local_info]
+        self.local_info.loc["local_abund"] = [self.local_community.count(x) for x in self.local_info]
+        self.local_info.loc["colonization_times"] = self.current_time - self.local_info.loc["colonization_times"]
+
+        for cname, species_list in self.get_clades():
             pass
 
     def simulate_seqs(self):
         self.species = []
-        for name, coltime in self._get_singleton_species().loc["colonization_times"].iteritems():
+        for name, coltime in self._get_singleton_species().loc["colonization_times"].items():
 ##        for name, coltime in self.local_info.loc["colonization_times"].iteritems():
             try:
                 meta_abund = self.region.get_abundance(name)
                 local_abund = self.local_community.count(name)
                 tdiv = self.current_time - coltime
-                sp = species(UUID = name,
+                ## Rescale abundances through time so they are "backwards" values
+                abundances_through_time = {self.current_time - x:y for x, y in list(self.local_info[name]["abundances_through_time"].items())} 
+                sp = species(name = name,
                              colonization_time = tdiv,\
                              growth = self.region.paramsdict["population_growth"],\
                              abundance = local_abund,\
                              meta_abundance = meta_abund,
                              migration_rate = self.local_info[name]["post_colonization_migrants"]/float(tdiv),\
-                             abundance_through_time = self.local_info[name]["abundances_through_time"].values())
+                             abundance_through_time = abundances_through_time)
                 sp.simulate_seqs()
                 sp.get_sumstats()
                 self.species.append(sp)
@@ -762,11 +775,11 @@ class LocalCommunity(object):
             #                         self.paramsdict["name"] + "-simout.txt")
             #self.stats.to_csv(statsfile, na_rep=0, float_format='%.5f')
 
-            #megalog = os.path.join(self._hackersonly["outdir"],
-            #                         self.paramsdict["name"] + "-megalog.txt")
+            megalog = os.path.join(self._hackersonly["outdir"],
+                                     self.paramsdict["name"] + "-megalog.txt")
             ## concatenate all species results and transpose the data frame so rows are species
             fullstats = pd.concat([sp.stats for sp in self.species], axis=1).T
-            #fullstats.to_csv(megalog, index_label=False)
+            fullstats.to_csv(megalog, index_label=False)
         except Exception as inst:
             LOGGER.error("Error in get_stats() - {}".format(inst))
             raise

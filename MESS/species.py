@@ -27,11 +27,11 @@ class species(object):
         ## a 'parameter' even though I know migration rate is a
         ## parameter too
         self.paramsdict = dict([
-                            ("alpha", 100),
+                            ("alpha", 1),
                             ("sequence_length", 570),
-                            ("mutation_rate", 0.000000022),
-                            ("sample_size_local", 100),
-                            ("sample_size_meta", 100),
+                            ("mutation_rate", 0.0000022),
+                            ("sample_size_local", 10),
+                            ("sample_size_meta", 10),
                             ("abundance_through_time", abundance_through_time),
         ])
 
@@ -79,8 +79,7 @@ class species(object):
         ## Take the harmonic mean of the abundance trajectory through time
         elif growth == "harmonic":
             try:
-                initial_size = hmean(abundance_through_time)
-                #LOGGER.debug("sp {}\tinit_size {}\tabunds {}".format(self.name, initial_size, abundance_through_time))
+                initial_size = hmean(abundance_through_time.values())
                 self.stats["growth_rate"] = 0
             except Exception as inst:
                 LOGGER.debug("Failed harmonic mean for {}".format(self))
@@ -156,16 +155,16 @@ class species(object):
         return size_change_events
 
 
-    def _get_local_meta_split(self):
+    def _get_local_meta_split(self, founder_idx = 0, meta_idx = 1):
         ## Going backwards in time, at colonization time throw all lineages from
         ## the local community back into the metacommunity
-        split_event = msprime.MassMigration(time = self.stats["coltime"],\
-                                            source = 0,\
-                                            destination = 1,\
+        split_event = msprime.MassMigration(time = self.stats["coltime"] + 1,\
+                                            source = founder_idx,\
+                                            destination = meta_idx,\
                                             proportion = 1)
 
         local_rate_change = msprime.PopulationParametersChange(\
-                                            time = self.stats["coltime"] - 1,\
+                                            time = self.stats["coltime"],\
                                             growth_rate = 0,\
                                             population_id = 0)
 
@@ -173,19 +172,19 @@ class species(object):
         ## to sample too much from the metacommunity or the local pi
         ## goes way up.
         local_size_change = msprime.PopulationParametersChange(\
-                                            time = self.stats["coltime"] - 1,\
-                                            initial_size = 1,\
-                                            population_id = 0)
+                                            time = self.stats["coltime"],\
+                                            initial_size = .01,\
+                                            population_id = founder_idx)
 
         migrate_change = msprime.MigrationRateChange(
-                                            time = self.stats["coltime"] - 1,\
+                                            time = self.stats["coltime"],\
                                             rate = 0)
 
         return [migrate_change, local_size_change, local_rate_change, split_event]
 
 
     def simulate_seqs(self):
-
+        LOGGER.debug("Entering simulate_seqs - {}".format(self))
         ## TODO: Here we are assuming only one island and that the migration
         ## is only ever unidirectional from the mainland to the island
         migmat = [[0, self.stats["migration_rate"]],
@@ -211,6 +210,7 @@ class species(object):
             #with open(debugfile, 'a') as outfile:
             #    outfile.write(debug.print_history())
 
+        LOGGER.debug("Executing msprime - {}".format(self))
         self.tree_sequence = msprime.simulate(length = self.paramsdict["sequence_length"],\
                                               Ne = self.stats["Ne_local"],\
                                               mutation_rate = self.paramsdict["mutation_rate"],\
@@ -222,6 +222,7 @@ class species(object):
 
     def get_sumstats(self):
 
+        LOGGER.debug("Entering get_sumstats - {}".format(self))
         ## pairwise diversity per base
         self.stats["pi_tot"] = self.tree_sequence.get_pairwise_diversity()\
                                 / self.paramsdict["sequence_length"]
@@ -378,6 +379,10 @@ def sim_clade(forward_info):
     ## Build the nasty msprime command for species all related
     ## by local speciation. Run the msprime, and gather summary
     ## statistics
+
+    ## Here local info has to be transformed so that all time
+    ## values are backards in time.
+    ## TODO:
 
     ## Get species objects for each species in this clade
     clade_species = [species.from_df(pd.DataFrame(forward_info[x])) for x in forward_info]

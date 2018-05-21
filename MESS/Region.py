@@ -302,12 +302,20 @@ class Region(object):
         ## Preserve any parameter state that has changed:
         self.write_params(force=True)
 
+        simfile = os.path.join(self.paramsdict["project_dir"], "SIMOUT.txt")
         ## Open output file. If force then overwrite existing, otherwise just append.
         append = 'a'
         if force:
             append = 'w'
-        SIMOUT = open(os.path.join(self.paramsdict["project_dir"], "SIMOUT.txt"), append)
-        SIMOUT.write("\t".join(self.islands.values()[0].stats.keys()) + "\n")
+
+        ## Decide whether to print the header, if stuff is already in there then
+        ## don't print the header, unless you're doing force because this opens
+        ## in overwrite mode.
+        header = "\t".join(self.islands.values()[0].stats.keys()) + "\n"
+        if len(open(simfile, 'a+').readline()) > 0 and not force:
+            header = ""
+        SIMOUT = open(simfile, append)
+        SIMOUT.write(header)
 
         ## Just get all the time values to simulate up front
         ## Doesn't save time really, just makes housekeeping easier
@@ -502,7 +510,9 @@ class Region(object):
                     #* self.metacommunity.metcommunity_tree_height)
         return weight
 
+
     #def get_local_phy(self):
+
 
 def simulate(data, time=time, quiet=True):
     import os
