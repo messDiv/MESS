@@ -20,14 +20,14 @@ LOGGER = logging.getLogger(__name__)
 class species(object):
 
     def __init__(self, name = "", growth="constant", abundance = 1,
-                meta_abundance = 1, colonization_time = 0, migration_rate=0,
+                meta_abundance = 1, divergence_time = 0, migration_rate=0,
                 abundance_through_time=[]):
 
         ## I'm calling anything that is invariant across species
         ## a 'parameter' even though I know migration rate is a
         ## parameter too
         self.paramsdict = dict([
-                            ("alpha", 1),
+                            ("alpha", 100),
                             ("sequence_length", 570),
                             ("mutation_rate", 0.0000022),
                             ("sample_size_local", 10),
@@ -40,7 +40,7 @@ class species(object):
         ## da is what was called pi_net in msbayes
         self.stats = pd.Series(
             index=[ "name",
-                    "coltime",
+                    "tdiv",
                     "migration_rate",
                     "growth_rate",
                     "Ne_local",
@@ -56,14 +56,15 @@ class species(object):
                     "tajd_local"]).astype(np.object)
 
         self.stats["name"] = name
-        self.stats["coltime"] = colonization_time
-        self.stats["migration_rate"] = migration_rate
         self.stats["Ne_local"] = abundance * self.paramsdict["alpha"]
         self.stats["Ne_meta"] = meta_abundance * self.paramsdict["alpha"]
+        self.stats["tdiv"] = divergence_time * self.paramsdict["alpha"]
 
         ## Parameters
         ## the 'name' here is just a toy fake species name
-        self.name = names.names().get_name()
+        ## This makes debugging funcking annoying.
+        #self.name = names.names().get_name()
+        self.name = name
         self.tree_sequence = []
 
         ## Calculate the growth rate and the initial population size
@@ -71,15 +72,16 @@ class species(object):
             ## TODO: Add a hackersonly param to tune the number of founders
             ## or maybe just use mig_clust_size?
             initial_size = 1.
-            self.stats["growth_rate"] = -np.log(initial_size/self.stats["local_Ne"])/self.stats["coltime"]
+            self.stats["growth_rate"] = -np.log(initial_size/self.stats["local_Ne"])/self.stats["tdiv"]
         ## Instantaneous expansion to current size and constant size through time
         elif growth == "constant":
-            initial_size = self.stats["Ne_local"]
             self.stats["growth_rate"] = 0
         ## Take the harmonic mean of the abundance trajectory through time
         elif growth == "harmonic":
             try:
-                initial_size = hmean(abundance_through_time.values())
+                harmonic = hmean(np.array(abundance_through_time.values()) * self.paramsdict["alpha"])
+                LOGGER.debug("sname Ne hmean- {} {} {}".format(self.name, self.stats["Ne_local"], harmonic))
+                self.stats["Ne_local"] = harmonic
                 self.stats["growth_rate"] = 0
             except Exception as inst:
                 LOGGER.debug("Failed harmonic mean for {}".format(self))
@@ -90,6 +92,8 @@ class species(object):
         else:
             raise MESSError("Unrecognized population growth parameter - {}".format(growth))
 
+        ## Set migration rate here to account for constant vs harmonic mean of Ne
+        self.stats["migration_rate"] = migration_rate / self.stats["Ne_local"]
 
     @classmethod
     def from_df(self, df):
@@ -107,10 +111,12 @@ class species(object):
 
         ## TODO: this doesn't pull in the growth model so will always be constant
         ## I guess you can set it yourself downstream
+        ## TODO: This also isn't even close to right. Colonization time is still forward time,
+        ## and consequently both divergence time and migration rate aren't scaled / K
         name = df.columns[0]
         sp_info = df[name]
         sp = species(name = name,
-                     colonization_time = sp_info["colonization_times"],\
+                     divergence_time = sp_info["colonization_times"],\
                      abundance = sp_info["local_abund"],\
                      meta_abundance = sp_info["meta_abund"],\
                      migration_rate = sp_info["post_colonization_migrants"]/float(sp_info["colonization_times"]),\
@@ -158,13 +164,13 @@ class species(object):
     def _get_local_meta_split(self, founder_idx = 0, meta_idx = 1):
         ## Going backwards in time, at colonization time throw all lineages from
         ## the local community back into the metacommunity
-        split_event = msprime.MassMigration(time = self.stats["coltime"] + 1,\
+        split_event = msprime.MassMigration(time = self.stats["tdiv"] + 1,\
                                             source = founder_idx,\
                                             destination = meta_idx,\
                                             proportion = 1)
 
         local_rate_change = msprime.PopulationParametersChange(\
-                                            time = self.stats["coltime"],\
+                                            time = self.stats["tdiv"],\
                                             growth_rate = 0,\
                                             population_id = 0)
 
@@ -172,12 +178,12 @@ class species(object):
         ## to sample too much from the metacommunity or the local pi
         ## goes way up.
         local_size_change = msprime.PopulationParametersChange(\
-                                            time = self.stats["coltime"],\
+                                            time = self.stats["tdiv"],\
                                             initial_size = .01,\
                                             population_id = founder_idx)
 
         migrate_change = msprime.MigrationRateChange(
-                                            time = self.stats["coltime"],\
+                                            time = self.stats["tdiv"],\
                                             rate = 0)
 
         return [migrate_change, local_size_change, local_rate_change, split_event]
@@ -202,7 +208,7 @@ class species(object):
                                                demographic_events = split_events)
 
             ## Enable this at your own peril, it will dump a ton of shit to stdout
-            #debug.print_history()
+            debug.print_history()
             ## I briefly toyed with the idea of logging this to a file, but you really
             ## don't need it that often, and it'd be a pain to get the outdir in here.
             #debugfile = os.path.join(self._hackersonly["outdir"],
@@ -212,13 +218,19 @@ class species(object):
 
         LOGGER.debug("Executing msprime - {}".format(self))
         self.tree_sequence = msprime.simulate(length = self.paramsdict["sequence_length"],\
-                                              Ne = self.stats["Ne_local"],\
                                               mutation_rate = self.paramsdict["mutation_rate"],\
                                               population_configurations = [pop_local, pop_meta],\
                                               migration_matrix = migmat,\
                                               demographic_events = split_events)
         self.get_sumstats()
 
+        tree = self.tree_sequence.first()
+        colour_map = {0:"red", 1:"blue"}
+        node_colours = {u: colour_map[tree.population(u)] for u in tree.nodes()}
+        node_labels = {
+            u: (str(u) if u < 8 else "{} (t={:.2f})".format(u, tree.time(u))) 
+            for u in tree.nodes()}
+        #tree.draw(path="/tmp/{}.svg".format(self.name.replace(" ", "_")), height=500, width=1000, node_labels=node_labels, node_colours=node_colours)
 
     def get_sumstats(self):
 
@@ -264,10 +276,11 @@ class species(object):
         self.stats["da"] = self.stats["dxy"] - (self.stats["pi_local"] + self.stats["pi_meta"])/2
 
         ## Forbid biologically unrealistic values of pi
+        ## TODO: This is dumb
         if self.stats["pi_meta"] > 0.2 or self.stats["pi_local"] > 0.2:
-            print("Bad pi {}".format(self))
-            self.simulate_seqs()
-            self.get_sumstats()
+            LOGGER.error("Bad pi {}".format(self))
+            #self.simulate_seqs()
+            #self.get_sumstats()
 
         self.stats["tajd_local"] = tajD_island(island_haps, self.stats["segsites_local"])
 
@@ -393,7 +406,7 @@ def sim_clade(forward_info):
 
 if __name__ == "__main__":
     import MESS
-    sp = species("wat", abundance=100, meta_abundance=1000, colonization_time=1000000)
+    sp = species("wat", abundance=100, meta_abundance=1000, divergence_time=1000000)
     sp.simulate_seqs()
     print(sp)
 
