@@ -100,6 +100,8 @@ class Region(object):
         for locname in self.islands.keys():
             self.islands[locname].prepopulate()
 
+        #print(self.get_phy_stats(self.metacommunity.metacommunity_tree))
+
 
     def _get_simulation_outdir(self, prefix=""):
         """ Construct an output directory for a simulation run.
@@ -495,6 +497,12 @@ class Region(object):
 
         return trts
 
+    def get_phy_stats(self, tree):
+        total = []
+        for edge in tree.postorder_edge_iter():
+            if edge.length is not None:
+                total.append(edge.length)
+        return [np.mean(total), np.var(total), len(total), sum(total)]
 
     def get_weight(self):
         weight =   (self.metacommunity.paramsdict["trait_strength"] *

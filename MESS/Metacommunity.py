@@ -353,13 +353,14 @@ class Metacommunity(object):
         LOGGER.debug("Migrant idx {}\tid {}\t trait_val {}".format(migrant_draw, new_species, trait_value))
         return new_species, trait_value
 
+        '''
     def get_phy_stats(self, tree):
         total = []
         for edge in tree.postorder_edge_iter():
             if edge.length is not None:
                 total.append(edge.length)
         return [np.mean(total), np.var(total), len(total), sum(total)]
-
+        '''
     def get_nmigrants(self, nmigrants=1):
         migrants = []
         trait_vals = []
