@@ -523,7 +523,7 @@ REGION_PARAMS = {
     "data_model" : "Structure of data output to reference table (see docs)",\
     "generations" : "Duration of simulations. Specify int range or 0 for lambda.",\
     "recording_period" : "Number of forward-time generations between samples for logging",\
-    "population_growth" : "Rate of growth since colonization: exponential/constant",\
+    "population_growth" : "Rate of growth since colonization: exponential/constant/harmonic",\
     "community_assembly_model" : "Model of Community Assembly: neutral, filtering, competition",\
     "speciation_model" : "Type of speciation process: none, point_mutation, protracted, random_fission",\
 }

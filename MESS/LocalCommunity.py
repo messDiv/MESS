@@ -697,10 +697,11 @@ class LocalCommunity(object):
                 meta_abund = self.region.get_abundance(name)
                 local_abund = self.local_community.count(name)
                 tdiv = self.current_time - coltime
+                tdiv = tdiv / float(self.paramsdict["K"])
                 ## Rescale abundances through time so they are "backwards" values
                 abundances_through_time = {self.current_time - x:y for x, y in list(self.local_info[name]["abundances_through_time"].items())} 
                 sp = species(name = name,
-                             colonization_time = tdiv,\
+                             divergence_time = tdiv,\
                              growth = self.region.paramsdict["population_growth"],\
                              abundance = local_abund,\
                              meta_abundance = meta_abund,
@@ -772,7 +773,7 @@ class LocalCommunity(object):
             #self.stats.to_csv(statsfile, na_rep=0, float_format='%.5f')
 
             megalog = os.path.join(self._hackersonly["outdir"],
-                                     self.paramsdict["name"] + "-megalog.txt")
+                                     self.paramsdict["name"] + "-{}-megalog.txt".format(self._lambda()))
             ## concatenate all species results and transpose the data frame so rows are species
             fullstats = pd.concat([sp.stats for sp in self.species], axis=1).T
             fullstats.to_csv(megalog, index_label=False)
