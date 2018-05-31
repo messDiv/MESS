@@ -1,8 +1,8 @@
 .. _sec-introduction:
 
-============
-Introduction
-============
+==================
+Intro API Tutorial
+==================
 
 **MESS - Massive Eco-Evolutionary Synthesis Simulations**
 
