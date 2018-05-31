@@ -42,6 +42,7 @@ requirements:
     - macroeco
     - mpmath
     - rpy2
+    - dill
 
   commands:
     - MESS -v
