@@ -49,7 +49,8 @@ class Region(object):
         self.paramsdict = OrderedDict([
                        ("simulation_name", name),
                        ("project_dir", "./default_MESS"),
-                       ("data_model", 4),
+                       ("sgd_dimensions", 1),
+                       ("sgd_bins", 10),
                        ("generations", 0),
                        ("recording_period", 10000),
                        ("population_growth", "constant"),
@@ -130,7 +131,7 @@ class Region(object):
         try:
             LOGGER.debug("set param {} - {} = {}".format(self, param, newvalue))
             ## Cast params to correct types
-            if param in ["data_model", "recording_period"]:
+            if param in ["sgd_dimensions", "sgd_bins", "recording_period"]:
                 self.paramsdict[param] = int(float(newvalue))
 
             elif param == "project_dir":
@@ -528,7 +529,8 @@ def simulate(data, time=time, quiet=True):
 REGION_PARAMS = {
     "simulation_name" : "The name of this simulation scenario",\
     "project_dir" : "Where to save files",\
-    "data_model" : "Structure of data output to reference table (see docs)",\
+    "sgd_dimensions" : "Number of dimensions for simulated SGD: 1 or 2",\
+    "sgd_bins" : "Number of bins per axis for simulated SGD",\
     "generations" : "Duration of simulations. Specify int range or 0 for lambda.",\
     "recording_period" : "Number of forward-time generations between samples for logging",\
     "population_growth" : "Rate of growth since colonization: exponential/constant/harmonic",\

@@ -557,11 +557,8 @@ class LocalCommunity(object):
             ##############################################
             if self.region.paramsdict["speciation_model"] != "none" and\
                np.random.random_sample() < self.paramsdict["speciation_probability"]:
-<<<<<<< HEAD
-                self.speciate()
-=======
+
                self.speciate()
->>>>>>> f58f1b4c0d98147f3b3c476549d8654f589d6f38
 
             ## update current time
             self.current_time += 1
@@ -758,7 +755,10 @@ class LocalCommunity(object):
         self.stats.median_dxy= np.median(dxys)
         self.stats.iqr_dxy = iqr(dxys)
 
-        self.stats.sgd = SGD(pis, dxys)
+        self.stats.sgd = SGD(pis,\
+                             dxys,\
+                             nbins = self.region.paramsdict["sgd_bins"],\
+                             ndims = self.region.paramsdict["sgd_dimensions"])
         LOGGER.debug("SGD - {}".format(self.stats.sgd))
 
         try:

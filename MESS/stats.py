@@ -63,7 +63,7 @@ def SAD(community, from_abundances=False, octaves=False):
     return abundance_distribution
 
 
-def SGD(pis, dxys=[], nbins=10, flatten=True):
+def SGD(pis, dxys=[], nbins=10, ndims=1):
     """ Construct the Species Genetic Diversity histogram. Input is
     a list of pi values and optionally a list of dxy values if 2D
     is desired. nbins is the dimension of one axis of the SGD, and
@@ -71,6 +71,10 @@ def SGD(pis, dxys=[], nbins=10, flatten=True):
 
     ## TODO: Possibly experiment with normed/density params
     """
+
+    flatten = False
+    if ndims == 1:
+        flatten = True
 
     if not len(dxys):
         hist, xedges = np.histogram(pis, bins=nbins)
