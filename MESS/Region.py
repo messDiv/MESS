@@ -87,7 +87,7 @@ class Region(object):
         """ Just link a local community that was created externally.
         This is primarily used by __main__ during the initialization process."""
         LOGGER.debug("Linking local community - {}".format(local_community))
-        local_community.region = self
+        local_community._set_region(self)
         self.islands[local_community.paramsdict["name"]] = local_community
         local_community.prepopulate(quiet=True)
 
@@ -131,7 +131,12 @@ class Region(object):
         try:
             LOGGER.debug("set param {} - {} = {}".format(self, param, newvalue))
             ## Cast params to correct types
-            if param in ["sgd_dimensions", "sgd_bins", "recording_period"]:
+            if param in ["sgd_bins", "recording_period"]:
+                self.paramsdict[param] = int(float(newvalue))
+
+            elif param == "sgd_dimensions":
+                if int(newvalue) not in [1, 2]:
+                    raise MESSError("sgd_dimensions parameter must be either 1 or 2, you put: {}".format(newvalues))
                 self.paramsdict[param] = int(float(newvalue))
 
             elif param == "project_dir":
@@ -312,7 +317,7 @@ class Region(object):
         ## Decide whether to print the header, if stuff is already in there then
         ## don't print the header, unless you're doing force because this opens
         ## in overwrite mode.
-        header = "\t".join(self.islands.values()[0].stats.keys()) + "\n"
+        header = "\t".join(self.islands.values()[0]._get_stats_header()) + "\n"
         if len(open(simfile, 'a+').readline()) > 0 and not force:
             header = ""
         SIMOUT = open(simfile, append)

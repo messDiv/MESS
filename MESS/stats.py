@@ -63,31 +63,6 @@ def SAD(community, from_abundances=False, octaves=False):
     return abundance_distribution
 
 
-def SGD(pis, dxys=[], nbins=10, ndims=1):
-    """ Construct the Species Genetic Diversity histogram. Input is
-    a list of pi values and optionally a list of dxy values if 2D
-    is desired. nbins is the dimension of one axis of the SGD, and
-    the result will be square.
-
-    ## TODO: Possibly experiment with normed/density params
-    """
-
-    flatten = False
-    if ndims == 1:
-        flatten = True
-
-    if not len(dxys):
-        hist, xedges = np.histogram(pis, bins=nbins)
-    else:
-        hist, xedges, yedges = np.histogram2d(pis, dxys, bins=nbins)
-        ## numpy 2d histogram is oriented somewhat unintuitively
-        ## transposing the array turns y axis into rows
-        hist = hist.T.ravel() if flatten else hist.T
-    ## Return as int array, since histogram2d uses float64 bins
-    hist = hist.astype(int)
-    return np.array2string(hist).replace('\n', '')
-
-
 def pi(haplotypes):
     ## If no seg sites in a pop then haplotypes will be 0 length
     if haplotypes.size == 0:
@@ -140,10 +115,3 @@ if __name__ == "__main__":
     #assert(cmp(sad_oct.values(), [2, 2, 1, 1, 2, 0, 1])) 
     print("SAD - {}".format(sad))
     print("SAD octaves - {}".format(sad_oct))
-
-    pis = np.random.exponential(0.05, size=100)
-    dxys = np.random.exponential(0.05, size=100)
-    sgd = SGD(pis)
-    print(sgd)
-    sgd2 = SGD(pis, dxys)
-    print(sgd2)

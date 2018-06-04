@@ -15,8 +15,9 @@ import os
 import MESS
 
 from .util import MESSError, _tuplecheck, sample_param_range
-from .stats import shannon, SAD, SGD
+from .stats import shannon, SAD
 from .species import species
+from .SGD import SGD
 
 import logging
 LOGGER = logging.getLogger(__name__)
@@ -104,7 +105,7 @@ class LocalCommunity(object):
 
         ## summary stats dict
         self.stats = pd.Series(
-            index=["_lambda",
+            index = ["_lambda",
                    "generation",
                    "K",
                    "colrate",
@@ -120,7 +121,6 @@ class LocalCommunity(object):
                    "stdv_dxy",
                    "median_dxy",
                    "iqr_dxy",
-                   "sgd",
                    "trees",
                    "mean_ltr",
                    "var_ltr",
@@ -130,6 +130,9 @@ class LocalCommunity(object):
                    "var_dif",
                    "kurtosis",
                    "skewness"]).astype(np.object)
+
+        ## Will be initialized as a pd series when the region is linked
+        self.SGD = ""
 
         ## List for storing species that have had sequence
         ## simulated and sumstats calculated
@@ -205,6 +208,15 @@ class LocalCommunity(object):
                                         0,\
                                         OrderedDict([(self.current_time,self.paramsdict["mig_clust_size"])]),\
                                         ancestor]
+
+
+    def _set_region(self, region):
+        self.region = region
+        self.SGD = SGD([], ndims=region.paramsdict["sgd_dimensions"], nbins=region.paramsdict["sgd_bins"])
+
+
+    def _get_stats_header(self):
+        return pd.concat([self.stats, self.SGD.to_series()]).keys()
 
 
     def _paramschecker(self, param, newvalue, quiet=False):
@@ -564,6 +576,8 @@ class LocalCommunity(object):
             self.current_time += 1
 
 
+
+
     def get_abundances(self, octaves=False):
         return SAD(self.local_community)
 
@@ -755,11 +769,11 @@ class LocalCommunity(object):
         self.stats.median_dxy= np.median(dxys)
         self.stats.iqr_dxy = iqr(dxys)
 
-        self.stats.sgd = SGD(pis,\
-                             dxys,\
-                             nbins = self.region.paramsdict["sgd_bins"],\
-                             ndims = self.region.paramsdict["sgd_dimensions"])
-        LOGGER.debug("SGD - {}".format(self.stats.sgd))
+        self.SGD = SGD(pis,\
+                       dxys,\
+                       nbins = self.region.paramsdict["sgd_bins"],\
+                       ndims = self.region.paramsdict["sgd_dimensions"])
+        LOGGER.debug("SGD - {}".format(self.SGD))
 
         try:
             self.stats.mean_ltr = self.region.get_trait_stats(self.local_community)[0]
@@ -785,7 +799,7 @@ class LocalCommunity(object):
             LOGGER.error("Error in get_stats() - {}".format(inst))
             raise
 
-        return self.stats
+        return pd.concat([self.stats, self.SGD.to_series()])
 
 
 #############################
