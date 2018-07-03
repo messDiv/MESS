@@ -147,8 +147,7 @@ class Metacommunity(object):
                 self.paramsdict[param] = float(newvalue)
 
             elif param == "J":
-                ## Do nothing. J is calculated from the data and not set, for now.
-                pass
+                self.paramsdict[param] = int(float(newvalue))
 
         except Exception as inst:
             ## Do something intelligent here?
@@ -378,7 +377,7 @@ class Metacommunity(object):
 LOCAL_PARAMS = {
     "metacommunity_type" : "Options: uniform/logser/<filename>",\
     "nspecies" : "Number of species in the regional pool",\
-    "J" : "Total # of individuals in the regional pool (calculated)",\
+    "J" : "Total # of individuals in the regional pool",\
     "birth_rate" : "Speciation rate of metacommunity",\
     "death_proportion" : "Proportion of speciation rate to be extinction rate",\
     "logser_shape" : "If logser: Shape parameter of the distribution",\

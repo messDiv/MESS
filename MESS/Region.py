@@ -49,7 +49,8 @@ class Region(object):
         self.paramsdict = OrderedDict([
                        ("simulation_name", name),
                        ("project_dir", "./default_MESS"),
-                       ("data_model", 4),
+                       ("sgd_dimensions", 1),
+                       ("sgd_bins", 10),
                        ("generations", 0),
                        ("recording_period", 10000),
                        ("population_growth", "constant"),
@@ -86,7 +87,7 @@ class Region(object):
         """ Just link a local community that was created externally.
         This is primarily used by __main__ during the initialization process."""
         LOGGER.debug("Linking local community - {}".format(local_community))
-        local_community.region = self
+        local_community._set_region(self)
         self.islands[local_community.paramsdict["name"]] = local_community
         local_community.prepopulate(quiet=True)
 
@@ -130,7 +131,12 @@ class Region(object):
         try:
             LOGGER.debug("set param {} - {} = {}".format(self, param, newvalue))
             ## Cast params to correct types
-            if param in ["data_model", "recording_period"]:
+            if param in ["sgd_bins", "recording_period"]:
+                self.paramsdict[param] = int(float(newvalue))
+
+            elif param == "sgd_dimensions":
+                if int(newvalue) not in [1, 2]:
+                    raise MESSError("sgd_dimensions parameter must be either 1 or 2, you put: {}".format(newvalues))
                 self.paramsdict[param] = int(float(newvalue))
 
             elif param == "project_dir":
@@ -311,7 +317,7 @@ class Region(object):
         ## Decide whether to print the header, if stuff is already in there then
         ## don't print the header, unless you're doing force because this opens
         ## in overwrite mode.
-        header = "\t".join(self.islands.values()[0].stats.keys()) + "\n"
+        header = "\t".join(self.islands.values()[0]._get_stats_header()) + "\n"
         if len(open(simfile, 'a+').readline()) > 0 and not force:
             header = ""
         SIMOUT = open(simfile, append)
@@ -528,10 +534,11 @@ def simulate(data, time=time, quiet=True):
 REGION_PARAMS = {
     "simulation_name" : "The name of this simulation scenario",\
     "project_dir" : "Where to save files",\
-    "data_model" : "Structure of data output to reference table (see docs)",\
+    "sgd_dimensions" : "Number of dimensions for simulated SGD: 1 or 2",\
+    "sgd_bins" : "Number of bins per axis for simulated SGD",\
     "generations" : "Duration of simulations. Specify int range or 0 for lambda.",\
     "recording_period" : "Number of forward-time generations between samples for logging",\
-    "population_growth" : "Rate of growth since colonization: exponential/constant",\
+    "population_growth" : "Rate of growth since colonization: exponential/constant/harmonic",\
     "community_assembly_model" : "Model of Community Assembly: neutral, filtering, competition",\
     "speciation_model" : "Type of speciation process: none, point_mutation, protracted, random_fission",\
 }

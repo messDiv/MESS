@@ -11,4 +11,4 @@ mess_log.txt
 *.egg-info
 params*
 *.swp
-default_MESS/
+*_MESS/

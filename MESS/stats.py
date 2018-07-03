@@ -6,9 +6,12 @@ import math
 
 ## Here abundances is an ordered dict of tuples which are (abundance, count)
 ## This is the typical format returned by LocalCommunity.get_abundances(octaves=False)
+## Just fucking use scipy.stats.entropy idiot
 def shannon(abundances):
     ## Unpack the abundance dist
-    abunds = [v for v in list(abundances.values())]
+    abunds = []
+    for k, v in abundances.items():
+        abunds.extend([k] * v)
     tot = np.sum(abunds)
     return -1 * np.sum([x/float(tot) * math.log(x/float(tot)) for x in abunds  if x > 0])
 
@@ -63,27 +66,6 @@ def SAD(community, from_abundances=False, octaves=False):
     return abundance_distribution
 
 
-def SGD(pis, dxys=[], nbins=10, flatten=True):
-    """ Construct the Species Genetic Diversity histogram. Input is
-    a list of pi values and optionally a list of dxy values if 2D
-    is desired. nbins is the dimension of one axis of the SGD, and
-    the result will be square.
-
-    ## TODO: Possibly experiment with normed/density params
-    """
-
-    if not len(dxys):
-        hist, xedges = np.histogram(pis, bins=nbins)
-    else:
-        hist, xedges, yedges = np.histogram2d(pis, dxys, bins=nbins)
-        ## numpy 2d histogram is oriented somewhat unintuitively
-        ## transposing the array turns y axis into rows
-        hist = hist.T.ravel() if flatten else hist.T
-    ## Return as int array, since histogram2d uses float64 bins
-    hist = hist.astype(int)
-    return np.array2string(hist).replace('\n', '')
-
-
 def pi(haplotypes):
     ## If no seg sites in a pop then haplotypes will be 0 length
     if haplotypes.size == 0:
@@ -136,10 +118,3 @@ if __name__ == "__main__":
     #assert(cmp(sad_oct.values(), [2, 2, 1, 1, 2, 0, 1])) 
     print("SAD - {}".format(sad))
     print("SAD octaves - {}".format(sad_oct))
-
-    pis = np.random.exponential(0.05, size=100)
-    dxys = np.random.exponential(0.05, size=100)
-    sgd = SGD(pis)
-    print(sgd)
-    sgd2 = SGD(pis, dxys)
-    print(sgd2)

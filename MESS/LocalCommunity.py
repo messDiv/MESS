@@ -15,8 +15,9 @@ import os
 import MESS
 
 from .util import MESSError, _tuplecheck, sample_param_range
-from .stats import shannon, SAD, SGD
+from .stats import shannon, SAD
 from .species import species
+from .SGD import SGD
 
 import logging
 LOGGER = logging.getLogger(__name__)
@@ -104,7 +105,7 @@ class LocalCommunity(object):
 
         ## summary stats dict
         self.stats = pd.Series(
-            index=["_lambda",
+            index = ["_lambda",
                    "generation",
                    "K",
                    "colrate",
@@ -120,7 +121,6 @@ class LocalCommunity(object):
                    "stdv_dxy",
                    "median_dxy",
                    "iqr_dxy",
-                   "sgd",
                    "trees",
                    "mean_ltr",
                    "var_ltr",
@@ -130,6 +130,9 @@ class LocalCommunity(object):
                    "var_dif",
                    "kurtosis",
                    "skewness"]).astype(np.object)
+
+        ## Will be initialized as a pd series when the region is linked
+        self.SGD = ""
 
         ## List for storing species that have had sequence
         ## simulated and sumstats calculated
@@ -205,6 +208,15 @@ class LocalCommunity(object):
                                         0,\
                                         OrderedDict([(self.current_time,self.paramsdict["mig_clust_size"])]),\
                                         ancestor]
+
+
+    def _set_region(self, region):
+        self.region = region
+        self.SGD = SGD([], ndims=region.paramsdict["sgd_dimensions"], nbins=region.paramsdict["sgd_bins"])
+
+
+    def _get_stats_header(self):
+        return pd.concat([self.stats, self.SGD.to_series()]).keys()
 
 
     def _paramschecker(self, param, newvalue, quiet=False):
@@ -557,10 +569,16 @@ class LocalCommunity(object):
             ##############################################
             if self.region.paramsdict["speciation_model"] != "none" and\
                np.random.random_sample() < self.paramsdict["speciation_probability"]:
+<<<<<<< HEAD
+=======
+
+>>>>>>> e1aa79e6ee18a4da5fa36411d36dac048124432b
                self.speciate()
 
             ## update current time
             self.current_time += 1
+
+
 
 
     def get_abundances(self, octaves=False):
@@ -697,10 +715,11 @@ class LocalCommunity(object):
                 meta_abund = self.region.get_abundance(name)
                 local_abund = self.local_community.count(name)
                 tdiv = self.current_time - coltime
+                tdiv = tdiv / float(self.paramsdict["K"])
                 ## Rescale abundances through time so they are "backwards" values
                 abundances_through_time = {self.current_time - x:y for x, y in list(self.local_info[name]["abundances_through_time"].items())}
                 sp = species(name = name,
-                             colonization_time = tdiv,\
+                             divergence_time = tdiv,\
                              growth = self.region.paramsdict["population_growth"],\
                              abundance = local_abund,\
                              meta_abundance = meta_abund,
@@ -753,8 +772,11 @@ class LocalCommunity(object):
         self.stats.median_dxy= np.median(dxys)
         self.stats.iqr_dxy = iqr(dxys)
 
-        self.stats.sgd = SGD(pis, dxys)
-        LOGGER.debug("SGD - {}".format(self.stats.sgd))
+        self.SGD = SGD(pis,\
+                       dxys,\
+                       nbins = self.region.paramsdict["sgd_bins"],\
+                       ndims = self.region.paramsdict["sgd_dimensions"])
+        LOGGER.debug("SGD - {}".format(self.SGD))
 
         try:
             self.stats.mean_ltr = self.region.get_trait_stats(self.local_community)[0]
@@ -772,7 +794,7 @@ class LocalCommunity(object):
             #self.stats.to_csv(statsfile, na_rep=0, float_format='%.5f')
 
             megalog = os.path.join(self._hackersonly["outdir"],
-                                     self.paramsdict["name"] + "-megalog.txt")
+                                     self.paramsdict["name"] + "-{}-megalog.txt".format(self._lambda()))
             ## concatenate all species results and transpose the data frame so rows are species
             fullstats = pd.concat([sp.stats for sp in self.species], axis=1).T
             fullstats.to_csv(megalog, index_label=False)
@@ -780,7 +802,7 @@ class LocalCommunity(object):
             LOGGER.error("Error in get_stats() - {}".format(inst))
             raise
 
-        return self.stats
+        return pd.concat([self.stats, self.SGD.to_series()])
 
 
 #############################
