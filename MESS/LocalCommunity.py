@@ -569,10 +569,7 @@ class LocalCommunity(object):
             ##############################################
             if self.region.paramsdict["speciation_model"] != "none" and\
                np.random.random_sample() < self.paramsdict["speciation_probability"]:
-<<<<<<< HEAD
-=======
 
->>>>>>> e1aa79e6ee18a4da5fa36411d36dac048124432b
                self.speciate()
 
             ## update current time
