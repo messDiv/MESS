@@ -101,8 +101,6 @@ class Region(object):
         for locname in self.islands.keys():
             self.islands[locname].prepopulate()
 
-        #print(self.get_phy_stats(self.metacommunity.metacommunity_tree))
-
 
     def _get_simulation_outdir(self, prefix=""):
         """ Construct an output directory for a simulation run.
@@ -584,5 +582,6 @@ if __name__ == "__main__":
     #print(data.islands.values()[0])
     print("Testing lambda function.")
     data.simulate(_lambda=.4)
+
     #data.run(10)
     print(data.get_most_abundant())

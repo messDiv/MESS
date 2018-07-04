@@ -122,14 +122,14 @@ class LocalCommunity(object):
                    "median_dxy",
                    "iqr_dxy",
                    "trees",
-                   "mean_ltr",
-                   "var_ltr",
-                   "mean_rtr",
-                   "var_rtr",
-                   "mean_dif",
-                   "var_dif",
-                   "kurtosis",
-                   "skewness"]).astype(np.object)
+                   "mn_local_traits",
+                   "var_local_traits",
+                   "mn_regional_traits",
+                   "var_regional_traits",
+                   "reg_loc_mn_trait_dif",
+                   "reg_loc_var_trait_dif",
+                   "kurtosis_local_traits",
+                   "skewness_local_traits"]).astype(np.object)
 
         ## Will be initialized as a pd series when the region is linked
         self.SGD = ""
@@ -776,14 +776,19 @@ class LocalCommunity(object):
         LOGGER.debug("SGD - {}".format(self.SGD))
 
         try:
-            self.stats.mean_ltr = self.region.get_trait_stats(self.local_community)[0]
-            self.stats.var_ltr = self.region.get_trait_stats(self.local_community)[1]
-            self.stats.mean_rtr = self.region.get_trait_stats(self.local_community)[2]
-            self.stats.var_rtr = self.region.get_trait_stats(self.local_community)[3]
-            self.stats.mean_dif = self.region.get_trait_stats(self.local_community)[4]
-            self.stats.var_dif = self.region.get_trait_stats(self.local_community)[5]
-            self.stats.kurtosis = self.region.get_trait_stats(self.local_community)[6][0]
-            self.stats.skewness = self.region.get_trait_stats(self.local_community)[7][0]
+            trait_stats = self.region.get_trait_stats(self.local_community)
+            self.stats.mn_local_traits = trait_stats[0]
+            self.stats.var_local_traits = trait_stats[1]
+            self.stats.mn_regional_traits = trait_stats[2]
+            self.stats.var_regional_traits = trait_stats[3]
+            self.stats.reg_loc_mn_trait_dif = trait_stats[4]
+            self.stats.reg_loc_var_trait_dif = trait_stats[5]
+            self.stats.kurtosis_local_traits = trait_stats[6][0]
+            self.stats.skewness_local_traits = trait_stats[7][0]
+
+            ## This line will get you phy stats (mean and var of branch lenghts) from the regional/metacommuntiy tree
+            ## Not sure what to do about local tree yet.. 
+            #phy_stats = self.region.get_phy_stats(self.region.metacommunity.metacommunity_tree)
 
             ## Log to file
             #statsfile = os.path.join(self._hackersonly["outdir"],
