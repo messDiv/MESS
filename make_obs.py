@@ -6,7 +6,7 @@ import glob
 import os
 from itertools import combinations
 from collections import Counter
-from gimmeSAD import shannon
+from MESS.stats import shannon
 
 
 def pi(file):
@@ -30,7 +30,10 @@ def pi(file):
                 ## Enumerate the possible comparisons and for each
                 ## comparison calculate the number of pairwise differences,
                 ## summing over all sites in the sequence.
-                for c in combinations(Counter(d).values(), 2):
+                base_count = Counter(d)
+                ## ignore indels
+                del base_count["-"]
+                for c in combinations(base_count.values(), 2):
                     #print(c)
                     n = c[0] + c[1]
                     n_comparisons = float(n) * (n - 1) / 2
@@ -93,6 +96,7 @@ if __name__ == "__main__":
     args = parse_command_line()
 
     outfile = open(args.outfile, 'w')
+    outpis = open(args.outfile.split(".")[0]+".pis", 'w')
 
     ## Format header
     if args.abund_file:
@@ -115,7 +119,9 @@ if __name__ == "__main__":
         pis = []
         for f in files:
             pis.append(pi(f))
+            outpis.write("{} {}\n".format(pi(f), f))
         dat = make_1D_heat(pis)
         outfile.write(dat)
+        
 
     outfile.close()
