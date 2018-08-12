@@ -20,8 +20,8 @@
 # -- Project information -----------------------------------------------------
 
 project = u'MESS'
-copyright = u'2018, Isaac Overcast, Megan Ruffley, Bob Week, Mike Hickerson, Luke Harmon, et al'
-author = u'Isaac Overcast, Megan Ruffley, Bob Week, Mike Hickerson, Luke Harmon, et al'
+copyright = u'2018'
+author = u''
 
 # The short X.Y version
 version = u''
