@@ -22,7 +22,7 @@ Method 1: Install pre-built binary from conda
 
 .. code:: bash
 
-    conda install mess openblas dendropy -c mess -c conda-forge -c openblas
+    conda install mess openblas dendropy -c mess -c conda-forge -c anaconda
 
 
 See  `venv <https://docs.python.org/3/tutorial/venv.html>`_ to install into a virtual environment.
