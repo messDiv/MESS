@@ -16,6 +16,10 @@ __interactive__ = 1      ## CLI __main__ changes to 0
 import os as _os
 import atexit as _atexit
 
+## Force matplotlib to behave on headless environments
+import matplotlib
+matplotlib.use("agg")
+
 from .util import *
 from .Region import Region 
 from .LocalCommunity import LocalCommunity
@@ -62,7 +66,7 @@ def cluster_info(ipyclient, spacer=""):
     for hostname in set(hosts):
         result.append("{}host compute node: [{} cores] on {}"\
             .format(spacer, hosts.count(hostname), hostname))
-    print "\n".join(result)
+    print("\n".join(result))
 
 
 
