@@ -22,27 +22,7 @@ Method 1: Install pre-built binary from conda
 
 .. code:: bash
 
-    conda install mess -c messDiv -c conda-forge
+    conda install mess openblas dendropy -c mess -c conda-forge -c openblas
 
--------------------------------------
-Method 2: Build from source using pip
--------------------------------------
-
-Prerequisites:
-
-* pip
-* C compiler with OpenMP support
-
-Clone the git repository, then ``pip install`` the project root:
-
-.. code:: bash
-
-    git clone https://github.com/messDiv/MESS
-    cd MESS/
-    pip install .
-
-Depending on your system, ``pip`` may have trouble installing some
-dependencies (such as ``numpy``, ``msprime``, ``pysam``).
-In this case, you should manually install these dependencies and try again.
 
 See  `venv <https://docs.python.org/3/tutorial/venv.html>`_ to install into a virtual environment.
