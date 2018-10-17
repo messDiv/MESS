@@ -6,7 +6,6 @@ import pandas as pd
 import collections      # For Counter
 import itertools
 import msprime
-import names
 import math
 import os
 # pylint: disable=C0103
@@ -27,9 +26,9 @@ class species(object):
         ## a 'parameter' even though I know migration rate is a
         ## parameter too
         self.paramsdict = dict([
-                            ("alpha", 100),
+                            ("sigma", 100),
                             ("sequence_length", 570),
-                            ("mutation_rate", 0.0000022),
+                            ("mutation_rate", 0.00000022),
                             ("sample_size_local", 10),
                             ("sample_size_meta", 10),
                             ("abundance_through_time", abundance_through_time),
@@ -56,14 +55,11 @@ class species(object):
                     "tajd_local"]).astype(np.object)
 
         self.stats["name"] = name
-        self.stats["Ne_local"] = abundance * self.paramsdict["alpha"]
-        self.stats["Ne_meta"] = meta_abundance * self.paramsdict["alpha"]
-        self.stats["tdiv"] = divergence_time * self.paramsdict["alpha"]
+        self.stats["Ne_local"] = abundance * self.paramsdict["sigma"]
+        self.stats["Ne_meta"] = meta_abundance * self.paramsdict["sigma"]
+        self.stats["tdiv"] = divergence_time * self.paramsdict["sigma"]
 
         ## Parameters
-        ## the 'name' here is just a toy fake species name
-        ## This makes debugging funcking annoying.
-        #self.name = names.names().get_name()
         self.name = name
         self.tree_sequence = []
 
@@ -79,7 +75,7 @@ class species(object):
         ## Take the harmonic mean of the abundance trajectory through time
         elif growth == "harmonic":
             try:
-                harmonic = hmean(np.array(abundance_through_time.values()) * self.paramsdict["alpha"])
+                harmonic = hmean(np.array(abundance_through_time.values()) * self.paramsdict["sigma"])
                 LOGGER.debug("sname Ne hmean- {} {} {}".format(self.name, self.stats["Ne_local"], harmonic))
                 self.stats["Ne_local"] = harmonic
                 self.stats["growth_rate"] = 0
@@ -88,6 +84,7 @@ class species(object):
                 raise inst
         ## Do piecewise constant population size changes through time
         elif growth == "piecewise":
+            ##TODO: piecewise population size change is unimplemented
             pass
         else:
             raise MESSError("Unrecognized population growth parameter - {}".format(growth))
@@ -230,7 +227,8 @@ class species(object):
         node_labels = {
             u: (str(u) if u < 8 else "{} (t={:.2f})".format(u, tree.time(u))) 
             for u in tree.nodes()}
-        #tree.draw(path="/tmp/{}.svg".format(self.name.replace(" ", "_")), height=500, width=1000, node_labels=node_labels, node_colours=node_colours)
+        tree.draw(path="/tmp/{}.svg".format(self.name.replace(" ", "_")), height=500, width=1000, node_labels=node_labels, node_colours=node_colours)
+
 
     def get_sumstats(self):
 
@@ -288,7 +286,7 @@ class species(object):
     ## This is hackish and is used by the LocalCommunity.bottleneck() function
     ## that is more or less untested
     def update_abundance(self, abund):
-        self.stats["Ne_local"] = abund * self.paramsdict["alpha"]
+        self.stats["Ne_local"] = abund * self.paramsdict["sigma"]
 
 
 #######################################
