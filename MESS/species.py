@@ -213,6 +213,7 @@ class species(object):
             #with open(debugfile, 'a') as outfile:
             #    outfile.write(debug.print_history())
 
+        LOGGER.debug("Executing msprime - {}".format(self.name))
         self.tree_sequence = msprime.simulate(length = self.paramsdict["sequence_length"],\
                                               mutation_rate = self.paramsdict["mutation_rate"],\
                                               population_configurations = [pop_local, pop_meta],\
