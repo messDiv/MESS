@@ -165,7 +165,7 @@ def parse_command_line():
 
     parser.add_argument('-p', metavar='params', dest="params",
         type=str,
-        help="path to params file simulations: params-{assembly_name}.txt")
+        help="path to params file simulations: params-{name}.txt")
 
     parser.add_argument("-s", metavar="sims", dest="sims",
         type=int, default=0,

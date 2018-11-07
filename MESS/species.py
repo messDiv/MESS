@@ -20,7 +20,7 @@ class species(object):
 
     def __init__(self, name = "", growth="constant", abundance = 1,
                 meta_abundance = 1, divergence_time = 0, migration_rate=0,
-                abundance_through_time=[]):
+                abundance_through_time={}):
 
         ## I'm calling anything that is invariant across species
         ## a 'parameter' even though I know migration rate is a
@@ -31,7 +31,7 @@ class species(object):
                             ("mutation_rate", 0.00000022),
                             ("sample_size_local", 10),
                             ("sample_size_meta", 10),
-                            ("abundance_through_time", abundance_through_time),
+                            ("abundance_through_time", collections.OrderedDict(sorted(abundance_through_time.items()))),
         ])
 
         ## Stats for this species in a nice pd series
@@ -187,7 +187,7 @@ class species(object):
 
 
     def simulate_seqs(self):
-        LOGGER.debug("Entering simulate_seqs - {}".format(self))
+        LOGGER.debug("Entering simulate_seqs - {}".format(self.name))
         ## TODO: Here we are assuming only one island and that the migration
         ## is only ever unidirectional from the mainland to the island
         migmat = [[0, self.stats["migration_rate"]],
@@ -213,7 +213,6 @@ class species(object):
             #with open(debugfile, 'a') as outfile:
             #    outfile.write(debug.print_history())
 
-        LOGGER.debug("Executing msprime - {}".format(self))
         self.tree_sequence = msprime.simulate(length = self.paramsdict["sequence_length"],\
                                               mutation_rate = self.paramsdict["mutation_rate"],\
                                               population_configurations = [pop_local, pop_meta],\
@@ -232,7 +231,7 @@ class species(object):
 
     def get_sumstats(self):
 
-        LOGGER.debug("Entering get_sumstats - {}".format(self))
+        LOGGER.debug("Entering get_sumstats - {}".format(self.name))
         ## pairwise diversity per base
         self.stats["pi_tot"] = self.tree_sequence.get_pairwise_diversity()\
                                 / self.paramsdict["sequence_length"]
