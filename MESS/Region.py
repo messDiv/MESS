@@ -187,6 +187,12 @@ class Region(object):
             self.islands[name] = new
 
 
+    def _reset_metacommunity(self):
+        ## Calling set_metacommunity() again will regenerate a new
+        ## metacommunity using the same parameters each time.
+        self.metacommunity.set_metacommunity()
+
+
     def write_params(self, outfile=None, outdir=None, force=False):
         """ Write out the parameters of this model to a file properly
         formatted as input for `MESS -p <params.txt>`. A good and
@@ -410,6 +416,10 @@ class Region(object):
         ## Not as big of a deal on ipp simulations, but if you're running on a local computer
         ## the local communities need to get reupped for each simulation.
         self._reset_local_communities()
+
+        ## Flip the metacommunity per simulation so we get new draws of trait values.
+        ## This is a little slow for logser, and also performance scales with metacommunity size
+        self._reset_metacommunity()
 
         ## Get an output directory for dumping data
         outdir = self._get_simulation_outdir()

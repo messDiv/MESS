@@ -213,7 +213,7 @@ class species(object):
             #with open(debugfile, 'a') as outfile:
             #    outfile.write(debug.print_history())
 
-        LOGGER.debug("Executing msprime - {}".format(self))
+        LOGGER.debug("Executing msprime - {}".format(self.name))
         self.tree_sequence = msprime.simulate(length = self.paramsdict["sequence_length"],\
                                               mutation_rate = self.paramsdict["mutation_rate"],\
                                               population_configurations = [pop_local, pop_meta],\
@@ -232,7 +232,7 @@ class species(object):
 
     def get_sumstats(self):
 
-        LOGGER.debug("Entering get_sumstats - {}".format(self))
+        LOGGER.debug("Entering get_sumstats - {}".format(self.name))
         ## pairwise diversity per base
         self.stats["pi_tot"] = self.tree_sequence.get_pairwise_diversity()\
                                 / self.paramsdict["sequence_length"]
