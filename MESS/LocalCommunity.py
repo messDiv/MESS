@@ -51,7 +51,7 @@ class LocalCommunity(object):
                         ("colrate", colrate),
                         ("age", 100000),
                         ("mig_clust_size", mig_clust_size),
-                        ("filtering_optimum", 100)
+                        ("filtering_optimum", 25)
         ])
 
         ## A dictionary for holding prior ranges for values we're interested in
@@ -263,7 +263,7 @@ class LocalCommunity(object):
                 self.paramsdict[param] = newvalue
 
             elif param == "filtering_optimum":
-                self.paramsdict[param] = float(newvalue)
+                self.paramsdict[param] = float(loc=np.random.normal(self.region.get_trait_stats(self.local_community)[3],scale=self.region.get_trait_stats(self.local_community)[4], size=1))
 
             else:
                 self.paramsdict[param] = newvalue
@@ -429,7 +429,7 @@ class LocalCommunity(object):
                 reject = reject + 1
                 victim = random.choice(self.local_community)
                 victim_trait = self.region.get_trait(victim)
-                death_Probability = 1 - (np.exp(-((victim_trait - self.paramsdict["filtering_optimum"]) ** 2)/self.region.get_weight()))
+                death_Probability = 1 - (np.exp(-((victim_trait - self.paramsdict["filtering_optimum"]) ** 2)/self.region.paramsdict["ecological_strength"]))
 
             self.rejections.append(reject)
 
@@ -443,7 +443,7 @@ class LocalCommunity(object):
                 reject = reject + 1
                 victim = random.choice(self.local_community)
                 victim_trait = self.region.get_trait(victim)
-                death_Probability = (np.exp(-((victim_trait - mean_local_trait) ** 2)/self.region.get_weight()))
+                death_Probability = (np.exp(-((victim_trait - mean_local_trait) ** 2)/self.region.paramsdict["ecological_strength"]))
 
             self.rejections.append(reject)
 
@@ -895,7 +895,7 @@ class LocalCommunity(object):
             self.stats.skewness_local_traits = trait_stats[7][0]
 
             ## This line will get you phy stats (mean and var of branch lenghts) from the regional/metacommuntiy tree
-            ## Not sure what to do about local tree yet.. 
+            ## Not sure what to do about local tree yet..
             #phy_stats = self.region.get_phy_stats(self.region.metacommunity.metacommunity_tree)
 
             ## Log to file
