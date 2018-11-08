@@ -263,7 +263,10 @@ class LocalCommunity(object):
                 self.paramsdict[param] = newvalue
 
             elif param == "filtering_optimum":
-                self.paramsdict[param] = float(loc=np.random.normal(self.region.get_trait_stats(self.local_community)[3],scale=self.region.get_trait_stats(self.local_community)[4], size=1))
+                tmp = np.random.normal(loc=self.region.get_trait_stats(self.local_community)[3],\
+                                                          scale=self.region.get_trait_stats(self.local_community)[4],\
+                                                          size=1)
+                self.paramsdict[param] = tmp
 
             else:
                 self.paramsdict[param] = newvalue

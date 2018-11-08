@@ -372,7 +372,7 @@ LOCAL_PARAMS = {
     "death_proportion" : "Proportion of speciation rate to be extinction rate",\
     "logser_shape" : "If logser: Shape parameter of the distribution",\
     "trait_rate" : "Trait evolution rate parameter",\
-    "trait_strength" : "Strength of community assembly process on phenotypic change",\
+    "ecological_strength" : "Strength of community assembly process on phenotypic change",\
 }
 
 

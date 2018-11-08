@@ -56,7 +56,7 @@ class Region(object):
                        ("population_growth", "constant"),
                        ("community_assembly_model", "neutral"),
                        ("speciation_model", "point_mutation"),
-                       ("specation_probability", 0,),
+                       ("speciation_probability", 0,),
                        ("mutation_rate", 0.000022),
                        ("sigma", 1000),
                        ("sequence_length", 570),
@@ -319,6 +319,12 @@ class Region(object):
                 [np.where(self.metacommunity.community["ids"] == species)][0]
 
 
+    def get_species_params(self):
+        return {"mutation_rate":self.paramsdict["mutation_rate"],
+                "sigma": self.paramsdict["sigma"],
+                "sequence_length":self.paramsdict["sequence_length"]}
+        
+
     ## Main function for managing cluster parallelized simulations
     def run(self, sims, force=False, ipyclient=None, quiet=False):
         """ Do the heavy lifting here"""
@@ -533,12 +539,6 @@ class Region(object):
                 total.append(edge.length)
         return [np.mean(total), np.var(total), len(total), sum(total)]
 
-    def get_weight(self):
-        weight =   (self.metacommunity.paramsdict["trait_strength"] *
-                    self.metacommunity.paramsdict["trait_rate"])
-                    #* self.metacommunity.metcommunity_tree_height)
-        return weight
-
 
     #def get_local_phy(self):
 
@@ -564,7 +564,7 @@ REGION_PARAMS = {
     "population_growth" : "Rate of growth since colonization: exponential/constant/harmonic",\
     "community_assembly_model" : "Model of Community Assembly: neutral, filtering, competition",\
     "speciation_model" : "Type of speciation process: none, point_mutation, protracted, random_fission",\
-    "speciation_probability", "Probability of forming a new species per forward time step",\
+    "speciation_probability" : "Probability of forming a new species per forward time step",\
     "mutation_rate" : "Mutation rate scaled per base per generation",\
     "sigma" : "Abundance/Ne scaling factor",\
     "sequence_length" : "Length in bases of the sequence to simulate",\
