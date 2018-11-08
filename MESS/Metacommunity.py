@@ -46,7 +46,7 @@ class Metacommunity(object):
                         ("birth_rate", 2),
                         ("death_proportion", 0.5),
                         ("trait_rate", 5),
-                        ("trait_strength", 1),
+                        ("ecological_strength", 25),
         ])
 
         ## elite hackers only internal dictionary, normally you shouldn't mess with this
@@ -143,7 +143,7 @@ class Metacommunity(object):
             elif param == "trait_rate":
                 self.paramsdict[param] = float(newvalue)
 
-            elif param == "trait_strength":
+            elif param == "ecological_strength":
                 self.paramsdict[param] = float(newvalue)
 
             elif param == "J":
