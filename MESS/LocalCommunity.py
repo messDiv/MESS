@@ -4,10 +4,11 @@ from __future__ import print_function
 
 from scipy.stats import logser
 from collections import OrderedDict
-from scipy.stats import iqr
+from scipy.stats import iqr,hmean
 import collections
 import pandas as pd
 import numpy as np
+import msprime
 import itertools
 import random
 import sys
@@ -48,7 +49,6 @@ class LocalCommunity(object):
                         ("mode", "volcanic"),
                         ("K", K),
                         ("colrate", colrate),
-                        ("speciation_probability", 0),
                         ("age", 100000),
                         ("mig_clust_size", mig_clust_size),
                         ("filtering_optimum", 100)
@@ -90,7 +90,7 @@ class LocalCommunity(object):
         ## Fields:
         ##  * "colonization_times" - Colonization times per species
         ##  * "post_colonization_migrants" - Count of post colonization migrants per species
-        ##  * "abundance_through_time" - A record of abundance through time for this species
+        ##  * "abundances_through_time" - A record of abundance through time for this species
         ##  * "ancestor" - The species name of the immediate ancestor if local speciation
         ##                 happened, otherwise "".
         self.local_info = pd.DataFrame([])
@@ -194,20 +194,35 @@ class LocalCommunity(object):
         return percent_equil
 
 
-    def _add_local_info(self, sname, ancestor=""):
+    def _add_local_info(self, sname, abundances_through_time=0,\
+                        ancestor='', ancestral_abundance=[], speciation_completion=0):
         ## Construct a new local_info record for new_species. The fields are:
         ## colonization time - in the forward time model. This gets converted to
         ##      divergence time for the backward time model.
         ## post_colonization_migrants - The count of migrants that have come in
         ##      that are the same species as this one, since colonization
-        ## abundance_through_time - Dictionary containing history of population
-        ##      size change through time
+        ## abundances_through_time - Dictionary containing history of population
+        ##      size change through time. Default is 0, which indicates a new colonist.
         ## ancestor - If the species was introduced by speciation rather than
         ##      colonization, then it'll have an ancestral species.
+        #######################
+        ## Protracted speciation parameters that shouldn't be touched otherwise
+        #######################
+        ## ancestral_abundance - A list of fluctuating ancestral abundances at
+        ##      the time the species split from its sister. Default is empty list which indicates
+        ##      a new colonist from the metacommunity.
+        ## speciation_completion - The point in forward time when this species will become 'good'.
+        ##      before this point it is an incipient species and if the simulation is stopped then
+        ##      all the individuals will be thrown back into the parent species pool.
+        ##      Default is 0 which indicates this is a good species immediately, either a new
+        ##      colonizing lineage or a point mutation species.
+        if abundances_through_time == 0: abundances_through_time = OrderedDict([(self.current_time,self.paramsdict["mig_clust_size"])])
         self.local_info[sname] = [self.current_time,\
                                         0,\
-                                        OrderedDict([(self.current_time,self.paramsdict["mig_clust_size"])]),\
-                                        ancestor]
+                                        abundances_through_time,\
+                                        ancestor,\
+                                        ancestral_abundance,
+                                        speciation_completion]
 
 
     def _set_region(self, region):
@@ -242,9 +257,6 @@ class LocalCommunity(object):
                     self.paramsdict[param] = sample_param_range(tup)[0]
                 else:
                     self.paramsdict[param] = tup
-
-            elif param == "speciation_probability":
-                self.paramsdict[param] = float(newvalue)
 
             elif param == "mode":
                 ## Must reup the local community if you change the mode
@@ -386,10 +398,12 @@ class LocalCommunity(object):
                                             index = ["colonization_times",\
                                                      "post_colonization_migrants",\
                                                      "abundances_through_time",\
-                                                     "ancestor"])
+                                                     "ancestor",\
+                                                     "ancestral_abundance",\
+                                                     "speciation_completion"])
         self.local_info = self.local_info.fillna(0)
         for sp in self.local_info:
-            self.local_info[sp] = [0, 0, OrderedDict(), ""]
+            self.local_info[sp] = [0, 0, OrderedDict(), "", [], 0]
 
         self.founder_flags = [True] * len(self.local_community)
 
@@ -459,6 +473,7 @@ class LocalCommunity(object):
 
     def _test_local_extinction(self, victim):
         ## Record local extinction events
+        ancestor = victim
         if not victim in self.local_community:
             self.extinctions += 1
             try:
@@ -466,7 +481,22 @@ class LocalCommunity(object):
                 ## Remove the species from the local_info array
                 self.extinction_times.append(self.current_time - self.local_info[victim]["colonization_times"])
                 vic_info = self.local_info.pop(victim)
-                LOGGER.debug("Extinction victim info \n{}\n{}".format(victim, vic_info))
+                offspring = self.local_info.columns[self.local_info.loc["ancestor"] == victim]
+                LOGGER.debug("\nExtinction victim info \n{}\n{}\nOffspring {}".format(victim, vic_info, offspring))
+
+                ## Speciation process nonsense
+                ## Update ancestry and population size change history for any species with this one as 
+                ## direct ancestor
+                ancestor = vic_info["ancestor"]
+                anc_size_changes = vic_info["abundances_through_time"]
+                self.local_info.loc["ancestor"][self.local_info.loc["ancestor"] == victim] = ancestor
+                ## I don't think you can vectorize the update
+                
+                for o in offspring:
+                    LOGGER.debug("offspring {} {}".format(o, self.local_info[o]["abundances_through_time"]))
+                    self.local_info[o]["abundances_through_time"].update(anc_size_changes)
+                    LOGGER.debug("offspring {} {}".format(o, self.local_info[o]["abundances_through_time"]))
+
             except Exception as inst:
                 LOGGER.debug(self.local_info)
                 raise MESSError("Exception during recording extinction - {}".format(inst))
@@ -474,6 +504,7 @@ class LocalCommunity(object):
             if victim[0] == self.invasive:
                 LOGGER.info("invasive went extinct")
                 self.invasive = -1
+        return ancestor
 
 
     def migrate_no_dupes_step(self):
@@ -568,14 +599,12 @@ class LocalCommunity(object):
             ## Speciation process
             ##############################################
             if self.region.paramsdict["speciation_model"] != "none" and\
-               np.random.random_sample() < self.paramsdict["speciation_probability"]:
+               np.random.random_sample() < self.Region.paramsdict["speciation_probability"]:
 
                self.speciate()
 
             ## update current time
             self.current_time += 1
-
-
 
 
     def get_abundances(self, octaves=False):
@@ -603,16 +632,19 @@ class LocalCommunity(object):
         chx = random.choice(self.local_community)
         idx = self.local_community.index(chx)
 
-        ## Construct the new species name.
-        ## We want the new name to be globally unique but we don't
-        ## want to waste a bunch of time keeping track of it in the
-        ## region, so we can do something like this:
-        sname = chx + ":{}-{}".format(self.name, self.current_time)
-        self._add_local_info(sname = sname, ancestor = chx)
 
         if self.region.paramsdict["speciation_model"] == "point_mutation":
+            ## Construct the new species name.
+            ## We want the new name to be globally unique but we don't
+            ## want to waste a bunch of time keeping track of it in the
+            ## region, so we can do something like this:
+            sname = chx + ":{}-{}".format(self.name, self.current_time)
+
             ## Replace the individual in the local_community with the new species
             self.local_community[idx] = sname
+
+            ## Fetch the abundance history of the parent species
+            parent_abunds = self.local_info[chx]["abundances_through_time"]
 
             ## Inform the regional pool that we have a new species
             trt = self.region.get_trait(chx)
@@ -623,8 +655,12 @@ class LocalCommunity(object):
             ## TODO: is this really an "extinction" event? we need to clean up
             ## the local_info regardless, but we may not want to increment the
             ## extinctions counter.
-            self._test_local_extinction(chx)
-            ## TODO: TODO: TODO: Still have to do ancestor inheritance
+            ancestor = self._test_local_extinction(chx)
+
+            ## In the point mutation speciation model the offspring population
+            ## immediately inherits the parent population history of size change.
+            ## _test_local_extinction() handles all the ancestor inheritence logic.
+            self._add_local_info(sname = sname, abundances_through_time=parent_abunds , ancestor = ancestor)
 
         elif self.region.paramsdict["speciation_model"] == "random_fission":
             pass
@@ -700,36 +736,108 @@ class LocalCommunity(object):
         self.local_info.loc["meta_abund"] = [self.region.get_abundance(x) for x in self.local_info]
         self.local_info.loc["local_abund"] = [self.local_community.count(x) for x in self.local_info]
         self.local_info.loc["colonization_times"] = self.current_time - self.local_info.loc["colonization_times"]
+        #import pdb; pdb.set_trace()
+        for cname, species_list in self._get_clades().items():
+            ## Just get a slice of the local_info df that represents the species of interest
+            dat = self.local_info[species_list]
+            ## Dictionary mapping species names to 0-based index (where 0 is metacommunity)
+            sp_idxs = OrderedDict({x:ix for ix, x in zip(range(1, len(dat.columns)+1), dat.columns[::-1])})
+            sp_idxs[''] = 0
 
-        for cname, species_list in self.get_clades():
-            pass
+            pop_cfgs = []
+            pop_meta = msprime.PopulationConfiguration(sample_size = 10, initial_size = 10000)
+            pop_cfgs.append(pop_meta)
+            for sp, idx in sp_idxs.items():
+                if not sp:
+                    continue
+                sizechange_times = sorted(dat[sp]["abundances_through_time"], reverse=True)
+    
+                size = hmean([dat[sp]["abundances_through_time"][x]*1000 for x in sizechange_times])
+                pop_local = msprime.PopulationConfiguration(sample_size = 10, initial_size = size, growth_rate = 0)
+                pop_cfgs.append(pop_local)
+
+            ## sp are added in chronological order of coltime, so the'll be in the right order here for
+            ## adding in reverse coltime
+            split_events = []
+            for col in dat.columns:
+                #print(col, dat[col].loc['colonization_times'])
+                #print(sp_idxs[col])
+                split_event = msprime.MassMigration(time = dat[col].loc['colonization_times'],\
+                                                    source = sp_idxs[col],\
+                                                    destination = sp_idxs[dat[col]["ancestor"]],\
+                                                    proportion = 1)
+                split_events.append(split_event)
+
+            try:
+                #print(sp_idxs, split_events)
+                debug = msprime.DemographyDebugger(population_configurations = pop_cfgs,\
+                                                 demographic_events = split_events)
+
+                ## Enable this at your own peril, it will dump a ton of shit to stdout
+                #debug.print_history()
+            except:
+                import pdb; pdb.set_trace()
+                raise
+
+            tree_sequence = msprime.simulate(length = 600,\
+                                            mutation_rate = 1e-7,\
+                                            population_configurations = pop_cfgs,\
+                                            demographic_events = split_events)
+
+            ## Now we have the tree sequence for the clade and can go back through the species list
+            ## and pull out stats per species
+            LOGGER.debug("Done with hsitory now simulating seqs")
+            metasamps = tree_sequence.samples(population=0)
+            for sp, idx in sp_idxs.items():
+                ## Skip the metacommunity, which doesn't have a parent :'(
+                if sp == '':
+                    continue
+                sp_obj = species(name = sp,
+                         species_params = self.Region.get_species_params(),
+                         divergence_time = dat[sp].loc['colonization_times'],\
+                         growth = self.region.paramsdict["population_growth"],\
+                         abundance = dat[sp].loc["local_abund"],\
+                         meta_abundance = dat[sp]["meta_abund"],
+                         migration_rate = dat[sp]["post_colonization_migrants"]/float(dat[col]['colonization_times']),\
+                         abundance_through_time = {self.current_time - x:y for x, y in list(dat[sp]["abundances_through_time"].items())})
+                sp_obj.tree_sequence = tree_sequence
+                samps = tree_sequence.samples(population=idx)
+                sp_obj.get_sumstats(samps, metasamps)
+                self.species.append(sp_obj)
+
 
     def simulate_seqs(self):
+        self.sim_seqs()
+        return
         self.species = []
-        for name, coltime in self._get_singleton_species().loc["colonization_times"].items():
-##        for name, coltime in self.local_info.loc["colonization_times"].iteritems():
+#        for name, coltime in self._get_singleton_species().loc["colonization_times"].items():
+        for name, coltime in self.local_info.loc["colonization_times"].iteritems():
             try:
-                meta_abund = self.region.get_abundance(name)
+                ## Get the meta abundance for the original colonizing lineage
+                meta_abund = self.region.get_abundance(name.split(":")[0])
                 local_abund = self.local_community.count(name)
                 tdiv = self.current_time - coltime
                 tdiv = tdiv / float(self.paramsdict["K"])
                 ## Rescale abundances through time so they are "backwards" values
                 abundances_through_time = {self.current_time - x:y for x, y in list(self.local_info[name]["abundances_through_time"].items())}
-                sp = species(name = name,
-                             divergence_time = tdiv,\
-                             growth = self.region.paramsdict["population_growth"],\
-                             abundance = local_abund,\
-                             meta_abundance = meta_abund,
-                             migration_rate = self.local_info[name]["post_colonization_migrants"]/float(tdiv),\
-                             abundance_through_time = abundances_through_time)
+                try:
+                    sp = species(name = name,
+                                 species_params = self.Region.get_species_params(),
+                                 divergence_time = tdiv,\
+                                 growth = self.region.paramsdict["population_growth"],\
+                                 abundance = local_abund,\
+                                 meta_abundance = meta_abund,
+                                 migration_rate = self.local_info[name]["post_colonization_migrants"]/float(tdiv),\
+                                 abundance_through_time = abundances_through_time)
+                except Exception as inst:
+                    print("Error in creating species {}\n{}".format(name, inst))
                 sp.simulate_seqs()
-                sp.get_sumstats()
                 self.species.append(sp)
                 ## For debugging invasives
                 #if s.abundance > 1000:
                 #    print("\n{}".format(s))
             except Exception as inst:
-                print(self.local_community)
+                print("tdiv = {}".format(tdiv))
                 print(self.local_info)
                 print(len(set(self.local_community)))
                 print(self.local_info.shape)
@@ -815,7 +923,6 @@ LOCAL_PARAMS = {
     "mode" : "Local community formation mode (volcanic/landbridge)",\
     "K" : "Local carrying capacity",\
     "colrate" : "Colonization rate into local community",\
-    "speciation_probability" : "Probability of forming a new species per forward time step",\
     "mig_clust_size" : "# of individuals per colonization event",\
     "age" : "Local community age",\
     "filtering_optimum" : "optimum trait value, only used during environmental filtering model",\

@@ -56,6 +56,10 @@ class Region(object):
                        ("population_growth", "constant"),
                        ("community_assembly_model", "neutral"),
                        ("speciation_model", "point_mutation"),
+                       ("specation_probability", 0,),
+                       ("mutation_rate", 0.000022),
+                       ("sigma", 1000),
+                       ("sequence_length", 570),
         ])
 
         ## Track local communities in this model and colonization rates among them
@@ -163,6 +167,17 @@ class Region(object):
             elif param == "speciation_model":
                 self.paramsdict[param] = newvalue
 
+            elif param == "speciation_probability":
+                self.paramsdict[param] = float(newvalue)
+
+            elif param == "mutation_rate":
+                self.paramsdict[param] = float(newvalue)
+
+            elif param == "sigma":
+                self.paramsdict[param] = float(newvalue)
+
+            elif param == "sequence_length":
+                self.paramsdict[param] = float(newvalue)
             else:
                 self.paramsdict[param] = newvalue
         except Exception as inst:
@@ -549,6 +564,10 @@ REGION_PARAMS = {
     "population_growth" : "Rate of growth since colonization: exponential/constant/harmonic",\
     "community_assembly_model" : "Model of Community Assembly: neutral, filtering, competition",\
     "speciation_model" : "Type of speciation process: none, point_mutation, protracted, random_fission",\
+    "speciation_probability", "Probability of forming a new species per forward time step",\
+    "mutation_rate" : "Mutation rate scaled per base per generation",\
+    "sigma" : "Abundance/Ne scaling factor",\
+    "sequence_length" : "Length in bases of the sequence to simulate",\
 }
 
 

@@ -8,8 +8,6 @@ import itertools
 import msprime
 import math
 import os
-# pylint: disable=C0103
-# pylint: disable=R0903
 
 from stats import *
 
@@ -18,7 +16,10 @@ LOGGER = logging.getLogger(__name__)
 
 class species(object):
 
-    def __init__(self, name = "", growth="constant", abundance = 1,
+    def __init__(self, name = "", species_params={"mutation_rate":0.00000222,
+                                                  "sigma":1000,
+                                                  "sequence_length":570},
+                growth="constant", abundance = 1,
                 meta_abundance = 1, divergence_time = 0, migration_rate=0,
                 abundance_through_time={}):
 
@@ -26,9 +27,9 @@ class species(object):
         ## a 'parameter' even though I know migration rate is a
         ## parameter too
         self.paramsdict = dict([
-                            ("sigma", 100),
-                            ("sequence_length", 570),
-                            ("mutation_rate", 0.00000022),
+                            ("sigma", species_params["sigma"]),
+                            ("sequence_length", species_params["sequence_length"]),
+                            ("mutation_rate", species_params["mutation_rate"]),
                             ("sample_size_local", 10),
                             ("sample_size_meta", 10),
                             ("abundance_through_time", collections.OrderedDict(sorted(abundance_through_time.items()))),
@@ -230,19 +231,35 @@ class species(object):
         tree.draw(path="/tmp/{}.svg".format(self.name.replace(" ", "_")), height=500, width=1000, node_labels=node_labels, node_colours=node_colours)
 
 
-    def get_sumstats(self):
+    def get_sumstats(self, samps=np.array([]), metasamps=np.array([])):
 
         LOGGER.debug("Entering get_sumstats - {}".format(self.name))
-        ## pairwise diversity per base
-        self.stats["pi_tot"] = self.tree_sequence.get_pairwise_diversity()\
-                                / self.paramsdict["sequence_length"]
 
         self.stats["segsites_tot"] = len(next(self.tree_sequence.haplotypes()))
+        LOGGER.debug("segsites_tot {}".format(self.stats["segsites_tot"]))
 
         all_haps = self.tree_sequence.haplotypes()
         ## Get population specific haplotypes
-        island_haps = [next(all_haps) for _ in range(self.paramsdict["sample_size_local"])]
-        meta_haps = [next(all_haps) for _ in range(self.paramsdict["sample_size_meta"])]
+        if samps.size > 0 and samps.size > 0:
+            LOGGER.debug("samps full - samps and metasamps - {} {}".format(samps, metasamps))
+            ## pairwise diversity per base for local and meta samples combined
+            self.stats["pi_tot"] = self.tree_sequence.get_pairwise_diversity(np.concatenate([samps, metasamps]))\
+                                    / self.paramsdict["sequence_length"]
+            all_haps = list(all_haps)
+            island_haps = [all_haps[x] for x in samps]
+            meta_haps = [all_haps[x] for x in metasamps]
+        elif samps.size == 0 and samps.size == 0:
+            LOGGER.debug("samps empty - samps and metasamps - {} {}".format(samps, metasamps))
+            self.stats["pi_tot"] = self.tree_sequence.get_pairwise_diversity()\
+                                    / self.paramsdict["sequence_length"]
+            LOGGER.debug("pi_tot {}".format(self.stats["pi_tot"]))
+            try:
+                island_haps = [next(all_haps) for _ in range(self.paramsdict["sample_size_local"])]
+                meta_haps = [next(all_haps) for _ in range(self.paramsdict["sample_size_meta"])]
+            except Exception as inst:
+                raise MESSError("Error fetching local/meta haplotypes {}".format(self.name))
+        else:
+            raise Exception("Problem in get_sumstats: Samps and metasamps must either both be empty or both contain a list of samples")
 
         ## Calculate S for each population
         ## Turn to an np array and transpose it, then test if all elements

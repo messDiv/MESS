@@ -69,8 +69,6 @@ class SGD(object):
                                                                       for y in range(self.nbins)]
             dat = self.sgd.ravel()
 
-        print(dat)
-        print(self._sgd_header)
         return pd.Series(dat, index=self._sgd_header)
 
 
