@@ -256,7 +256,7 @@ class Metacommunity(object):
             tups = list(zip(traits["name"], traits["value"]))
             ids = np.array([x[0] for x in tups])
             trait_values = np.array([x[1] for x in tups])
-            self.paramsdict["filtering_optimum"] = np.random.normal(loc=np.mean(trait_values), scale=np.std(trait_values), size=1)
+            self.paramsdict["filtering_optimum"] = np.random.normal(loc=np.mean(trait_values), scale=np.std(trait_values), size=1)[0]
 
         ## Attempt to read tree/ids/abunds/traits from a file. If it fails, fall back to just
         ## try reading the old list of abundances format.
