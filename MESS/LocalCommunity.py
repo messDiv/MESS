@@ -50,8 +50,7 @@ class LocalCommunity(object):
                         ("K", K),
                         ("colrate", colrate),
                         ("age", 100000),
-                        ("mig_clust_size", mig_clust_size),
-                        ("filtering_optimum", 25)
+                        ("mig_clust_size", mig_clust_size)
         ])
 
         ## A dictionary for holding prior ranges for values we're interested in
@@ -262,12 +261,6 @@ class LocalCommunity(object):
                 ## Must reup the local community if you change the mode
                 self.paramsdict[param] = newvalue
 
-            elif param == "filtering_optimum":
-                tmp = np.random.normal(loc=self.region.get_trait_stats(self.local_community)[3],\
-                                                          scale=self.region.get_trait_stats(self.local_community)[4],\
-                                                          size=1)
-                self.paramsdict[param] = tmp
-
             else:
                 self.paramsdict[param] = newvalue
         except Exception as inst:
@@ -432,7 +425,7 @@ class LocalCommunity(object):
                 reject = reject + 1
                 victim = random.choice(self.local_community)
                 victim_trait = self.region.get_trait(victim)
-                death_Probability = 1 - (np.exp(-((victim_trait - self.paramsdict["filtering_optimum"]) ** 2)/self.region.paramsdict["ecological_strength"]))
+                death_Probability = 1 - (np.exp(-((victim_trait - self.region.metacommunity.paramsdict["filtering_optimum"]) ** 2)/self.region.paramsdict["ecological_strength"]))
 
             self.rejections.append(reject)
 
@@ -488,13 +481,13 @@ class LocalCommunity(object):
                 LOGGER.debug("\nExtinction victim info \n{}\n{}\nOffspring {}".format(victim, vic_info, offspring))
 
                 ## Speciation process nonsense
-                ## Update ancestry and population size change history for any species with this one as 
+                ## Update ancestry and population size change history for any species with this one as
                 ## direct ancestor
                 ancestor = vic_info["ancestor"]
                 anc_size_changes = vic_info["abundances_through_time"]
                 self.local_info.loc["ancestor"][self.local_info.loc["ancestor"] == victim] = ancestor
                 ## I don't think you can vectorize the update
-                
+
                 for o in offspring:
                     LOGGER.debug("offspring {} {}".format(o, self.local_info[o]["abundances_through_time"]))
                     self.local_info[o]["abundances_through_time"].update(anc_size_changes)
@@ -754,7 +747,7 @@ class LocalCommunity(object):
                 if not sp:
                     continue
                 sizechange_times = sorted(dat[sp]["abundances_through_time"], reverse=True)
-    
+
                 size = hmean([dat[sp]["abundances_through_time"][x]*1000 for x in sizechange_times])
                 pop_local = msprime.PopulationConfiguration(sample_size = 10, initial_size = size, growth_rate = 0)
                 pop_cfgs.append(pop_local)
@@ -928,7 +921,6 @@ LOCAL_PARAMS = {
     "colrate" : "Colonization rate into local community",\
     "mig_clust_size" : "# of individuals per colonization event",\
     "age" : "Local community age",\
-    "filtering_optimum" : "optimum trait value, only used during environmental filtering model",\
 }
 
 

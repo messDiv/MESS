@@ -47,6 +47,7 @@ class Metacommunity(object):
                         ("death_proportion", 0.5),
                         ("trait_rate", 5),
                         ("ecological_strength", 25),
+                        ("filtering_optimum", 1)
         ])
 
         ## elite hackers only internal dictionary, normally you shouldn't mess with this
@@ -144,6 +145,9 @@ class Metacommunity(object):
                 self.paramsdict[param] = float(newvalue)
 
             elif param == "ecological_strength":
+                self.paramsdict[param] = float(newvalue)
+
+            elif param == "filtering_optimum":
                 self.paramsdict[param] = float(newvalue)
 
             elif param == "J":
@@ -252,6 +256,7 @@ class Metacommunity(object):
             tups = list(zip(traits["name"], traits["value"]))
             ids = np.array([x[0] for x in tups])
             trait_values = np.array([x[1] for x in tups])
+            self.paramsdict["filtering_optimum"] = np.random.normal(loc=np.mean(trait_values), scale=np.std(trait_values), size=1)
 
         ## Attempt to read tree/ids/abunds/traits from a file. If it fails, fall back to just
         ## try reading the old list of abundances format.
@@ -373,6 +378,7 @@ LOCAL_PARAMS = {
     "logser_shape" : "If logser: Shape parameter of the distribution",\
     "trait_rate" : "Trait evolution rate parameter",\
     "ecological_strength" : "Strength of community assembly process on phenotypic change",\
+    "filtering_optimum" : "optimum trait value, only used during environmental filtering model",\
 }
 
 
