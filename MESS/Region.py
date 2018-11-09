@@ -17,9 +17,11 @@ class Region(object):
 
     """
 
-    def __init__(self, name, quiet=False, **kwargs):
+    def __init__(self, name, quiet=False, log_files=False, **kwargs):
         if not name:
             raise MESSError(REQUIRE_NAME)
+
+        self._log_files = log_files
 
         ## Do some checking here to make sure the name doesn't have
         ## special characters, spaces, or path delimiters. Allow _ and -.
@@ -442,8 +444,10 @@ class Region(object):
         ## This is a little slow for logser, and also performance scales with metacommunity size
         self._reset_metacommunity()
 
-        ## Get an output directory for dumping data
-        outdir = self._get_simulation_outdir()
+        if self._log_files:
+            ## Get an output directory for dumping data
+            outdir = self._get_simulation_outdir()
+            self.write_params(outdir=outdir)
 
         step = 0
         ## Create an temp function to test whether we've reached the end of this simulation
@@ -468,7 +472,6 @@ class Region(object):
         for name, island in self.islands.items():
             statsdf = island.get_stats()
 
-        self.write_params(outdir=outdir)
         return statsdf
 
 

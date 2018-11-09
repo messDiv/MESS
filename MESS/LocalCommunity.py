@@ -899,8 +899,10 @@ class LocalCommunity(object):
             #                         self.paramsdict["name"] + "-simout.txt")
             #self.stats.to_csv(statsfile, na_rep=0, float_format='%.5f')
 
-            megalog = os.path.join(self._hackersonly["outdir"],
-                                     self.paramsdict["name"] + "-{}-megalog.txt".format(self._lambda()))
+            ## If you don't actually want all the intermediate files then we won't make them
+            if self.region._log_files:
+                megalog = os.path.join(self._hackersonly["outdir"],
+                                         self.paramsdict["name"] + "-{}-megalog.txt".format(self._lambda()))
             ## concatenate all species results and transpose the data frame so rows are species
             fullstats = pd.concat([sp.stats for sp in self.species], axis=1).T
             fullstats.to_csv(megalog, index_label=False)
