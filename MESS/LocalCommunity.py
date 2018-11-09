@@ -263,10 +263,7 @@ class LocalCommunity(object):
                 self.paramsdict[param] = newvalue
 
             elif param == "filtering_optimum":
-                tmp = np.random.normal(loc=self.region.get_trait_stats(self.local_community)[3],\
-                                                          scale=self.region.get_trait_stats(self.local_community)[4],\
-                                                          size=1)
-                self.paramsdict[param] = tmp
+                self.paramsdict[param] = newvalue
 
             else:
                 self.paramsdict[param] = newvalue
@@ -602,7 +599,7 @@ class LocalCommunity(object):
             ## Speciation process
             ##############################################
             if self.region.paramsdict["speciation_model"] != "none" and\
-               np.random.random_sample() < self.Region.paramsdict["speciation_probability"]:
+               np.random.random_sample() < self.region.paramsdict["speciation_probability"]:
 
                self.speciate()
 
@@ -796,7 +793,7 @@ class LocalCommunity(object):
                 if sp == '':
                     continue
                 sp_obj = species(name = sp,
-                         species_params = self.Region.get_species_params(),
+                         species_params = self.region.get_species_params(),
                          divergence_time = dat[sp].loc['colonization_times'],\
                          growth = self.region.paramsdict["population_growth"],\
                          abundance = dat[sp].loc["local_abund"],\
@@ -825,7 +822,7 @@ class LocalCommunity(object):
                 abundances_through_time = {self.current_time - x:y for x, y in list(self.local_info[name]["abundances_through_time"].items())}
                 try:
                     sp = species(name = name,
-                                 species_params = self.Region.get_species_params(),
+                                 species_params = self.region.get_species_params(),
                                  divergence_time = tdiv,\
                                  growth = self.region.paramsdict["population_growth"],\
                                  abundance = local_abund,\
@@ -910,9 +907,9 @@ class LocalCommunity(object):
             if self.region._log_files:
                 megalog = os.path.join(self._hackersonly["outdir"],
                                          self.paramsdict["name"] + "-{}-megalog.txt".format(self._lambda()))
-            ## concatenate all species results and transpose the data frame so rows are species
-            fullstats = pd.concat([sp.stats for sp in self.species], axis=1).T
-            fullstats.to_csv(megalog, index_label=False)
+                ## concatenate all species results and transpose the data frame so rows are species
+                fullstats = pd.concat([sp.stats for sp in self.species], axis=1).T
+                fullstats.to_csv(megalog, index_label=False)
         except Exception as inst:
             LOGGER.error("Error in get_stats() - {}".format(inst))
             raise
