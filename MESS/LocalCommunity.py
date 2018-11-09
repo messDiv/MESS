@@ -108,6 +108,11 @@ class LocalCommunity(object):
                    "generation",
                    "K",
                    "colrate",
+                   "speciation_probability",
+                   "sigma",
+                   "trait_rate",
+                   "ecological_strength",
+                   "filtering_optimum",
                    "colrate_calculated",
                    "extrate_calculated",
                    "R",
@@ -856,12 +861,20 @@ class LocalCommunity(object):
         LOGGER.debug("Entering get_stats()")
         self.simulate_seqs()
         LOGGER.debug("First 5 species - \n{}".format(self.species[:5]))
+        ## Model parameters
         self.stats._lambda = self._lambda()
         self.stats.generation = self.current_time
         self.stats.K = self.paramsdict["K"]
         self.stats.colrate = self.paramsdict["colrate"]
+        self.stats.speciation_probability = self.region.paramsdict["speciation_probability"]
+        self.stats.sigma = self.region.paramsdict["sigma"]
+        self.stats.trait_rate = self.region.metacommunity.paramsdict["trait_rate"]
+        self.stats.ecological_strength = self.region.metacommunity.paramsdict["ecological_strength"]
+        ## Pseudo-parameters
+        self.stats.filtering_optimum = self.region.metacommunity.paramsdict["filtering_optimum"]
         self.stats.colrate_calculated = self.colonizations/float(self.current_time)
         self.stats.extrate_calculated = self.extinctions/float(self.current_time)
+        ## Model sumstats
         self.stats.R = len(set(self.local_community))
         self.stats.shannon = shannon(self.get_abundances(octaves=False))
 
