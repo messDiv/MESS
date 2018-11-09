@@ -73,7 +73,7 @@ def getregion(args, region_params, meta_params, island_params):
     if not os.path.exists(project_dir):
         os.mkdir(project_dir)
 
-    data = MESS.Region(sim_name)
+    data = MESS.Region(sim_name, quiet=args.quiet, log_files=args.log_files)
 
     ## Populate the parameters of the Region
     for param in region_params:
@@ -191,6 +191,9 @@ def parse_command_line():
     parser.add_argument('-d', action='store_true', dest="debug",
         help="print lots more info to mess_log.txt.")
 
+    parser.add_argument('-l', action='store_true', dest="log_files",
+        help="Write out lots of information in one directory per simulation.")
+    
     parser.add_argument('-v', action='version', 
         version=str(pkg_resources.get_distribution('mess')),
         help=argparse.SUPPRESS)
