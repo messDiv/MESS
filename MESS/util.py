@@ -8,8 +8,8 @@ import os
 import logging
 LOGGER = logging.getLogger(__name__)
 
-from stats import *
-from SGD import SGD
+from .stats import *
+from .SGD import SGD
 
 ## Custom exception class
 class MESSError(Exception):

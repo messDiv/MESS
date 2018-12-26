@@ -9,7 +9,7 @@ import os
 # pylint: disable=C0103
 # pylint: disable=R0903
 
-from stats import *
+from .stats import *
 
 import logging
 LOGGER = logging.getLogger(__name__)
@@ -31,7 +31,13 @@ class SGD(object):
         flatten = False
         if ndims == 1:
             flatten = True
-    
+
+        ##FIXME!!!!! This is a band-aid! To remove the original sample
+        ## This is not being used since rn i've got empty demes switched on, which should do the same thing
+        #idx = np.argmax(pis)
+        #pis = np.delete(pis, idx)
+        #dxys = np.delete(dxys, idx)
+
         if not len(pis):
             shape = (nbins, nbins) if ndims == 2 else (nbins,)
             hist = np.zeros(shape)

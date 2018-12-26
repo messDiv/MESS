@@ -67,7 +67,7 @@ class LocalCommunity(object):
         ##  * outdir is inherited from the Region.simulate() command, so users
         ##      should normally not mess with this.
         self._hackersonly = dict([
-                        ("allow_empty", False),
+                        ("allow_empty", True),
                         ("outdir", []),
         ])
 
@@ -346,7 +346,7 @@ class LocalCommunity(object):
         try:
             ## Always log size changes through time
             abunds = collections.Counter(self.local_community)
-            LOGGER.debug("_log \n{}".format(self.local_info))
+            LOGGER.debug("_log {} - gen {}\n{}".format(self.local_info, self.name, self.current_time))
             LOGGER.debug("abunds \n{}".format(abunds))
             for species in self.local_info:
                 self.local_info[species]["abundances_through_time"][self.current_time] = abunds[species]
@@ -486,7 +486,7 @@ class LocalCommunity(object):
                 self.extinction_times.append(self.current_time - self.local_info[victim]["colonization_times"])
                 vic_info = self.local_info.pop(victim)
                 offspring = self.local_info.columns[self.local_info.loc["ancestor"] == victim]
-                LOGGER.debug("\nExtinction victim info \n{}\n{}\nOffspring {}".format(victim, vic_info, offspring))
+                #LOGGER.debug("\nExtinction victim info \n{}\n{}\nOffspring {}".format(victim, vic_info, offspring))
 
                 ## Speciation process nonsense
                 ## Update ancestry and population size change history for any species with this one as
@@ -736,6 +736,16 @@ class LocalCommunity(object):
 
     def sim_seqs(self):
         self.species = []
+        #import pdb; pdb.set_trace()
+        try:
+            ## Hax. Remove the empty deme from local info. This _might_ break the fancy plots.
+            self.local_community = [x for x in self.local_community if x != None]
+            import sys
+            LOGGER.error("FUCKING WHAT {}\n{}".format(sys.version, sys.path))
+            self.local_info = self.local_info.drop(np.NaN, axis=1)
+        except:
+            ## df.drop will raise if it doesn't find a matching label to drop, in which case we're done.
+            pass
 
         self.local_info.loc["meta_abund"] = [self.region.get_abundance(x) for x in self.local_info]
         self.local_info.loc["local_abund"] = [self.local_community.count(x) for x in self.local_info]
@@ -780,7 +790,6 @@ class LocalCommunity(object):
                 ## Enable this at your own peril, it will dump a ton of shit to stdout
                 #debug.print_history()
             except:
-                import pdb; pdb.set_trace()
                 raise
 
             tree_sequence = msprime.simulate(length = 600,\
@@ -796,13 +805,20 @@ class LocalCommunity(object):
                 ## Skip the metacommunity, which doesn't have a parent :'(
                 if sp == '':
                     continue
+                try:
+                    migration_rate = dat[sp]["post_colonization_migrants"]/float(dat[col]['colonization_times'])
+                except ZeroDivisionError as inst:
+                    ## This should only happen when coltime is 0, which should be never
+                    LOGGER.error("Got bad coltime - {}".format(dat[col]))
+                    migration_rate = 0
+
                 sp_obj = species(name = sp,
                          species_params = self.region.get_species_params(),
                          divergence_time = dat[sp].loc['colonization_times'],\
                          growth = self.region.paramsdict["population_growth"],\
                          abundance = dat[sp].loc["local_abund"],\
                          meta_abundance = dat[sp]["meta_abund"],
-                         migration_rate = dat[sp]["post_colonization_migrants"]/float(dat[col]['colonization_times']),\
+                         migration_rate = migration_rate,\
                          abundance_through_time = {self.current_time - x:y for x, y in list(dat[sp]["abundances_through_time"].items())})
                 sp_obj.tree_sequence = tree_sequence
                 samps = tree_sequence.samples(population=idx)
@@ -812,6 +828,7 @@ class LocalCommunity(object):
 
     def simulate_seqs(self):
         self.sim_seqs()
+        ##FIXME Oh boy. This was hacked for the speciation code. Gotta clean this up.
         return
         self.species = []
 #        for name, coltime in self._get_singleton_species().loc["colonization_times"].items():
@@ -872,8 +889,11 @@ class LocalCommunity(object):
         self.stats.ecological_strength = self.region.metacommunity.paramsdict["ecological_strength"]
         ## Pseudo-parameters
         self.stats.filtering_optimum = self.region.metacommunity.paramsdict["filtering_optimum"]
-        self.stats.colrate_calculated = self.colonizations/float(self.current_time)
-        self.stats.extrate_calculated = self.extinctions/float(self.current_time)
+        try:
+            self.stats.colrate_calculated = self.colonizations/float(self.current_time)
+            self.stats.extrate_calculated = self.extinctions/float(self.current_time)
+        except ZeroDivisionError as inst:
+            raise MESSError("Current time should never be zero, check parameter settings.")
         ## Model sumstats
         self.stats.R = len(set(self.local_community))
         self.stats.shannon = shannon(self.get_abundances(octaves=False))
