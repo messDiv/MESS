@@ -9,7 +9,7 @@ import msprime
 import math
 import os
 
-from stats import *
+from .stats import *
 
 import logging
 LOGGER = logging.getLogger(__name__)
@@ -228,7 +228,7 @@ class species(object):
         node_labels = {
             u: (str(u) if u < 8 else "{} (t={:.2f})".format(u, tree.time(u))) 
             for u in tree.nodes()}
-        tree.draw(path="/tmp/{}.svg".format(self.name.replace(" ", "_")), height=500, width=1000, node_labels=node_labels, node_colours=node_colours)
+        #tree.draw(path="/tmp/{}.svg".format(self.name.replace(" ", "_")), height=500, width=1000, node_labels=node_labels, node_colours=node_colours)
 
 
     def get_sumstats(self, samps=np.array([]), metasamps=np.array([])):
@@ -240,8 +240,8 @@ class species(object):
 
         all_haps = self.tree_sequence.haplotypes()
         ## Get population specific haplotypes
-        if samps.size > 0 and samps.size > 0:
-            LOGGER.debug("samps full - samps and metasamps - {} {}".format(samps, metasamps))
+        if samps.size > 0 and metasamps.size > 0:
+            LOGGER.debug("samps specified - samps and metasamps - {} {}".format(samps, metasamps))
             ## pairwise diversity per base for local and meta samples combined
             self.stats["pi_tot"] = self.tree_sequence.get_pairwise_diversity(np.concatenate([samps, metasamps]))\
                                     / self.paramsdict["sequence_length"]
