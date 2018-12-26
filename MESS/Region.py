@@ -340,6 +340,8 @@ class Region(object):
         append = 'a'
         if force:
             append = 'w'
+            ## Prevent from shooting yourself in the foot with -f
+            os.rename(simfile, simfile+".bak")
 
         ## Decide whether to print the header, if stuff is already in there then
         ## don't print the header, unless you're doing force because this opens
@@ -384,7 +386,10 @@ class Region(object):
             ipyclient[:].use_dill()
             lbview = ipyclient.load_balanced_view()
             for i in xrange(sims):
-                parallel_jobs[i] = lbview.apply(simulate, *(self, gens[i]))
+                if do_lambda:
+                    parallel_jobs[i] = lbview.apply(simulate, self, gens[i], 0)
+                else:
+                    parallel_jobs[i] = lbview.apply(simulate, self, 0, gens[i])
 
             ## Wait for all jobs to finish
             start = time.time()
@@ -435,6 +440,9 @@ class Region(object):
         if _lambda > 0 and nsteps > 0:
             LOGGER.error("simulate accepts only one of either lambda or nsteps args")
             return
+        if _lambda = 0 and nsteps = 0:
+            msg = "Either _lambda or nsteps must be specified."
+            raise MESSError(msg)
 
         ## Not as big of a deal on ipp simulations, but if you're running on a local computer
         ## the local communities need to get reupped for each simulation.
@@ -546,10 +554,10 @@ class Region(object):
     #def get_local_phy(self):
 
 
-def simulate(data, time=time, quiet=True):
+def simulate(data, _lambda=0, nsteps=0, quiet=True):
     import os
     LOGGER.debug("Entering sim - {} on pid {}\n{}".format(data, os.getpid(), data.paramsdict))
-    res = data.simulate(_lambda=time, quiet=quiet)
+    res = data.simulate(_lambda=_lambda, nsteps=nsteps, quiet=quiet)
     LOGGER.debug("Leaving sim - {} on pid {}\n{}".format(data, os.getpid(),\
                                                         [str(x) for x in data.islands.values()]))
     return res
