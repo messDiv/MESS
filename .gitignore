@@ -1,3 +1,4 @@
+*.nfs*
 *.ipynb_checkpoints/
 *.pyc
 .Rproj.user

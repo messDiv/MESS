@@ -346,7 +346,7 @@ class LocalCommunity(object):
         try:
             ## Always log size changes through time
             abunds = collections.Counter(self.local_community)
-            LOGGER.debug("_log {} - gen {}\n{}".format(self.local_info, self.name, self.current_time))
+            LOGGER.debug("_log - gen {} {}\n{}".format(self.name, self.current_time, self.local_info))
             LOGGER.debug("abunds \n{}".format(abunds))
             for species in self.local_info:
                 self.local_info[species]["abundances_through_time"][self.current_time] = abunds[species]
@@ -410,7 +410,6 @@ class LocalCommunity(object):
             self.local_info[sp] = [0, 0, OrderedDict(), "", [], 0]
 
         self.founder_flags = [True] * len(self.local_community)
-
         if not quiet:
             print("    Initializing local community:")
             print("      N species = {}".format(len(set(self.local_community))))
@@ -423,37 +422,46 @@ class LocalCommunity(object):
 
         ## TODO: Is this still true?
         ##currently this will fail under volcanic model because the entire local community will go extinct
-        if self.region.paramsdict["community_assembly_model"] == "filtering":
-            death_Probability = 0
-            reject = 0
+        done = False
+        reject = 0
+        victim = ''
+        while not done:
+            victim = random.choice(self.local_community)
+            ## Emtpy niche always dies and neutral model always accepts selection regardless
+            if victim == None or self.region.paramsdict["community_assembly_model"] == "neutral":
+                done = True
 
-            ## While the death probability is less than random uniform numeber between 0 and 1,
-            ## keep selecting a new victime to potentially die
-            while death_Probability < np.random.uniform(0,1):
-                reject = reject + 1
-                victim = random.choice(self.local_community)
-                victim_trait = self.region.get_trait(victim)
-                death_Probability = 1 - (np.exp(-((victim_trait - self.region.metacommunity.paramsdict["filtering_optimum"]) ** 2)/self.region.metacommunity.paramsdict["ecological_strength"]))
+            elif self.region.paramsdict["community_assembly_model"] == "filtering":
 
-            self.rejections.append(reject)
+                try:
+                    ## While the death probability is less than random uniform numeber between 0 and 1,
+                    ## keep selecting a new victime to potentially die
+                    death_thresh = np.random.uniform(0,1)
+                    victim_trait = self.region.get_trait(victim)
+                    death_probability = 1 - (np.exp(-((victim_trait - self.region.metacommunity.paramsdict["filtering_optimum"]) ** 2)/self.region.metacommunity.paramsdict["ecological_strength"]))
+                    death_probability = (1 - death_probability) * 0.25 + death_probability
+                    LOGGER.debug("rj {} thr {} trait {} dprob {} opt {}".format(reject, death_thresh, victim_trait, death_probability, self.region.metacommunity.paramsdict["filtering_optimum"]))
+                    if death_probability > death_thresh:
+                        done = True
+                    else:
+                        reject = reject + 1
+                except Exception as inst:
+                    raise MESSError("Error in death_step() - {}".format(inst))
 
-
-        if self.region.paramsdict["community_assembly_model"] == "competition":
-            death_Probability = 0
-            reject = 0
-            mean_local_trait = self.region.get_trait_stats(self.local_community)[0]
-
-            while death_Probability < np.random.uniform(0,1):
-                reject = reject + 1
-                victim = random.choice(self.local_community)
+            elif self.region.paramsdict["community_assembly_model"] == "competition":
+                ## Filter out empty niche space because it doesn't have trait values
+                ##FIXME this is suboptimal, I'm sure, since each death step will walk the local community list each time.
+                death_thresh = np.random.uniform(0,1)
+                mean_local_trait = self.region.get_trait_stats([x for x in self.local_community if x != None])[0]
                 victim_trait = self.region.get_trait(victim)
                 death_Probability = (np.exp(-((victim_trait - mean_local_trait) ** 2)/self.region.metacommunity.paramsdict["ecological_strength"]))
 
-            self.rejections.append(reject)
+                if death_probability > death_thresh:
+                    done = True
+                else:
+                    reject = reject + 1
 
-        else:
-            ## If not trait based just select one individual randomly (neutral0
-            victim = random.choice(self.local_community)
+        self.rejections.append(reject)
 
         ## If no invasive has invaded then just do the normal sampling
         if self.invasive == -1:
@@ -466,19 +474,24 @@ class LocalCommunity(object):
                 self.survived_invasives += 1
                 victim = random.choice(self.local_community)
 
-        ## Clean up local community list and founder flag list
-        idx = self.local_community.index(victim)
-        self.local_community.pop(idx)
-        self.founder_flags.pop(idx)
+        try:
+            ## Clean up local community list and founder flag list
+            idx = self.local_community.index(victim)
+            self.local_community.pop(idx)
+            self.founder_flags.pop(idx)
 
-        ## If the species of the victim went locally extinct then clean up local_info
-        self._test_local_extinction(victim)
+            ## If the species of the victim went locally extinct then clean up local_info
+            self._test_local_extinction(victim)
+        except Exception as inst:
+            import pdb; pdb.set_trace()
+            raise inst
 
 
     def _test_local_extinction(self, victim):
         ## Record local extinction events
         ancestor = victim
-        if not victim in self.local_community:
+        ## Don't clean up after emtpy niche space
+        if not victim in self.local_community and victim != None:
             self.extinctions += 1
             try:
                 ## Record the lifetime of this species and remove their record from divergence_times
@@ -591,13 +604,18 @@ class LocalCommunity(object):
                 self.founder_flags.extend([False] * self.paramsdict["mig_clust_size"])
                 self.colonizations += 1
             else:
-                self.death_step()
-                ## Sample all available from local community (community grows slow in volcanic model)
-                ## This is the fastest way to sample from a list. >4x faster than np.random.choice
-                chx = random.choice(self.local_community)
-                self.local_community.append(chx)
-                idx = self.local_community.index(chx)
-                self.founder_flags.append(self.founder_flags[idx])
+                try:
+                    self.death_step()
+                    ## Sample all available from local community (community grows slow in volcanic model)
+                    ## This is the fastest way to sample from a list. >4x faster than np.random.choice
+                    chx = random.choice(self.local_community)
+                    self.local_community.append(chx)
+                    idx = self.local_community.index(chx)
+                    self.founder_flags.append(self.founder_flags[idx])
+                except Exception as inst:
+                    import pdb; pdb.set_trace()
+                    LOGGER.error("Exception in step() - {}".format(inst))
+                    raise inst
 
             ##############################################
             ## Speciation process
@@ -736,12 +754,9 @@ class LocalCommunity(object):
 
     def sim_seqs(self):
         self.species = []
-        #import pdb; pdb.set_trace()
         try:
             ## Hax. Remove the empty deme from local info. This _might_ break the fancy plots.
             self.local_community = [x for x in self.local_community if x != None]
-            import sys
-            LOGGER.error("FUCKING WHAT {}\n{}".format(sys.version, sys.path))
             self.local_info = self.local_info.drop(np.NaN, axis=1)
         except:
             ## df.drop will raise if it doesn't find a matching label to drop, in which case we're done.
@@ -750,7 +765,6 @@ class LocalCommunity(object):
         self.local_info.loc["meta_abund"] = [self.region.get_abundance(x) for x in self.local_info]
         self.local_info.loc["local_abund"] = [self.local_community.count(x) for x in self.local_info]
         self.local_info.loc["colonization_times"] = self.current_time - self.local_info.loc["colonization_times"]
-        #import pdb; pdb.set_trace()
         for cname, species_list in self._get_clades().items():
             ## Just get a slice of the local_info df that represents the species of interest
             dat = self.local_info[species_list]

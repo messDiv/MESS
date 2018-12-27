@@ -511,7 +511,6 @@ class Region(object):
 
     def get_trait(self, loc_id):
         return self.metacommunity.community['trait_values'][self.metacommunity.community["ids"] == loc_id]
-        self.local_info
 
 
     def get_trait_stats(self, local_com):
