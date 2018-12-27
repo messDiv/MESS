@@ -433,7 +433,7 @@ class LocalCommunity(object):
                 reject = reject + 1
                 victim = random.choice(self.local_community)
                 victim_trait = self.region.get_trait(victim)
-                death_Probability = 1 - (np.exp(-((victim_trait - self.region.metacommunity.paramsdict["filtering_optimum"]) ** 2)/self.region.paramsdict["ecological_strength"]))
+                death_Probability = 1 - (np.exp(-((victim_trait - self.region.metacommunity.paramsdict["filtering_optimum"]) ** 2)/self.region.metacommunity.paramsdict["ecological_strength"]))
 
             self.rejections.append(reject)
 
@@ -447,7 +447,7 @@ class LocalCommunity(object):
                 reject = reject + 1
                 victim = random.choice(self.local_community)
                 victim_trait = self.region.get_trait(victim)
-                death_Probability = (np.exp(-((victim_trait - mean_local_trait) ** 2)/self.region.paramsdict["ecological_strength"]))
+                death_Probability = (np.exp(-((victim_trait - mean_local_trait) ** 2)/self.region.metacommunity.paramsdict["ecological_strength"]))
 
             self.rejections.append(reject)
 

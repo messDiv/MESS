@@ -440,7 +440,7 @@ class Region(object):
         if _lambda > 0 and nsteps > 0:
             LOGGER.error("simulate accepts only one of either lambda or nsteps args")
             return
-        if _lambda = 0 and nsteps = 0:
+        if _lambda == 0 and nsteps == 0:
             msg = "Either _lambda or nsteps must be specified."
             raise MESSError(msg)
 
