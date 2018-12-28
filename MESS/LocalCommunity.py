@@ -346,7 +346,7 @@ class LocalCommunity(object):
         try:
             ## Always log size changes through time
             abunds = collections.Counter(self.local_community)
-            LOGGER.debug("_log - gen {} {}\n{}".format(self.name, self.current_time, self.local_info))
+            LOGGER.debug("_log - {} lambda {} gen {} {}\n{}".format(self.name, self._lambda(), self.current_time, self.local_info))
             LOGGER.debug("abunds \n{}".format(abunds))
             for species in self.local_info:
                 self.local_info[species]["abundances_through_time"][self.current_time] = abunds[species]
@@ -423,7 +423,7 @@ class LocalCommunity(object):
         done = False
         reject = 0
         victim = ''
-        survival_scalar = 0.25
+        survival_scalar = 0.5
         while not done:
             ## If reject is > 0, then this is a trait model that has chosen an individual
             ## at time 0, so we will keep looping here and sampling only real individuals
@@ -470,7 +470,7 @@ class LocalCommunity(object):
                 mean_local_trait = self.region.get_trait_stats([x for x in self.local_community if x != None])[0]
                 victim_trait = self.region.get_trait(victim)
                 death_probability = (np.exp(-((victim_trait - mean_local_trait) ** 2)/self.region.metacommunity.paramsdict["ecological_strength"]))
-                death_probability = (1 - death_probability) * survival_scalar*2 + death_probability
+                death_probability = (1 - death_probability) * survival_scalar + death_probability
                 LOGGER.debug("rj {} trait {} dprob {} dthr {} mean_loc {}".format(reject, victim_trait, death_probability, death_thresh, mean_local_trait))
 
                 if death_probability > death_thresh:
