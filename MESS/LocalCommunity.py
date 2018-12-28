@@ -346,7 +346,7 @@ class LocalCommunity(object):
         try:
             ## Always log size changes through time
             abunds = collections.Counter(self.local_community)
-            LOGGER.debug("_log - {} lambda {} gen {} {}\n{}".format(self.name, self._lambda(), self.current_time, self.local_info))
+            LOGGER.debug("_log - {} lambda {} gen {}\n{}".format(self.name, self._lambda(), self.current_time, self.local_info))
             LOGGER.debug("abunds \n{}".format(abunds))
             for species in self.local_info:
                 self.local_info[species]["abundances_through_time"][self.current_time] = abunds[species]
