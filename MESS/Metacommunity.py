@@ -314,9 +314,17 @@ class Metacommunity(object):
 
         self.community = np.zeros([self.paramsdict["nspecies"]], dtype=METACOMMUNITY_DTYPE)
         ## Populate the metacommunity ndarray
-        self.community["abundances"] = np.array(abundances)
-        self.community["ids"] = ids
-        self.community['trait_values'] = np.array(trait_values)
+        try:
+            self.community["abundances"] = np.array(abundances)
+            self.community["ids"] = ids
+            self.community['trait_values'] = np.array(trait_values)
+        except ValueError as inst:
+            msg = \
+"""
+  Attempting to set metacommunity size {} with {} species. This can happen sometimes
+  with the `logser` metacommunity simulation. Simplest to ignore and rerun it.
+"""
+            raise MESSError(msg.format(self.paramsdict["nspecies"], len(ids)))
 
         ## Calculate immigration probabilities
         self.paramsdict["J"] = np.sum(self.community["abundances"])
