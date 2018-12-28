@@ -12,7 +12,7 @@ Welcome to MESS's documentation!
    installation
    tutorial_cli
    tutorial_api
-
+   parameters
 
 Indices and tables
 ==================
