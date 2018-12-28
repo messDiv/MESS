@@ -509,6 +509,7 @@ class Region(object):
             except Exception as inst:
                 print("    Exception in fancy_plots() - {}".format(inst))
 
+    @memoize
     def get_trait(self, loc_id):
         return self.metacommunity.community['trait_values'][self.metacommunity.community["ids"] == loc_id]
 
