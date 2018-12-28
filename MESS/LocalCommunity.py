@@ -450,6 +450,11 @@ class LocalCommunity(object):
                 ## keep selecting a new victime to potentially die
                 death_thresh = np.random.uniform(0,1)
                 victim_trait = self.region.get_trait(victim)
+                ##FIXME Nothing here ever changes. The victim trait, and environmental optimum could be 
+                ##      calculated once at init, and could be used as a weight on abundance to sample
+                ##      the victim directly, without all this faffing around. This would be harder to
+                ##      pull off for the competition model since the target is always moving. Maybe
+                ##      better to leave them both the same for simplicity.
                 death_probability = 1 - (np.exp(-((victim_trait - self.region.metacommunity.paramsdict["filtering_optimum"]) ** 2)/self.region.metacommunity.paramsdict["ecological_strength"]))
                 death_probability = (1 - death_probability) * survival_scalar + death_probability
                 LOGGER.debug("rj {} trait {} dprob {} dthr {} opt {}".format(reject, victim_trait, death_probability, death_thresh, self.region.metacommunity.paramsdict["filtering_optimum"]))
