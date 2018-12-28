@@ -314,6 +314,9 @@ class Metacommunity(object):
 
         self.community = np.zeros([self.paramsdict["nspecies"]], dtype=METACOMMUNITY_DTYPE)
         ## Populate the metacommunity ndarray
+        ## FIXME: Sometimes the logser R call returns a number of species not == to the #
+        ##        requested, so this will raise. The better thing to do here would be to
+        ##        fix the R code.
         try:
             self.community["abundances"] = np.array(abundances)
             self.community["ids"] = ids
