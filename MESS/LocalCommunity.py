@@ -15,7 +15,7 @@ import sys
 import os
 import MESS
 
-from .util import MESSError, _tuplecheck, sample_param_range
+from .util import MESSError, _tuplecheck, sample_param_range, memoize
 from .stats import shannon, SAD
 from .species import species
 from .SGD import SGD
@@ -447,6 +447,7 @@ class LocalCommunity(object):
 
             death_thresh = np.random.uniform(0,1)
             victim_trait = self.region.get_trait(victim)
+            LOGGER.debug("wat {} {}".format(victim, victim_trait))
 
             if self.region.paramsdict["community_assembly_model"] == "filtering":
 
@@ -455,7 +456,8 @@ class LocalCommunity(object):
                 ##      the victim directly, without all this faffing around. This would be harder to
                 ##      pull off for the competition model since the target is always moving. Maybe
                 ##      better to leave them both the same for simplicity.
-                death_probability = 1 - (np.exp(-((victim_trait - self.region.metacommunity.paramsdict["filtering_optimum"]) ** 2)/self.region.metacommunity.paramsdict["ecological_strength"]))
+                death_probability = _get_filtering_death_prob(self.region, victim_trait)
+                #death_probability = 1 - (np.exp(-((victim_trait - self.region.metacommunity.paramsdict["filtering_optimum"]) ** 2)/self.region.metacommunity.paramsdict["ecological_strength"]))
                 death_probability = (1 - death_probability) * survival_scalar + death_probability
                 target_trait_val = self.region.metacommunity.paramsdict["filtering_optimum"]
 
@@ -972,6 +974,15 @@ class LocalCommunity(object):
             raise
 
         return pd.concat([self.stats, self.SGD.to_series()])
+
+
+@memoize
+def _get_filtering_death_prob(region, victim_trait):
+    try:
+        val = 1 - (np.exp(-((victim_trait - region.metacommunity.paramsdict["filtering_optimum"]) ** 2)/region.metacommunity.paramsdict["ecological_strength"]))
+    except Exception as inst:
+        raise MESSError("Error getting death prob using trait - {}".format(victim_trait))
+    return val
 
 
 #############################
