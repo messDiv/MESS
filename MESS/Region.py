@@ -129,7 +129,7 @@ class Region(object):
         return outdir
 
 
-    def _paramschecker(self, param, newvalue, quiet=False):
+    def _paramschecker(self, param, newvalue, quiet=True):
         """ Raises exceptions when params are set to values they should not be"""
         ## TODO: This should actually check the values and make sure they make sense
         try:
