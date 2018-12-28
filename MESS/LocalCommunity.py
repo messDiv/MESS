@@ -418,20 +418,25 @@ class LocalCommunity(object):
 
 
     def death_step(self):
-        ## Select the individual to die
 
+        ## Select the individual to die
+        victim = random.choice(self.local_community)
         done = False
+
+        ## Emtpy niche always dies and neutral model always accepts selection regardless
+        if victim == None or self.region.paramsdict["community_assembly_model"] == "neutral":
+            done = True
+
         reject = 0
-        victim = ''
         survival_scalar = 0.5
         while not done:
+            ## If you made it this far then you're doing a trait model.
+
             ## If reject is > 0, then this is a trait model that has chosen an individual
             ## at time 0, so we will keep looping here and sampling only real individuals
             ## Saves a bunch of time looping and grabbing None over and over, esp in early days
             if reject > 0:
                 victim = random.choice([x for x in self.local_community if x != None])
-            else:
-                victim = random.choice(self.local_community)
 
             ## This is the "get on with it" switch. Only for trait models, especially
             ## for when the competition model goes off the rails. Here ratchet up the
@@ -440,16 +445,11 @@ class LocalCommunity(object):
                 survival_scalar += .2
                 LOGGER.debug("Survival scalar bump - {}".format(survival_scalar))
 
-            ## Emtpy niche always dies and neutral model always accepts selection regardless
-            if victim == None or self.region.paramsdict["community_assembly_model"] == "neutral":
-                done = True
+            death_thresh = np.random.uniform(0,1)
+            victim_trait = self.region.get_trait(victim)
 
-            elif self.region.paramsdict["community_assembly_model"] == "filtering":
+            if self.region.paramsdict["community_assembly_model"] == "filtering":
 
-                ## While the death probability is less than random uniform numeber between 0 and 1,
-                ## keep selecting a new victime to potentially die
-                death_thresh = np.random.uniform(0,1)
-                victim_trait = self.region.get_trait(victim)
                 ##FIXME Nothing here ever changes. The victim trait, and environmental optimum could be 
                 ##      calculated once at init, and could be used as a weight on abundance to sample
                 ##      the victim directly, without all this faffing around. This would be harder to
@@ -457,26 +457,19 @@ class LocalCommunity(object):
                 ##      better to leave them both the same for simplicity.
                 death_probability = 1 - (np.exp(-((victim_trait - self.region.metacommunity.paramsdict["filtering_optimum"]) ** 2)/self.region.metacommunity.paramsdict["ecological_strength"]))
                 death_probability = (1 - death_probability) * survival_scalar + death_probability
-                LOGGER.debug("rj {} trait {} dprob {} dthr {} opt {}".format(reject, victim_trait, death_probability, death_thresh, self.region.metacommunity.paramsdict["filtering_optimum"]))
-                if death_probability > death_thresh:
-                    done = True
-                else:
-                    reject = reject + 1
+                target_trait_val = self.region.metacommunity.paramsdict["filtering_optimum"]
 
             elif self.region.paramsdict["community_assembly_model"] == "competition":
-                ## Filter out empty niche space because it doesn't have trait values
-                ##FIXME this is suboptimal, I'm sure, since each death step will walk the local community list each time.
-                death_thresh = np.random.uniform(0,1)
-                mean_local_trait = self.region.get_trait_stats([x for x in self.local_community if x != None])[0]
-                victim_trait = self.region.get_trait(victim)
+                mean_local_trait = self.region.get_trait_stats(self.local_community, mean_only=True)
                 death_probability = (np.exp(-((victim_trait - mean_local_trait) ** 2)/self.region.metacommunity.paramsdict["ecological_strength"]))
                 death_probability = (1 - death_probability) * survival_scalar + death_probability
-                LOGGER.debug("rj {} trait {} dprob {} dthr {} mean_loc {}".format(reject, victim_trait, death_probability, death_thresh, mean_local_trait))
+                target_trait_val = mean_local_trait
 
-                if death_probability > death_thresh:
-                    done = True
-                else:
-                    reject = reject + 1
+            LOGGER.debug("rj {} trait {} dprob {} dthr {} target {}".format(reject, victim_trait, death_probability, death_thresh, target_trait_val))
+            if death_probability > death_thresh:
+                done = True
+            else:
+                reject = reject + 1
 
         self.rejections.append(reject)
 
@@ -954,8 +947,8 @@ class LocalCommunity(object):
             self.stats.var_regional_traits = trait_stats[3]
             self.stats.reg_loc_mn_trait_dif = trait_stats[4]
             self.stats.reg_loc_var_trait_dif = trait_stats[5]
-            self.stats.kurtosis_local_traits = trait_stats[6][0]
-            self.stats.skewness_local_traits = trait_stats[7][0]
+            self.stats.kurtosis_local_traits = trait_stats[6]
+            self.stats.skewness_local_traits = trait_stats[7]
 
             ## This line will get you phy stats (mean and var of branch lenghts) from the regional/metacommuntiy tree
             ## Not sure what to do about local tree yet..
@@ -974,6 +967,7 @@ class LocalCommunity(object):
                 fullstats = pd.concat([sp.stats for sp in self.species], axis=1).T
                 fullstats.to_csv(megalog, index_label=False)
         except Exception as inst:
+            import pdb; pdb.set_trace()
             LOGGER.error("Error in get_stats() - {}".format(inst))
             raise
 
