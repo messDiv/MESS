@@ -513,32 +513,30 @@ class Region(object):
         return self.metacommunity.community['trait_values'][self.metacommunity.community["ids"] == loc_id]
 
 
-    def get_trait_stats(self, local_com):
-        local_traits = []
-        for idx in np.unique(local_com):
-            try:
-                trt = self.metacommunity.community["trait_values"][self.metacommunity.community["ids"] == idx]
-                if trt.any():
-                    local_traits.append(trt)
-                else:
-                    raise MESSError("Error formatting trait_stats, empty trait value.")
-            except Exception as inst:
-                LOGGER.error("Error in get_trait_stats {}".format(inst))
-                raise
-
-        trts = []
+    def get_trait_stats(self, local_com, mean_only=False):
         try:
-            trts = [np.mean(local_traits),
-                    np.var(local_traits),
-                    np.mean(self.metacommunity.community["trait_values"]),
-                    np.var(self.metacommunity.community["trait_values"]),
-                    np.mean(self.metacommunity.community["trait_values"]) - np.mean(local_traits),
-                    np.var(self.metacommunity.community["trait_values"]) - np.var(local_traits),
-                    kurtosis(local_traits),
-                    skew(local_traits)]
-        except:
-            LOGGER.error("Error calculating trait values")
-            raise
+            sp = list(set(local_com))
+            mask = np.isin(self.metacommunity.community["ids"], sp)
+            local_traits = self.metacommunity.community["trait_values"][mask]
+        except Exception as inst:
+            raise MESSError("Problem getting traits from local community: {}".format(local_com))
+
+        if mean_only:
+            return np.mean(local_traits)
+        else:
+            trts = []
+            try:
+                trts = [np.mean(local_traits),
+                        np.var(local_traits),
+                        np.mean(self.metacommunity.community["trait_values"]),
+                        np.var(self.metacommunity.community["trait_values"]),
+                        np.mean(self.metacommunity.community["trait_values"]) - np.mean(local_traits),
+                        np.var(self.metacommunity.community["trait_values"]) - np.var(local_traits),
+                        kurtosis(local_traits),
+                        skew(local_traits)]
+            except:
+                msg = "Error calculating local trait stats: {}".format(local_traits)
+                raise MESSError(msg)
 
         return trts
 
