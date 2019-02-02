@@ -41,6 +41,8 @@ requirements:
     - mpmath
     - rpy2
     - dill
+    - matplotlib
+    - dendropy
 
   commands:
     - MESS -v
