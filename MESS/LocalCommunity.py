@@ -428,7 +428,7 @@ class LocalCommunity(object):
             done = True
 
         reject = 0
-        survival_scalar = 0.5
+        survival_scalar = 0.25
         while not done:
             ## If you made it this far then you're doing a trait model.
 
@@ -447,23 +447,18 @@ class LocalCommunity(object):
 
             death_thresh = np.random.uniform(0,1)
             victim_trait = self.region.get_trait(victim)
-            LOGGER.debug("wat {} {}".format(victim, victim_trait))
 
             if self.region.paramsdict["community_assembly_model"] == "filtering":
 
-                ##FIXME Nothing here ever changes. The victim trait, and environmental optimum could be 
-                ##      calculated once at init, and could be used as a weight on abundance to sample
-                ##      the victim directly, without all this faffing around. This would be harder to
-                ##      pull off for the competition model since the target is always moving. Maybe
-                ##      better to leave them both the same for simplicity.
+                ## Call to _get_filter is memoized so results are cached
                 death_probability = _get_filtering_death_prob(self.region, victim_trait)
-                #death_probability = 1 - (np.exp(-((victim_trait - self.region.metacommunity.paramsdict["filtering_optimum"]) ** 2)/self.region.metacommunity.paramsdict["ecological_strength"]))
                 death_probability = (1 - death_probability) * survival_scalar + death_probability
                 target_trait_val = self.region.metacommunity.paramsdict["filtering_optimum"]
 
             elif self.region.paramsdict["community_assembly_model"] == "competition":
                 mean_local_trait = self.region.get_trait_stats(self.local_community, mean_only=True)
-                death_probability = (np.exp(-((victim_trait - mean_local_trait) ** 2)/self.region.metacommunity.paramsdict["ecological_strength"]))
+                death_probability = _get_competition_death_prob(self.region, victim_trait, mean_local_trait)
+                #death_probability = (np.exp(-((victim_trait - mean_local_trait) ** 2)/self.region.metacommunity.paramsdict["ecological_strength"]))
                 death_probability = (1 - death_probability) * survival_scalar + death_probability
                 target_trait_val = mean_local_trait
 
@@ -982,6 +977,15 @@ def _get_filtering_death_prob(region, victim_trait):
         val = 1 - (np.exp(-((victim_trait - region.metacommunity.paramsdict["filtering_optimum"]) ** 2)/region.metacommunity.paramsdict["ecological_strength"]))
     except Exception as inst:
         raise MESSError("Error getting death prob using trait - {}".format(victim_trait))
+    return val
+
+
+@memoize
+def _get_competition_death_prob(region, victim_trait, mean_local_trait):
+    try:
+        val = death_probability = (np.exp(-((victim_trait - mean_local_trait) ** 2)/region.metacommunity.paramsdict["ecological_strength"]))
+    except Exception as inst:
+        raise MESSError("Error in geting death prob using trait & mean - {} {}".format(victim_trait, mean_local_trait))
     return val
 
 

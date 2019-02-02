@@ -14,7 +14,6 @@ requirements:
     - python
     - setuptools
     - msprime
-    - macroeco
     - ipyparallel >=6.0.2
     - scipy >=0.16
     - cython
@@ -39,7 +38,6 @@ requirements:
     - pandas
     - numpy >=1.7
     - msprime
-    - macroeco
     - mpmath
     - rpy2
     - dill

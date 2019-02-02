@@ -445,38 +445,38 @@ def plot_rank_abundance(sp_list, max_n_species, max_abundance, stats_models=Fals
     plt.xlabel("Rank", fontsize=20)
 
     ## Whether or not to include a couple common statistical models in the plots
-    if stats_models:
-        import macroeco as meco
-        abund = [xx.stats["Ne_local"]/xx.paramsdict["sigma"] for xx in species]
-        ## Lognormal
-        mu, s = meco.models.lognorm.fit_mle(abund)
-        lognorm_rad = meco.models.lognorm.rank(len(abund), mu, s)
-        if as_curve:
-            Y = lognorm_rad[::-1]
-            plt.semilogy(X, Y, label="Lognorm RAD")
-        else:
-            Y = [int(math.ceil(np.log10(x))) for x in lognorm_rad[::-1]]
-            plt.scatter(X, Y, s=100, color="green", label="Lognorm RAD")
-        ## Logseries
-        p = meco.models.logser.fit_mle(abund)
-        logser_rad = meco.models.logser.rank(len(abund), p)
-        if as_curve:
-            Y = logser_rad[::-1]
-            plt.semilogy(X, Y, label="Logseries RAD")
-        else:
-            Y = [int(math.ceil(np.log10(x))) for x in logser_rad[::-1]]
-            plt.scatter(X, Y, s=100, color="red", label="Logseries RAD")
-        ## Poisson Lognormal
-        mu, s = meco.models.plnorm_ztrunc.fit_mle(abund)
-        plnorm_rad = meco.models.plnorm_ztrunc.rank(len(abund), mu, s)
-        if as_curve:
-            Y = plnorm_rad[::-1]
-            plt.semilogy(X, Y, label="Logseries RAD")
-        else:
-            Y = [int(math.ceil(np.log10(x))) for x in plnorm_rad[::-1]]
-            plt.scatter(X, Y, s=100, color="red", label="Poisson Lognorm RAD")
-
-        plt.legend()
+##    if stats_models:
+##        import macroeco as meco
+##        abund = [xx.stats["Ne_local"]/xx.paramsdict["sigma"] for xx in species]
+##        ## Lognormal
+##        mu, s = meco.models.lognorm.fit_mle(abund)
+##        lognorm_rad = meco.models.lognorm.rank(len(abund), mu, s)
+##        if as_curve:
+##            Y = lognorm_rad[::-1]
+##            plt.semilogy(X, Y, label="Lognorm RAD")
+##        else:
+##            Y = [int(math.ceil(np.log10(x))) for x in lognorm_rad[::-1]]
+##            plt.scatter(X, Y, s=100, color="green", label="Lognorm RAD")
+##        ## Logseries
+##        p = meco.models.logser.fit_mle(abund)
+##        logser_rad = meco.models.logser.rank(len(abund), p)
+##        if as_curve:
+##            Y = logser_rad[::-1]
+##            plt.semilogy(X, Y, label="Logseries RAD")
+##        else:
+##            Y = [int(math.ceil(np.log10(x))) for x in logser_rad[::-1]]
+##            plt.scatter(X, Y, s=100, color="red", label="Logseries RAD")
+##        ## Poisson Lognormal
+##        mu, s = meco.models.plnorm_ztrunc.fit_mle(abund)
+##        plnorm_rad = meco.models.plnorm_ztrunc.rank(len(abund), mu, s)
+##        if as_curve:
+##            Y = plnorm_rad[::-1]
+##            plt.semilogy(X, Y, label="Logseries RAD")
+##        else:
+##            Y = [int(math.ceil(np.log10(x))) for x in plnorm_rad[::-1]]
+##            plt.scatter(X, Y, s=100, color="red", label="Poisson Lognorm RAD")
+##
+##        plt.legend()
 
 
 def plot_abund_vs_colon(species, max_coltime, max_abundance):
