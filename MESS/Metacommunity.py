@@ -125,7 +125,33 @@ class Metacommunity(object):
             if not quiet and MESS.__interactive__:
                 print("  Updating Metacommunity parameters requires running set_metacommunity()"\
                         + " to apply the changes.")
+
             ## Cast params to correct types
+            '''
+            if param in ["birth_rate", "death_proportion", "trait_rate",
+            "ecological_strength", "filtering_optimum"]:
+                tup = _tuplecheck(newvalue, dtype=float)
+                if isinstance(tup, tuple):
+                    self._priors[param] = tup
+                    self.paramsdict[param] = sample_param_range(tup)[0]
+                else:
+                    self.paramsdict[param] = tup
+            '''
+            if param == "birth_rate":
+                self.paramsdict[param] = float(newvalue)
+
+            elif param == "death_proportion":
+                self.paramsdict[param] = float(newvalue)
+
+            elif param == "trait_rate":
+                self.paramsdict[param] = float(newvalue)
+
+            elif param == "ecological_strength":
+                self.paramsdict[param] = float(newvalue)
+
+            elif param == "filtering_optimum":
+                self.paramsdict[param] = float(newvalue)
+
             elif param == "metacommunity_type":
                 self.paramsdict[param] = newvalue
 
@@ -134,15 +160,6 @@ class Metacommunity(object):
 
             elif param == "logser_shape":
                 self.paramsdict[param] = float(newvalue)
-
-            elif param in ["birth_rate", "death_proportion", "trait_rate",
-            "ecological_strength", "filtering_optimum"]:
-                tup = _tuplecheck(newvalue, dtype=float)
-                if isinstance(tup, tuple):
-                    self._priors[param] = tup
-                    self.paramsdict[param] = sample_param_range(tup)[0]
-                else:
-                    self.paramsdict[param] = tup
 
             elif param == "J":
                 self.paramsdict[param] = int(float(newvalue))
