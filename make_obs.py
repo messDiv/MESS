@@ -1,8 +1,9 @@
 #!/usr/bin/env python2.7
 
-import numpy as np
 import argparse
 import glob
+import numpy as np
+import pandas as pd
 import os
 from itertools import combinations
 from collections import Counter
@@ -33,6 +34,7 @@ def pi(file):
                 base_count = Counter(d)
                 ## ignore indels
                 del base_count["-"]
+                del base_count["N"]
                 for c in combinations(base_count.values(), 2):
                     #print(c)
                     n = c[0] + c[1]
@@ -96,7 +98,6 @@ if __name__ == "__main__":
     args = parse_command_line()
 
     outfile = open(args.outfile, 'w')
-    outpis = open(args.outfile.split(".")[0]+".pis", 'w')
 
     ## Format header
     if args.abund_file:
@@ -116,11 +117,19 @@ if __name__ == "__main__":
     ## Get 1D pi vector
     if args.fasta_files:
         files = glob.glob(os.path.join(args.fasta_files, "*.fasta"))
-        pis = []
+
+        colname = [args.fasta_files.strip("/").split("/")[-1]]
+        pis = {}
         for f in files:
-            pis.append(pi(f))
-            outpis.write("{} {}\n".format(pi(f), f))
-        dat = make_1D_heat(pis)
+            ## Just use the OTU/species name for the pis file
+            pis[f.split("/")[-1].split(".")[0]] = pi(f)
+            pis_df = pd.DataFrame.from_dict(pis, orient="index", columns=colname)
+
+        outpis = args.outfile.split(".")[0]+".pis"
+        with open(outpis, 'w') as out:
+                pis_df.to_csv(out)
+
+        dat = make_1D_heat(pis.values())
         outfile.write(dat)
         
 
