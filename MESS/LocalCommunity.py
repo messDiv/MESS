@@ -764,7 +764,7 @@ class LocalCommunity(object):
         try:
             ## Hax. Remove the empty deme from local info. This _might_ break the fancy plots.
             self.local_community = [x for x in self.local_community if x != None]
-            self.local_info = self.local_info.drop(np.NaN, axis=1)
+            self.local_info = self.local_info[self.local_info.columns.dropna()]
         except:
             ## df.drop will raise if it doesn't find a matching label to drop, in which case we're done.
             pass
