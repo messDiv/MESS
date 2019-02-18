@@ -51,8 +51,9 @@ class LocalCommunity(object):
                         ("colrate", colrate),
                         ("age", 100000),
                         ("mig_clust_size", mig_clust_size),
+                        ("speciation_rate", 0),
+                        ("background_death", 0.25),
                         ("trait_rate_local", 5)
-
         ])
 
         ## A dictionary for holding prior ranges for values we're interested in
@@ -110,7 +111,7 @@ class LocalCommunity(object):
                    "generation",
                    "K",
                    "colrate",
-                   "speciation_probability",
+                   "speciation_rate",
                    "sigma",
                    "trait_rate_meta",
                    "trait_rate_local",
@@ -271,6 +272,12 @@ class LocalCommunity(object):
 
             elif param == "filtering_optimum":
                 self.paramsdict[param] = newvalue
+
+            elif param == "speciation_rate":
+                self.paramsdict[param] = float(newvalue)
+
+            elif param == "background_death":
+                self.paramsdict[param] = float(newvalue)
 
             elif param == "trait_rate_local":
                 self.paramsdict[param] = float(newvalue)
@@ -434,7 +441,7 @@ class LocalCommunity(object):
             done = True
 
         reject = 0
-        survival_scalar = 0.25
+        survival_scalar = self.paramsdict["background_death"]
         while not done:
             ## If you made it this far then you're doing a trait model.
 
@@ -638,7 +645,7 @@ class LocalCommunity(object):
             ## Speciation process
             ##############################################
             if self.region.paramsdict["speciation_model"] != "none" and\
-               np.random.random_sample() < self.region.paramsdict["speciation_probability"]:
+               np.random.random_sample() < self.paramsdict["speciation_rate"]:
 
                self.speciate()
 
@@ -687,8 +694,12 @@ class LocalCommunity(object):
         ## Identify parent's trait value
         parent_trait = self.region.get_trait(chx)
 
-        ## Add deviation of trait value to parent's trait value to get offspring phenotype
+        ## Trait evolution. Offsprint trait is normally distributed
+        ## with mean of parent value, and stdv equal to stdv of BM
+        ## process in metacommunity times average lineage lifetime
         trt = np.random.normal(parent_trait, self.paramsdict["trait_rate_local"], 1)
+
+
         self.region._record_local_speciation(sname, trt)
 
         if self.region.paramsdict["speciation_model"] == "point_mutation":
@@ -958,7 +969,7 @@ class LocalCommunity(object):
         self.stats.generation = self.current_time
         self.stats.K = self.paramsdict["K"]
         self.stats.colrate = self.paramsdict["colrate"]
-        self.stats.speciation_probability = self.region.paramsdict["speciation_probability"]
+        self.stats.speciation_rate = self.paramsdict["speciation_rate"]
         self.stats.sigma = self.region.paramsdict["sigma"]
         self.stats.trait_rate_meta = self.region.metacommunity.paramsdict["trait_rate_meta"]
         self.stats.ecological_strength = self.region.metacommunity.paramsdict["ecological_strength"]
@@ -1053,6 +1064,8 @@ LOCAL_PARAMS = {
     "colrate" : "Colonization rate into local community",\
     "mig_clust_size" : "# of individuals per colonization event",\
     "age" : "Local community age",\
+    "speciation_rate" : "# of new species per forward-time generation",\
+    "background_death" : "Baseline death probability in trait-based models",\
     "trait_rate_local" : "Trait evolution rate parameter for local community",\
 }
 
