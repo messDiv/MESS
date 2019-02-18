@@ -125,17 +125,19 @@ class Metacommunity(object):
             if not quiet and MESS.__interactive__:
                 print("  Updating Metacommunity parameters requires running set_metacommunity()"\
                         + " to apply the changes.")
+
             ## Cast params to correct types
-            elif param == "metacommunity_type":
-                self.paramsdict[param] = newvalue
-
-            elif param == "nspecies":
-                self.paramsdict[param] = int(float(newvalue))
-
-            elif param == "logser_shape":
-                self.paramsdict[param] = float(newvalue)
-
-            elif param == "birth_rate":
+            '''
+            if param in ["birth_rate", "death_proportion", "trait_rate",
+            "ecological_strength", "filtering_optimum"]:
+                tup = _tuplecheck(newvalue, dtype=float)
+                if isinstance(tup, tuple):
+                    self._priors[param] = tup
+                    self.paramsdict[param] = sample_param_range(tup)[0]
+                else:
+                    self.paramsdict[param] = tup
+            '''
+            if param == "birth_rate":
                 self.paramsdict[param] = float(newvalue)
 
             elif param == "death_proportion":
@@ -148,6 +150,15 @@ class Metacommunity(object):
                 self.paramsdict[param] = float(newvalue)
 
             elif param == "filtering_optimum":
+                self.paramsdict[param] = float(newvalue)
+
+            elif param == "metacommunity_type":
+                self.paramsdict[param] = newvalue
+
+            elif param == "nspecies":
+                self.paramsdict[param] = int(float(newvalue))
+
+            elif param == "logser_shape":
                 self.paramsdict[param] = float(newvalue)
 
             elif param == "J":
