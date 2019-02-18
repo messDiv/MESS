@@ -45,7 +45,7 @@ class Metacommunity(object):
                         ("J", 1000000),
                         ("birth_rate", 2),
                         ("death_proportion", 0.5),
-                        ("trait_rate", 5),
+                        ("trait_rate_meta", 5),
                         ("ecological_strength", 25),
                         ("filtering_optimum", 1)
         ])
@@ -59,7 +59,7 @@ class Metacommunity(object):
         self._priors = dict([
                         ("birth_rate", []),
                         ("death_proportion", []),
-                        ("trait_rate", []),
+                        ("trait_rate_meta", []),
                         ("ecological_strength", []),
                         ("filtering_optimum", [])
         ])
@@ -79,7 +79,7 @@ class Metacommunity(object):
                                                         self.paramsdict["nspecies"])
 
 
-    def _simulate_metacommunity(self, J, nspecies, birth_rate, death_proportion, trait_rate):
+    def _simulate_metacommunity(self, J, nspecies, birth_rate, death_proportion, trait_rate_meta):
         import rpy2.robjects as robjects
         from rpy2.robjects import r, pandas2ri
 
@@ -93,7 +93,7 @@ class Metacommunity(object):
         #' @param nspecies the number of species in the meta community
         #' @param birth_rate the speciation rate
         #' @param death_proportion the proportional extinction rate
-        #' @param trait_rate the rate of brownian motion
+        #' @param trait_rate_meta the rate of brownian motion
 
         makeMeta <- function(Jm, S, lambda, deathFrac, sigma2) {
           ## the tree
@@ -119,7 +119,7 @@ class Metacommunity(object):
         }"""
 
         make_meta_func = robjects.r(make_meta)
-        res = pandas2ri.ri2py(make_meta_func(J, nspecies, birth_rate, death_proportion, trait_rate))
+        res = pandas2ri.ri2py(make_meta_func(J, nspecies, birth_rate, death_proportion, trait_rate_meta))
         tree = res[0][0]
         traits = pandas2ri.ri2py(res[1])
         abunds = pandas2ri.ri2py(res[2])
@@ -136,7 +136,7 @@ class Metacommunity(object):
                         + " to apply the changes.")
 
             ## Cast params to correct types
-            if param in ["birth_rate", "death_proportion", "trait_rate",
+            if param in ["birth_rate", "death_proportion", "trait_rate_meta",
                             "ecological_strength", "filtering_optimum"]:
                 tup = _tuplecheck(newvalue, dtype=float)
                 if isinstance(tup, tuple):
@@ -250,7 +250,7 @@ class Metacommunity(object):
                                                                 self.paramsdict["nspecies"],\
                                                                 self.paramsdict["birth_rate"],\
                                                                 self.paramsdict["death_proportion"],\
-                                                                self.paramsdict["trait_rate"])
+                                                                self.paramsdict["trait_rate_meta"])
             #handle = Phylo.read(StringIO(tree), "newick")
             handle = dendropy.Tree.get(data=tree, schema="newick")
             self.metacommunity_tree = handle
@@ -272,7 +272,7 @@ class Metacommunity(object):
                 with open(meta_type, 'r') as infile:
                     lines = infile.readlines()
                     self.metcommunity_tree_height = float(lines[0].split()[0])
-                    self.paramsdict["trait_rate"] = float(lines[1].split()[0])
+                    self.paramsdict["trait_rate_meta"] = float(lines[1].split()[0])
 
                     for i in range(2,len(lines)):
                         info = lines[i].split()
@@ -391,7 +391,7 @@ LOCAL_PARAMS = {
     "birth_rate" : "Speciation rate of metacommunity",\
     "death_proportion" : "Proportion of speciation rate to be extinction rate",\
     "logser_shape" : "If logser: Shape parameter of the distribution",\
-    "trait_rate" : "Trait evolution rate parameter",\
+    "trait_rate_meta" : "Trait evolution rate parameter for metacommunity",\
     "ecological_strength" : "Strength of community assembly process on phenotypic change",\
     "filtering_optimum" : "optimum trait value, only used during environmental filtering model",\
 }

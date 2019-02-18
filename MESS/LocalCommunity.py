@@ -50,7 +50,9 @@ class LocalCommunity(object):
                         ("K", K),
                         ("colrate", colrate),
                         ("age", 100000),
-                        ("mig_clust_size", mig_clust_size)
+                        ("mig_clust_size", mig_clust_size),
+                        ("trait_rate_local", 5)
+
         ])
 
         ## A dictionary for holding prior ranges for values we're interested in
@@ -110,7 +112,8 @@ class LocalCommunity(object):
                    "colrate",
                    "speciation_probability",
                    "sigma",
-                   "trait_rate",
+                   "trait_rate_meta",
+                   "trait_rate_local",
                    "ecological_strength",
                    "filtering_optimum",
                    "colrate_calculated",
@@ -268,6 +271,9 @@ class LocalCommunity(object):
 
             elif param == "filtering_optimum":
                 self.paramsdict[param] = newvalue
+
+            elif param == "trait_rate_local":
+                self.paramsdict[param] = float(newvalue)
 
             else:
                 self.paramsdict[param] = newvalue
@@ -667,6 +673,7 @@ class LocalCommunity(object):
         chx = random.choice([sp for sp in self.local_community if sp != None])
         idx = self.local_community.index(chx)
 
+
         ## Construct the new species name.
         ## We want the new name to be globally unique but we don't
         ## want to waste a bunch of time keeping track of it in the
@@ -677,7 +684,11 @@ class LocalCommunity(object):
         parent_abunds = self.local_info[chx]["abundances_through_time"]
 
         ## Inform the regional pool that we have a new species
-        trt = self.region.get_trait(chx)
+        ## Identify parent's trait value
+        parent_trait = self.region.get_trait(chx)
+
+        ## Add deviation of trait value to parent's trait value to get offspring phenotype
+        trt = np.random.normal(parent_trait, self.paramsdict["trait_rate_local"], 1)
         self.region._record_local_speciation(sname, trt)
 
         if self.region.paramsdict["speciation_model"] == "point_mutation":
@@ -949,7 +960,7 @@ class LocalCommunity(object):
         self.stats.colrate = self.paramsdict["colrate"]
         self.stats.speciation_probability = self.region.paramsdict["speciation_probability"]
         self.stats.sigma = self.region.paramsdict["sigma"]
-        self.stats.trait_rate = self.region.metacommunity.paramsdict["trait_rate"]
+        self.stats.trait_rate_meta = self.region.metacommunity.paramsdict["trait_rate_meta"]
         self.stats.ecological_strength = self.region.metacommunity.paramsdict["ecological_strength"]
         ## Pseudo-parameters
         self.stats.filtering_optimum = self.region.metacommunity.paramsdict["filtering_optimum"]
@@ -1042,6 +1053,7 @@ LOCAL_PARAMS = {
     "colrate" : "Colonization rate into local community",\
     "mig_clust_size" : "# of individuals per colonization event",\
     "age" : "Local community age",\
+    "trait_rate_local" : "Trait evolution rate parameter for local community",\
 }
 
 
