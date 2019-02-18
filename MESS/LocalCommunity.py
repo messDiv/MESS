@@ -657,8 +657,10 @@ class LocalCommunity(object):
         """
         LOGGER.debug("Initiate speciation process")
 
-        ## Sample the individual to undergo speciation
-        chx = random.choice(self.local_community)
+        ## Sample the individual to undergo speciation. Remove all
+        ## empty deme space prior to this, if it exists, since we don't
+        ## want empty deme space speciating.
+        chx = random.choice([sp for sp in self.local_community if sp != None])
         idx = self.local_community.index(chx)
 
         ## Construct the new species name.
@@ -705,7 +707,9 @@ class LocalCommunity(object):
             ## If sp_abund == 1, or if new_abund == sp_abund then this is
             ## essentially anagenetic speciation, as the initial species will
             ## be removed from the local community and replaced by the new sp.
-            new_abund = np.random.randint(1, sp_abund)
+            ## The `sp_abund+1` here is because randint samples up to sp_abund-1,
+            ## so we need to allow for the case of new_abund == sp_abund.
+            new_abund = np.random.randint(1, sp_abund+1)
 
             ## Push the appropriate number of individuals of the original species
             ## back into the local community. Don't bother testing for sp_abund > 0
