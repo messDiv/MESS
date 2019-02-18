@@ -448,6 +448,10 @@ class LocalCommunity(object):
             death_thresh = np.random.uniform(0,1)
             victim_trait = self.region.get_trait(victim)
 
+            ## TODO: There's a bunch of nonsense here that could be optimized.
+            ## The trait based stuff is so much slower than the neutral, and
+            ## the competition model is especially bad, so optimization could
+            ## be useful.
             if self.region.paramsdict["community_assembly_model"] == "filtering":
 
                 ## Call to _get_filter is memoized so results are cached
@@ -458,7 +462,7 @@ class LocalCommunity(object):
             elif self.region.paramsdict["community_assembly_model"] == "competition":
                 mean_local_trait = self.region.get_trait_stats(self.local_community, mean_only=True)
                 death_probability = _get_competition_death_prob(self.region, victim_trait, mean_local_trait)
-                #death_probability = (np.exp(-((victim_trait - mean_local_trait) ** 2)/self.region.metacommunity.paramsdict["ecological_strength"]))
+
                 death_probability = (1 - death_probability) * survival_scalar + death_probability
                 target_trait_val = mean_local_trait
 
