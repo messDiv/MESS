@@ -50,7 +50,9 @@ class LocalCommunity(object):
                         ("K", K),
                         ("colrate", colrate),
                         ("age", 100000),
-                        ("mig_clust_size", mig_clust_size)
+                        ("mig_clust_size", mig_clust_size),
+                        ("speciation_rate", 0,)
+
         ])
 
         ## A dictionary for holding prior ranges for values we're interested in
@@ -108,7 +110,7 @@ class LocalCommunity(object):
                    "generation",
                    "K",
                    "colrate",
-                   "speciation_probability",
+                   "speciation_rate",
                    "sigma",
                    "trait_rate",
                    "ecological_strength",
@@ -268,6 +270,9 @@ class LocalCommunity(object):
 
             elif param == "filtering_optimum":
                 self.paramsdict[param] = newvalue
+
+            elif param == "speciation_rate":
+                self.paramsdict[param] = float(newvalue)
 
             else:
                 self.paramsdict[param] = newvalue
@@ -632,7 +637,7 @@ class LocalCommunity(object):
             ## Speciation process
             ##############################################
             if self.region.paramsdict["speciation_model"] != "none" and\
-               np.random.random_sample() < self.region.paramsdict["speciation_probability"]:
+               np.random.random_sample() < self.paramsdict["speciation_rate"]:
 
                self.speciate()
 
@@ -678,6 +683,9 @@ class LocalCommunity(object):
 
         ## Inform the regional pool that we have a new species
         trt = self.region.get_trait(chx)
+        ## Trait evolution. Offsprint trait is normally distributed
+        ## with mean of parent value, and stdv equal to stdv of BM
+        ## process in metacommunity times average lineage lifetime
         self.region._record_local_speciation(sname, trt)
 
         if self.region.paramsdict["speciation_model"] == "point_mutation":
@@ -947,7 +955,7 @@ class LocalCommunity(object):
         self.stats.generation = self.current_time
         self.stats.K = self.paramsdict["K"]
         self.stats.colrate = self.paramsdict["colrate"]
-        self.stats.speciation_probability = self.region.paramsdict["speciation_probability"]
+        self.stats.speciation_rate = self.paramsdict["speciation_rate"]
         self.stats.sigma = self.region.paramsdict["sigma"]
         self.stats.trait_rate = self.region.metacommunity.paramsdict["trait_rate"]
         self.stats.ecological_strength = self.region.metacommunity.paramsdict["ecological_strength"]
@@ -1042,6 +1050,7 @@ LOCAL_PARAMS = {
     "colrate" : "Colonization rate into local community",\
     "mig_clust_size" : "# of individuals per colonization event",\
     "age" : "Local community age",\
+    "speciation_rate" : "# of new species per forward-time generation",\
 }
 
 
