@@ -661,23 +661,23 @@ class LocalCommunity(object):
         chx = random.choice(self.local_community)
         idx = self.local_community.index(chx)
 
+        ## Construct the new species name.
+        ## We want the new name to be globally unique but we don't
+        ## want to waste a bunch of time keeping track of it in the
+        ## region, so we can do something like this:
+        sname = chx + ":{}-{}".format(self.name, self.current_time)
+
+        ## Fetch the abundance history of the parent species
+        parent_abunds = self.local_info[chx]["abundances_through_time"]
+
+        ## Inform the regional pool that we have a new species
+        trt = self.region.get_trait(chx)
+        self.region._record_local_speciation(sname, trt)
 
         if self.region.paramsdict["speciation_model"] == "point_mutation":
-            ## Construct the new species name.
-            ## We want the new name to be globally unique but we don't
-            ## want to waste a bunch of time keeping track of it in the
-            ## region, so we can do something like this:
-            sname = chx + ":{}-{}".format(self.name, self.current_time)
 
             ## Replace the individual in the local_community with the new species
             self.local_community[idx] = sname
-
-            ## Fetch the abundance history of the parent species
-            parent_abunds = self.local_info[chx]["abundances_through_time"]
-
-            ## Inform the regional pool that we have a new species
-            trt = self.region.get_trait(chx)
-            self.region._record_local_speciation(sname, trt)
 
             ## If the new individual removes the last member of the ancestor
             ## species, then you need to do some housekeeping.
@@ -692,7 +692,42 @@ class LocalCommunity(object):
             self._add_local_info(sname = sname, abundances_through_time=parent_abunds , ancestor = ancestor)
 
         elif self.region.paramsdict["speciation_model"] == "random_fission":
-            pass
+
+            ## Remove all individuals of the target species from the local community.
+            ## We'll have to add some back as the original species, but doing it
+            ## this way simplifies the housekeeping.
+            self.local_community = [sp for sp in self.local_community if sp != chx]
+            ## Get abundance of the target species so we can perform
+            ## the random fission.
+            sp_abund = self.paramsdict["K"] - len(self.local_community)
+
+            ## Get the number of individuals to carve off for the new species.
+            ## If sp_abund == 1, or if new_abund == sp_abund then this is
+            ## essentially anagenetic speciation, as the initial species will
+            ## be removed from the local community and replaced by the new sp.
+            new_abund = np.random.randint(1, sp_abund)
+
+            ## Push the appropriate number of individuals of the original species
+            ## back into the local community. Don't bother testing for sp_abund > 0
+            ## here since the extend will happily ignore the empty list.
+            sp_abund = sp_abund - new_abund
+            self.local_community.extend([chx] * sp_abund)
+
+            ## Test local extinction after parent species is pushed back to
+            ## local community. If no parent species remain at this time then
+            ## we need to do some housekeeping to track the ancestor of the
+            ## new species.
+            ancestor = self._test_local_extinction(chx)
+
+            ## Push the new appropriate number of new individuals of the new
+            ## species into the local community
+            self.local_community.extend([sname] * new_abund)
+
+            ## Same as for point mutation, the new species inherits the abndance
+            ## history of the parent, and also _test_local_extinction() handles
+            ## all the ancestor inheritence logic.
+            self._add_local_info(sname = sname, abundances_through_time=parent_abunds , ancestor = ancestor)
+
         elif self.region.paramsdict["speciation_model"] == "protracted":
             pass
         else:
