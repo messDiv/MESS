@@ -13,7 +13,7 @@ import random
 import sys
 import os
 import MESS
-from MESS.util import MESSError,set_params
+from MESS.util import _tuplecheck, sample_param_range, MESSError, set_params
 
 import logging
 LOGGER = logging.getLogger(__name__)
@@ -53,6 +53,15 @@ class Metacommunity(object):
         ## elite hackers only internal dictionary, normally you shouldn't mess with this
         self._hackersonly= OrderedDict([
                         ("lognorm_shape", 1.98),
+        ])
+
+        ## A dictionary for holding prior ranges for values we're interested in
+        self._priors = dict([
+                        ("birth_rate", []),
+                        ("death_proportion", []),
+                        ("trait_rate", []),
+                        ("ecological_strength", []),
+                        ("filtering_optimum", [])
         ])
 
         ## The Newick formatted tree for the metacommunity
@@ -127,31 +136,15 @@ class Metacommunity(object):
                         + " to apply the changes.")
 
             ## Cast params to correct types
-            '''
             if param in ["birth_rate", "death_proportion", "trait_rate",
-            "ecological_strength", "filtering_optimum"]:
+                            "ecological_strength", "filtering_optimum"]:
                 tup = _tuplecheck(newvalue, dtype=float)
                 if isinstance(tup, tuple):
                     self._priors[param] = tup
                     self.paramsdict[param] = sample_param_range(tup)[0]
                 else:
                     self.paramsdict[param] = tup
-            '''
-            if param == "birth_rate":
-                self.paramsdict[param] = float(newvalue)
-
-            elif param == "death_proportion":
-                self.paramsdict[param] = float(newvalue)
-
-            elif param == "trait_rate":
-                self.paramsdict[param] = float(newvalue)
-
-            elif param == "ecological_strength":
-                self.paramsdict[param] = float(newvalue)
-
-            elif param == "filtering_optimum":
-                self.paramsdict[param] = float(newvalue)
-
+                LOGGER.debug("{} {}".format(param, tup))
             elif param == "metacommunity_type":
                 self.paramsdict[param] = newvalue
 
@@ -166,7 +159,7 @@ class Metacommunity(object):
 
         except Exception as inst:
             ## Do something intelligent here?
-            raise MESSError("Bad parameter {} - Bad value {}".format(param, newvalue))
+            raise MESSError("Error {}\n    Bad parameter {} - Bad value {}".format(inst, param, newvalue))
 
 
     def write_params(self, outfile=None, append=True):

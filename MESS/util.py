@@ -97,31 +97,30 @@ def _tuplecheck(newvalue, dtype=str):
     """
     ## TODO: This actually should work
 
+    ## If it's a list then this is probably api mode so the types
+    ## of the values should be fine.
     if isinstance(newvalue, list):
         try:
             newvalue = tuple(newvalue)
         except TypeError:
-            pass
+            raise MESSError("_tuplecheck failed for {}, improper list format".format(newvalue))
     else:
         try:
-            newvalue = newvalue.rstrip(")").strip("(")
-            minval = dtype(newvalue.split("-")[0].strip())
-            maxval = dtype(newvalue.split("-")[1].strip())
-            newvalue = tuple([minval, maxval])
-        ## If split fails then theres only one value
-        except IndexError:
+            ## If it's just one value of the proper dtype this should
+            ## suffice to catch it.
             newvalue = dtype(newvalue)
-        ## If dtype fails to cast any element of newvalue
-        except ValueError:
-            LOGGER.info("_tuplecheck() failed to cast to {} - {}"\
-                        .format(dtype, newvalue))
-            raise
-
         except Exception as inst:
-            LOGGER.info(inst)
-            raise SystemExit(\
-            "\nError: Param`{}` is not formatted correctly.\n({})\n"\
-                 .format(newvalue, inst))
+            ## Failed to cast to dtype, so this is probably a prior range
+            ## Using comma as seperator here to avoid ugliness of using -,
+            ## because we may want negative values in some priors.
+            try:
+                newvalue = newvalue.rstrip(")").strip("(")
+                minval = dtype(newvalue.split(",")[0].strip())
+                maxval = dtype(newvalue.split(",")[1].strip())
+                newvalue = tuple([minval, maxval])
+            except Exception as inst:
+                raise MESSError("{}\t_tuplecheck() failed to cast to {} - {}"\
+                            .format(inst, dtype, newvalue))
 
     LOGGER.debug("Returning tuple - {}".format(newvalue))
     return newvalue
