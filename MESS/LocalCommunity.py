@@ -51,8 +51,8 @@ class LocalCommunity(object):
                         ("colrate", colrate),
                         ("age", 100000),
                         ("mig_clust_size", mig_clust_size),
-                        ("speciation_rate", 0,)
-
+                        ("speciation_rate", 0),
+                        ("background_death", 0.25)
         ])
 
         ## A dictionary for holding prior ranges for values we're interested in
@@ -274,6 +274,9 @@ class LocalCommunity(object):
             elif param == "speciation_rate":
                 self.paramsdict[param] = float(newvalue)
 
+            elif param == "background_death":
+                self.paramsdict[param] = float(newvalue)
+
             else:
                 self.paramsdict[param] = newvalue
         except Exception as inst:
@@ -433,7 +436,7 @@ class LocalCommunity(object):
             done = True
 
         reject = 0
-        survival_scalar = 0.25
+        survival_scalar = self.paramsdict["background_death"]
         while not done:
             ## If you made it this far then you're doing a trait model.
 
@@ -1051,6 +1054,7 @@ LOCAL_PARAMS = {
     "mig_clust_size" : "# of individuals per colonization event",\
     "age" : "Local community age",\
     "speciation_rate" : "# of new species per forward-time generation",\
+    "background_death" : "Baseline death probability in trait-based models",\
 }
 
 
