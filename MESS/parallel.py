@@ -7,12 +7,16 @@ from __future__ import print_function
 
 import ipyparallel as ipp
 import subprocess
-import cStringIO
 import socket
 import shlex
 import time
 import sys
 import os
+
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 from MESS import MESSError
 
@@ -104,8 +108,8 @@ def get_client(cluster_id, profile, engines, timeout, cores, quiet, **kwargs):
     ## save stds for later, we're gonna hide them to prevent external printing 
     save_stdout = sys.stdout 
     save_stderr = sys.stderr
-    sys.stdout = cStringIO.StringIO()
-    sys.stderr = cStringIO.StringIO()
+    sys.stdout = StringIO()
+    sys.stderr = StringIO()
 
     ## get cluster_info print string
     connection_string = "  establishing parallel connection:"
