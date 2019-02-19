@@ -1,4 +1,4 @@
-from util import *
+from .util import *
 from collections import OrderedDict
 import datetime
 import numpy as np
