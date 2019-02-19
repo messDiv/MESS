@@ -16,7 +16,7 @@ import os
 import MESS
 
 from .util import MESSError, _tuplecheck, sample_param_range, memoize
-from .stats import shannon, SAD
+from .stats import *
 from .species import species
 from .SGD import SGD
 
@@ -121,6 +121,14 @@ class LocalCommunity(object):
                    "extrate_calculated",
                    "R",
                    "shannon",
+                   "abund_h1",
+                   "abund_h2",
+                   "abund_h3",
+                   "abund_h4",
+                   "pi_h1",
+                   "pi_h2",
+                   "pi_h3",
+                   "pi_h4",
                    "mean_pi",
                    "stdv_pi",
                    "median_pi",
@@ -507,7 +515,7 @@ class LocalCommunity(object):
             ## If the species of the victim went locally extinct then clean up local_info
             self._test_local_extinction(victim)
         except Exception as inst:
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             raise inst
 
 
@@ -637,7 +645,7 @@ class LocalCommunity(object):
                     idx = self.local_community.index(chx)
                     self.founder_flags.append(self.founder_flags[idx])
                 except Exception as inst:
-                    import pdb; pdb.set_trace()
+                    #import pdb; pdb.set_trace()
                     LOGGER.error("Exception in step() - {}".format(inst))
                     raise inst
 
@@ -653,8 +661,8 @@ class LocalCommunity(object):
             self.current_time += 1
 
 
-    def get_abundances(self, octaves=False):
-        return SAD(self.local_community)
+    def get_abundances(self, octaves=False, raw_abunds=False):
+        return SAD(self.local_community, octaves=octaves, raw_abunds=raw_abunds)
 
 
     def speciate(self):
@@ -972,6 +980,7 @@ class LocalCommunity(object):
         self.stats.speciation_rate = self.paramsdict["speciation_rate"]
         self.stats.sigma = self.region.paramsdict["sigma"]
         self.stats.trait_rate_meta = self.region.metacommunity.paramsdict["trait_rate_meta"]
+        self.stats.trait_rate_local = self.paramsdict["trait_rate_local"]
         self.stats.ecological_strength = self.region.metacommunity.paramsdict["ecological_strength"]
         ## Pseudo-parameters
         self.stats.filtering_optimum = self.region.metacommunity.paramsdict["filtering_optimum"]
@@ -982,10 +991,22 @@ class LocalCommunity(object):
             raise MESSError("Current time should never be zero, check parameter settings.")
         ## Model sumstats
         self.stats.R = len(set(self.local_community))
-        self.stats.shannon = shannon(self.get_abundances(octaves=False))
+        sad = self.get_abundances(raw_abunds=True)
+        self.stats.shannon = hill_number(sad, order=1)
 
         pis = np.array([x.stats["pi_local"] for x in self.species])
         dxys = np.array([x.stats["dxy"] for x in self.species])
+
+        self.stats.abund_h1 = hill_number(sad, order=1)
+        self.stats.abund_h2 = hill_number(sad, order=2)
+        self.stats.abund_h3 = hill_number(sad, order=3)
+        self.stats.abund_h4 = hill_number(sad, order=4)
+
+        self.stats.pi_h1 = hill_number(pis, order=1)
+        self.stats.pi_h2 = hill_number(pis, order=2)
+        self.stats.pi_h3 = hill_number(pis, order=3)
+        self.stats.pi_h4 = hill_number(pis, order=4)
+
         self.stats.mean_pi = np.mean(pis)
         self.stats.stdv_pi = np.std(pis)
         self.stats.median_pi = np.median(pis)
@@ -1029,7 +1050,7 @@ class LocalCommunity(object):
                 fullstats = pd.concat([sp.stats for sp in self.species], axis=1).T
                 fullstats.to_csv(megalog, index_label=False)
         except Exception as inst:
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             LOGGER.error("Error in get_stats() - {}".format(inst))
             raise
 

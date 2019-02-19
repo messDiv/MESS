@@ -3,6 +3,7 @@ from __future__ import print_function
 import collections
 import numpy as np
 import math
+from scipy.stats import entropy
 
 ## Here abundances is an ordered dict of tuples which are (abundance, count)
 ## This is the typical format returned by LocalCommunity.get_abundances(octaves=False)
@@ -16,7 +17,36 @@ def shannon(abundances):
     return -1 * np.sum([x/float(tot) * math.log(x/float(tot)) for x in abunds  if x > 0])
 
 
-def SAD(community, from_abundances=False, octaves=False):
+## Get one hill humber from a list of abundances (a column vector from the OTU table)
+def hill_number(abunds, order):
+    ## Make sure abunds is a np array or else order > 2 will act crazy
+    abunds = np.array(abunds)
+    if order == 0:
+        return len(np.nonzero(abunds)[0])
+    if order == 1:
+        h1 = np.exp(entropy(abunds))
+        return h1
+    tot = float(np.sum(abunds))
+    proportions = np.array(abunds[abunds > 0])/tot
+    prop_order = proportions**order
+    h2 = np.sum(prop_order)**(1./(1-order))
+    return h2
+
+
+## Get all hill numbers from 0 to 'orders' from a column vector of abundances
+def hill_numbers(abunds, orders, granularity=None, do_negative=False):
+    ret = []
+    min_order = 0
+    if not granularity: granularity = orders + 1
+    if do_negative:
+        min_order = -orders
+        granularity *= 2
+    for order in np.linspace(min_order, orders, granularity):
+        ret.append(hill_number(abunds, order))
+    return np.array(ret)
+
+
+def SAD(community, from_abundances=False, octaves=False, raw_abunds=False):
     """Generate the species abundance distribution either raw or in 
     octaves of powers of 2. The input here is a simple list of "individuals"
     specified just by their species identifier.
@@ -42,6 +72,11 @@ def SAD(community, from_abundances=False, octaves=False):
     except KeyError:
         pass
 
+    ## If raw_abunds then we just want to get the list of all abundances
+    ## of all species as a list, don't do any SAD binning.
+    if raw_abunds:
+        return abundances.values()
+
     ## Now for each abundance class you have to go through and
     ## count the number of species at that abundance.
     abundance_distribution = collections.Counter(list(abundances.values()))
@@ -66,6 +101,8 @@ def SAD(community, from_abundances=False, octaves=False):
     return abundance_distribution
 
 
+## TODO: Replace this and the dxy function with the pi/dxy 
+## functions from easyCGD which are much nicer and smarter.
 def pi(haplotypes):
     ## If no seg sites in a pop then haplotypes will be 0 length
     if haplotypes.size == 0:
