@@ -48,7 +48,6 @@ class LocalCommunity(object):
                         ("mode", "volcanic"),
                         ("K", K),
                         ("colrate", colrate),
-                        ("age", 100000),
                         ("speciation_rate", 0),
                         ("background_death", 0.25),
                         ("trait_rate_local", 5)
@@ -68,10 +67,14 @@ class LocalCommunity(object):
         ##      should normally not mess with this.
         ##  * mig_clust_size: number of incoming migrants during colonization events.
         ##      The number of individuals sampled to die is adjusted to equal this.
+        ##  * age: This was intended to be the time at which the "island" arises
+        ##      during the simulation, to allow for islands popping up at
+        ##      at different times, but I never implemented this yet.
         self._hackersonly = dict([
                         ("allow_empty", True),
                         ("outdir", []),
                         ("mig_clust_size", 1),
+                        ("age", 100000),
         ])
 
         ## list for storing the state of our local community. The list is much faster
@@ -258,7 +261,7 @@ class LocalCommunity(object):
             LOGGER.debug("set param {} - {} = {}".format(self, param, newvalue))
 
             ## Cast params to correct types
-            if param in ["K", "age"]:
+            if param in ["K"]:
                 tup = _tuplecheck(newvalue, dtype=int)
                 if isinstance(tup, tuple):
                     self._priors[param] = tup
@@ -1083,7 +1086,6 @@ LOCAL_PARAMS = {
     "mode" : "Local community formation mode (volcanic/landbridge)",\
     "K" : "Local carrying capacity",\
     "colrate" : "Colonization rate into local community",\
-    "age" : "Local community age",\
     "speciation_rate" : "# of new species per forward-time generation",\
     "background_death" : "Baseline death probability in trait-based models",\
     "trait_rate_local" : "Trait evolution rate parameter for local community",\
