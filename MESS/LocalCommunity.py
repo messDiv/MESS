@@ -30,8 +30,7 @@ MAX_DUPLICATE_REDRAWS_FROM_METACOMMUNITY = 1500
 
 class LocalCommunity(object):
 
-    def __init__(self, name=None, K=5000, colrate=0.01, \
-                mig_clust_size=1, quiet=False):
+    def __init__(self, name=None, K=5000, colrate=0.01, quiet=False):
         self.quiet = quiet
 
         if name is None:
@@ -50,7 +49,6 @@ class LocalCommunity(object):
                         ("K", K),
                         ("colrate", colrate),
                         ("age", 100000),
-                        ("mig_clust_size", mig_clust_size),
                         ("speciation_rate", 0),
                         ("background_death", 0.25),
                         ("trait_rate_local", 5)
@@ -60,7 +58,6 @@ class LocalCommunity(object):
         self._priors = dict([
                         ("K", []),
                         ("colrate", []),
-                        ("mig_clust_size", [])
         ])
 
         ## Dictionary of 'secret' parameters that most people won't want to mess with
@@ -69,9 +66,12 @@ class LocalCommunity(object):
         ##      individual and populate the rest of K with 'empty' demes.
         ##  * outdir is inherited from the Region.simulate() command, so users
         ##      should normally not mess with this.
+        ##  * mig_clust_size: number of incoming migrants during colonization events.
+        ##      The number of individuals sampled to die is adjusted to equal this.
         self._hackersonly = dict([
                         ("allow_empty", True),
                         ("outdir", []),
+                        ("mig_clust_size", 1),
         ])
 
         ## list for storing the state of our local community. The list is much faster
@@ -190,7 +190,7 @@ class LocalCommunity(object):
 
         new.paramsdict = self.paramsdict
         ## Get sample from prior range on params that may have priors
-        for param in ["K", "colrate", "mig_clust_size"]:
+        for param in ["K", "colrate"]:
             ## if _priors is empty then this param is fixed
             if np.any(self._priors[param]):
                 self.paramsdict[param] = sample_param_range(new._priors[param])[0]
@@ -232,7 +232,7 @@ class LocalCommunity(object):
         ##      all the individuals will be thrown back into the parent species pool.
         ##      Default is 0 which indicates this is a good species immediately, either a new
         ##      colonizing lineage or a point mutation species.
-        if abundances_through_time == 0: abundances_through_time = OrderedDict([(self.current_time,self.paramsdict["mig_clust_size"])])
+        if abundances_through_time == 0: abundances_through_time = OrderedDict([(self.current_time,self._hackersonly["mig_clust_size"])])
         self.local_info[sname] = [self.current_time,\
                                         0,\
                                         abundances_through_time,\
@@ -258,7 +258,7 @@ class LocalCommunity(object):
             LOGGER.debug("set param {} - {} = {}".format(self, param, newvalue))
 
             ## Cast params to correct types
-            if param in ["K", "mig_clust_size", "age"]:
+            if param in ["K", "age"]:
                 tup = _tuplecheck(newvalue, dtype=int)
                 if isinstance(tup, tuple):
                     self._priors[param] = tup
@@ -612,7 +612,7 @@ class LocalCommunity(object):
             ## Check probability of an immigration event
             if np.random.random_sample() < self.paramsdict["colrate"]:
                 ## If clustered migration remove the necessary number of additional individuals
-                for _ in range(self.paramsdict["mig_clust_size"]):
+                for _ in range(self._hackersonly["mig_clust_size"]):
                     self.death_step()
 
                 ## Grab the new colonizing species
@@ -632,8 +632,8 @@ class LocalCommunity(object):
                         self.invasion_time = self.current_time
 
                 ## Add the colonizer to the local community, record the colonization time
-                self.local_community.extend([new_species] * self.paramsdict["mig_clust_size"])
-                self.founder_flags.extend([False] * self.paramsdict["mig_clust_size"])
+                self.local_community.extend([new_species] * self._hackersonly["mig_clust_size"])
+                self.founder_flags.extend([False] * self._hackersonly["mig_clust_size"])
                 self.colonizations += 1
             else:
                 try:
@@ -1083,7 +1083,6 @@ LOCAL_PARAMS = {
     "mode" : "Local community formation mode (volcanic/landbridge)",\
     "K" : "Local carrying capacity",\
     "colrate" : "Colonization rate into local community",\
-    "mig_clust_size" : "# of individuals per colonization event",\
     "age" : "Local community age",\
     "speciation_rate" : "# of new species per forward-time generation",\
     "background_death" : "Baseline death probability in trait-based models",\
