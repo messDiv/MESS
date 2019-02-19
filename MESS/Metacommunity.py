@@ -78,6 +78,11 @@ class Metacommunity(object):
         return "<Metacommunity: {} Richness {}>".format(self.paramsdict["metacommunity_type"],\
                                                         self.paramsdict["nspecies"])
 
+    def _resample_priors(self):
+        for k,v in self._priors.items():
+            if np.array(v).any():
+                self.paramsdict[k] = sample_param_range(v)[0]
+
 
     def _simulate_metacommunity(self, J, nspecies, birth_rate, death_proportion, trait_rate_meta):
         import rpy2.robjects as robjects
@@ -211,7 +216,7 @@ class Metacommunity(object):
             paramsfile.write("\n")
 
 
-    def set_metacommunity(self, random=False):
+    def set_metacommunity(self, random=False, resample=False):
         """
         For setting the metacommunity you can either generate a random
         uniform community or read on in from a file that's basically just
@@ -222,6 +227,9 @@ class Metacommunity(object):
         random=True will set random trait values in the range [0-1]
         """
         meta_type = self.paramsdict["metacommunity_type"]
+
+        if resample:
+            self._resample_priors()
 
         ## Accumulators for bringing in all the values. These will
         ## eventually all get shoved into self.community

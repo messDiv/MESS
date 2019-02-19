@@ -203,7 +203,7 @@ class Region(object):
     def _reset_metacommunity(self):
         ## Calling set_metacommunity() again will regenerate a new
         ## metacommunity using the same parameters each time.
-        self.metacommunity.set_metacommunity()
+        self.metacommunity.set_metacommunity(resample=True)
 
 
     def write_params(self, outfile=None, outdir=None, force=False):
