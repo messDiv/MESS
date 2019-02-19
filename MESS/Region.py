@@ -337,7 +337,11 @@ class Region(object):
         if force:
             append = 'w'
             ## Prevent from shooting yourself in the foot with -f
-            os.rename(simfile, simfile+".bak")
+            try:
+                os.rename(simfile, simfile+".bak")
+            except FileNotFoundError:
+                ## If the simfile doesn't exist catch the error and move on
+                pass
 
         ## Decide whether to print the header, if stuff is already in there then
         ## don't print the header, unless you're doing force because this opens
