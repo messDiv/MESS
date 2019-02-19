@@ -52,7 +52,6 @@ class Region(object):
                        ("simulation_name", name),
                        ("project_dir", "./default_MESS"),
                        ("sgd_dimensions", 1),
-                       ("sgd_bins", 10),
                        ("generations", 0),
                        ("recording_period", 10000),
                        ("community_assembly_model", "neutral"),
@@ -65,8 +64,10 @@ class Region(object):
         ##
         ##  * population_growth: Rate of growth since colonization: exponential/constant/harmonic.
         ##      'harmonic' is the only sensible one, so we'll use this as the default always.
+        ##  * sgd_bins: Number of bins per axis for the SGD histogram
         self._hackersonly = dict([
                        ("population_growth", "harmonic"),
+                       ("sgd_bins", 10),
         ])
 
         ## Track local communities in this model and colonization rates among them
@@ -140,7 +141,7 @@ class Region(object):
         try:
             LOGGER.debug("set param {} - {} = {}".format(self, param, newvalue))
             ## Cast params to correct types
-            if param in ["sgd_bins", "recording_period"]:
+            if param in ["recording_period"]:
                 self.paramsdict[param] = int(float(newvalue))
 
             elif param == "sgd_dimensions":
@@ -575,7 +576,6 @@ REGION_PARAMS = {
     "simulation_name" : "The name of this simulation scenario",\
     "project_dir" : "Where to save files",\
     "sgd_dimensions" : "Number of dimensions for simulated SGD: 1 or 2",\
-    "sgd_bins" : "Number of bins per axis for simulated SGD",\
     "generations" : "Duration of simulations. Specify int range or 0 for lambda.",\
     "recording_period" : "Number of forward-time generations between samples for logging",\
     "community_assembly_model" : "Model of Community Assembly: neutral, filtering, competition",\
