@@ -912,7 +912,7 @@ class LocalCommunity(object):
                 sp_obj = species(name = sp,
                          species_params = self.region.get_species_params(),
                          divergence_time = dat[sp].loc['colonization_times'],\
-                         growth = self.region.paramsdict["population_growth"],\
+                         growth = self.region._hackersonly["population_growth"],\
                          abundance = dat[sp].loc["local_abund"],\
                          meta_abundance = dat[sp]["meta_abund"],
                          migration_rate = migration_rate,\
@@ -942,7 +942,7 @@ class LocalCommunity(object):
                     sp = species(name = name,
                                  species_params = self.region.get_species_params(),
                                  divergence_time = tdiv,\
-                                 growth = self.region.paramsdict["population_growth"],\
+                                 growth = self.region._hackersonly["population_growth"],\
                                  abundance = local_abund,\
                                  meta_abundance = meta_abund,
                                  migration_rate = self.local_info[name]["post_colonization_migrants"]/float(tdiv),\

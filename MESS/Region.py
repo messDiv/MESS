@@ -55,12 +55,18 @@ class Region(object):
                        ("sgd_bins", 10),
                        ("generations", 0),
                        ("recording_period", 10000),
-                       ("population_growth", "constant"),
                        ("community_assembly_model", "neutral"),
                        ("speciation_model", "point_mutation"),
                        ("mutation_rate", 0.000022),
                        ("sigma", 1000),
                        ("sequence_length", 570),
+        ])
+
+        ##
+        ##  * population_growth: Rate of growth since colonization: exponential/constant/harmonic.
+        ##      'harmonic' is the only sensible one, so we'll use this as the default always.
+        self._hackersonly = dict([
+                       ("population_growth", "harmonic"),
         ])
 
         ## Track local communities in this model and colonization rates among them
@@ -572,7 +578,6 @@ REGION_PARAMS = {
     "sgd_bins" : "Number of bins per axis for simulated SGD",\
     "generations" : "Duration of simulations. Specify int range or 0 for lambda.",\
     "recording_period" : "Number of forward-time generations between samples for logging",\
-    "population_growth" : "Rate of growth since colonization: exponential/constant/harmonic",\
     "community_assembly_model" : "Model of Community Assembly: neutral, filtering, competition",\
     "speciation_model" : "Type of speciation process: none, point_mutation, protracted, random_fission",\
     "mutation_rate" : "Mutation rate scaled per base per generation",\
