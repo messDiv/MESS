@@ -328,9 +328,6 @@ class Region(object):
         """ Do the heavy lifting here"""
         print("    Generating {} simulations.".format(sims))
 
-        ## Preserve any parameter state that has changed:
-        self.write_params(force=True)
-
         simfile = os.path.join(self.paramsdict["project_dir"], "SIMOUT.txt")
         ## Open output file. If force then overwrite existing, otherwise just append.
         append = 'a'
