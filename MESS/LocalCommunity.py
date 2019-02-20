@@ -972,7 +972,7 @@ class LocalCommunity(object):
         LOGGER.debug("First 5 species - \n{}".format(self.species[:5]))
         ## Model parameters
         self.stats._lambda = self._lambda()
-        self.stats.generation = self.current_time
+        self.stats.generation = self.current_time * 2 / self.paramsdict["K"]
         self.stats.K = self.paramsdict["K"]
         self.stats.colrate = self.paramsdict["colrate"]
         self.stats.speciation_rate = self.paramsdict["speciation_rate"]
