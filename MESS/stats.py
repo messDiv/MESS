@@ -5,17 +5,6 @@ import numpy as np
 import math
 from scipy.stats import entropy
 
-## Here abundances is an ordered dict of tuples which are (abundance, count)
-## This is the typical format returned by LocalCommunity.get_abundances(octaves=False)
-## Just fucking use scipy.stats.entropy idiot
-def shannon(abundances):
-    ## Unpack the abundance dist
-    abunds = []
-    for k, v in abundances.items():
-        abunds.extend([k] * v)
-    tot = np.sum(abunds)
-    return -1 * np.sum([x/float(tot) * math.log(x/float(tot)) for x in abunds  if x > 0])
-
 
 ## Get one hill humber from a list of abundances (a column vector from the OTU table)
 def hill_number(abunds, order):

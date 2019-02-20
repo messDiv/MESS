@@ -123,7 +123,6 @@ class LocalCommunity(object):
                    "colrate_calculated",
                    "extrate_calculated",
                    "R",
-                   "shannon",
                    "abund_h1",
                    "abund_h2",
                    "abund_h3",
@@ -375,7 +374,7 @@ class LocalCommunity(object):
 
 
     def __str__(self):
-        return "<LocalCommunity {}: Shannon's Entropy {}>".format(self.name, shannon(self.get_abundances()))
+        return "<LocalCommunity {}>".format(self.name)
 
 
     def prepopulate(self, quiet=False):
@@ -991,7 +990,6 @@ class LocalCommunity(object):
         ## Model sumstats
         self.stats.R = len(set(self.local_community))
         sad = self.get_abundances(raw_abunds=True)
-        self.stats.shannon = hill_number(sad, order=1)
 
         pis = np.array([x.stats["pi_local"] for x in self.species])
         dxys = np.array([x.stats["dxy"] for x in self.species])

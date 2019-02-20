@@ -135,7 +135,7 @@ def import_empirical(input_dir):
     if os.path.isfile(abundfile):
         dat = open(abundfile).read().strip().split(",")
         dat = map(int, dat)
-        print("Got empirical shannon - {}".format(shannon(SAD(dat, from_abundances=True))))
+        print("Got empirical abundance Hill_1 - {}".format(hill_number(SAD(dat, from_abundances=True, raw_abunds=True))))
 
     fastadir = os.path.join(input_dir, "spider-fasta")
     if os.path.exists(fastadir):
