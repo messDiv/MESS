@@ -53,7 +53,6 @@ class Region(object):
                        ("project_dir", "./default_MESS"),
                        ("sgd_dimensions", 1),
                        ("generations", 0),
-                       ("recording_period", 10000),
                        ("community_assembly_model", "neutral"),
                        ("speciation_model", "point_mutation"),
                        ("mutation_rate", 0.000022),
@@ -65,9 +64,11 @@ class Region(object):
         ##  * population_growth: Rate of growth since colonization: exponential/constant/harmonic.
         ##      'harmonic' is the only sensible one, so we'll use this as the default always.
         ##  * sgd_bins: Number of bins per axis for the SGD histogram
+        ##  * recording_period: Number of forward-time ticks between samples for logging
         self._hackersonly = dict([
                        ("population_growth", "harmonic"),
                        ("sgd_bins", 10),
+                       ("recording_period", 10000),
         ])
 
         ## Track local communities in this model and colonization rates among them
@@ -139,12 +140,8 @@ class Region(object):
         """ Raises exceptions when params are set to values they should not be"""
         ## TODO: This should actually check the values and make sure they make sense
         try:
-            LOGGER.debug("set param {} - {} = {}".format(self, param, newvalue))
             ## Cast params to correct types
-            if param in ["recording_period"]:
-                self.paramsdict[param] = int(float(newvalue))
-
-            elif param == "sgd_dimensions":
+            if param == "sgd_dimensions":
                 if int(newvalue) not in [1, 2]:
                     raise MESSError("sgd_dimensions parameter must be either 1 or 2, you put: {}".format(newvalues))
                 self.paramsdict[param] = int(float(newvalue))
@@ -160,6 +157,9 @@ class Region(object):
                         print("    Project directory exists. Additional simulations will be appended.")
 
             elif param == "generations":
+                ## TODO: This is _not_ how the other prior ranges are specified now, which
+                ## uses the comma ',' delimiter, maybe stupidly. Make this test so it
+                ## uses tuplecheck and the comma like everything else. iao 2/19/19
                 if "-" in newvalue:
                     low = int(float(newvalue.split("-")[0].strip()))
                     high = int(float(newvalue.split("-")[1].strip()))
@@ -477,7 +477,7 @@ class Region(object):
             for island in self.islands.values():
                 island.step()
             step += 1
-            if not step % self.paramsdict["recording_period"]:
+            if not step % self._hackersonly["recording_period"]:
                for island in self.islands.values():
                     island._log(full=log_full)
         ## TODO: Combine stats across local communities if more than one
@@ -577,7 +577,6 @@ REGION_PARAMS = {
     "project_dir" : "Where to save files",\
     "sgd_dimensions" : "Number of dimensions for simulated SGD: 1 or 2",\
     "generations" : "Duration of simulations. Specify int range or 0 for lambda.",\
-    "recording_period" : "Number of forward-time generations between samples for logging",\
     "community_assembly_model" : "Model of Community Assembly: neutral, filtering, competition",\
     "speciation_model" : "Type of speciation process: none, point_mutation, protracted, random_fission",\
     "mutation_rate" : "Mutation rate scaled per base per generation",\

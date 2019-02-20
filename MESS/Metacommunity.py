@@ -47,12 +47,17 @@ class Metacommunity(object):
                         ("death_proportion", 0.5),
                         ("trait_rate_meta", 5),
                         ("ecological_strength", 25),
-                        ("filtering_optimum", 1)
         ])
 
         ## elite hackers only internal dictionary, normally you shouldn't mess with this
+        ##  * lognorm_shape: Shape parameter of the lognormal distribution, if you
+        ##      choose that option, otherwise it does nothing.
+        ##  * filtering_optimum: optimum trait value, only used during environmental
+        ##      filtering model. It isn't even a real parameter at this point because
+        ##      you can't set it, it's constructed during the simulation.
         self._hackersonly= OrderedDict([
                         ("lognorm_shape", 1.98),
+                        ("filtering_optimum", 1)
         ])
 
         ## A dictionary for holding prior ranges for values we're interested in
@@ -61,7 +66,6 @@ class Metacommunity(object):
                         ("death_proportion", []),
                         ("trait_rate_meta", []),
                         ("ecological_strength", []),
-                        ("filtering_optimum", [])
         ])
 
         ## The Newick formatted tree for the metacommunity
@@ -135,14 +139,13 @@ class Metacommunity(object):
         """ Raises exceptions when params are set to values they should not be"""
         ## TODO: This should actually check the values and make sure they make sense
         try:
-            LOGGER.debug("set param {} - {} = {}".format(self, param, newvalue))
             if not quiet and MESS.__interactive__:
                 print("  Updating Metacommunity parameters requires running set_metacommunity()"\
                         + " to apply the changes.")
 
             ## Cast params to correct types
             if param in ["birth_rate", "death_proportion", "trait_rate_meta",
-                            "ecological_strength", "filtering_optimum"]:
+                            "ecological_strength"]:
                 tup = _tuplecheck(newvalue, dtype=float)
                 if isinstance(tup, tuple):
                     self._priors[param] = tup
@@ -268,7 +271,7 @@ class Metacommunity(object):
             tups = list(zip(traits["name"], traits["value"]))
             ids = np.array([x[0] for x in tups])
             trait_values = np.array([x[1] for x in tups])
-            self.paramsdict["filtering_optimum"] = np.random.normal(loc=np.mean(trait_values), scale=np.std(trait_values), size=1)[0]
+            self._hackersonly["filtering_optimum"] = np.random.normal(loc=np.mean(trait_values), scale=np.std(trait_values), size=1)[0]
 
         ## Attempt to read tree/ids/abunds/traits from a file. If it fails, fall back to just
         ## try reading the old list of abundances format.
@@ -401,7 +404,6 @@ LOCAL_PARAMS = {
     "logser_shape" : "If logser: Shape parameter of the distribution",\
     "trait_rate_meta" : "Trait evolution rate parameter for metacommunity",\
     "ecological_strength" : "Strength of community assembly process on phenotypic change",\
-    "filtering_optimum" : "optimum trait value, only used during environmental filtering model",\
 }
 
 

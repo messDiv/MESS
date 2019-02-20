@@ -177,7 +177,7 @@ def set_params(data, param, newvalue, quiet=False):
         Further information about each parameter is also available
         in the documentation.
     """
-    LOGGER.debug("set_params: {} {} {}".format(data, param, newvalue))
+    LOGGER.debug("set param: {} {} = {}".format(data, param, newvalue))
     allowed_params = data.paramsdict.keys()
     ## require parameter recognition
     if not param in allowed_params:

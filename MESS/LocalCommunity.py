@@ -30,7 +30,7 @@ MAX_DUPLICATE_REDRAWS_FROM_METACOMMUNITY = 1500
 
 class LocalCommunity(object):
 
-    def __init__(self, name=None, K=5000, colrate=0.01, quiet=False):
+    def __init__(self, name=None, K=1000, colrate=0.01, quiet=False):
         self.quiet = quiet
 
         if name is None:
@@ -258,7 +258,6 @@ class LocalCommunity(object):
         ## TODO: This should actually check the values and make sure they make sense
         ## TODO: Also check here if you're setting the mode parameter you have to rerun prepopulate
         try:
-            LOGGER.debug("set param {} - {} = {}".format(self, param, newvalue))
 
             ## Cast params to correct types
             if param in ["K"]:
@@ -279,9 +278,6 @@ class LocalCommunity(object):
 
             elif param == "mode":
                 ## Must reup the local community if you change the mode
-                self.paramsdict[param] = newvalue
-
-            elif param == "filtering_optimum":
                 self.paramsdict[param] = newvalue
 
             elif param == "speciation_rate":
@@ -481,7 +477,7 @@ class LocalCommunity(object):
                 ## Call to _get_filter is memoized so results are cached
                 death_probability = _get_filtering_death_prob(self.region, victim_trait)
                 death_probability = (1 - death_probability) * survival_scalar + death_probability
-                target_trait_val = self.region.metacommunity.paramsdict["filtering_optimum"]
+                target_trait_val = self.region.metacommunity._hackersonly["filtering_optimum"]
 
             elif self.region.paramsdict["community_assembly_model"] == "competition":
                 mean_local_trait = self.region.get_trait_stats(self.local_community, mean_only=True)
@@ -986,7 +982,7 @@ class LocalCommunity(object):
         self.stats.trait_rate_local = self.paramsdict["trait_rate_local"]
         self.stats.ecological_strength = self.region.metacommunity.paramsdict["ecological_strength"]
         ## Pseudo-parameters
-        self.stats.filtering_optimum = self.region.metacommunity.paramsdict["filtering_optimum"]
+        self.stats.filtering_optimum = self.region.metacommunity._hackersonly["filtering_optimum"]
         try:
             self.stats.colrate_calculated = self.colonizations/float(self.current_time)
             self.stats.extrate_calculated = self.extinctions/float(self.current_time)
@@ -1063,7 +1059,7 @@ class LocalCommunity(object):
 @memoize
 def _get_filtering_death_prob(region, victim_trait):
     try:
-        val = 1 - (np.exp(-((victim_trait - region.metacommunity.paramsdict["filtering_optimum"]) ** 2)/region.metacommunity.paramsdict["ecological_strength"]))
+        val = 1 - (np.exp(-((victim_trait - region.metacommunity._hackersonly["filtering_optimum"]) ** 2)/region.metacommunity.paramsdict["ecological_strength"]))
     except Exception as inst:
         raise MESSError("Error getting death prob using trait - {}".format(victim_trait))
     return val
