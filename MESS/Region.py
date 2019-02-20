@@ -61,7 +61,7 @@ class Region(object):
                        ("sequence_length", 570),
         ])
 
-        ##
+        ## elite hackers only internal dictionary, normally you shouldn't mess with this
         ##  * population_growth: Rate of growth since colonization: exponential/constant/harmonic.
         ##      'harmonic' is the only sensible one, so we'll use this as the default always.
         ##  * sgd_bins: Number of bins per axis for the SGD histogram
