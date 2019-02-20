@@ -40,9 +40,8 @@ class Metacommunity(object):
         ##
         ## Also be sure to add it to _paramschecker so the type gets set correctly
         self.paramsdict = OrderedDict([
-                        ("metacommunity_type", meta_type),
-                        ("nspecies", 1000),
-                        ("J", 1000000),
+                        ("nspecies", 100),
+                        ("J", 100000),
                         ("birth_rate", 2),
                         ("death_proportion", 0.5),
                         ("trait_rate_meta", 5),
@@ -50,12 +49,14 @@ class Metacommunity(object):
         ])
 
         ## elite hackers only internal dictionary, normally you shouldn't mess with this
+        ##  * metacommunity_type: Options: uniform/logser/<filename>
         ##  * lognorm_shape: Shape parameter of the lognormal distribution, if you
         ##      choose that option, otherwise it does nothing.
         ##  * filtering_optimum: optimum trait value, only used during environmental
         ##      filtering model. It isn't even a real parameter at this point because
         ##      you can't set it, it's constructed during the simulation.
         self._hackersonly= OrderedDict([
+                        ("metacommunity_type", meta_type),
                         ("lognorm_shape", 1.98),
                         ("filtering_optimum", 1)
         ])
@@ -79,7 +80,7 @@ class Metacommunity(object):
 
 
     def __str__(self):
-        return "<Metacommunity: {} Richness {}>".format(self.paramsdict["metacommunity_type"],\
+        return "<Metacommunity: {} Richness {}>".format(self._hackersonly["metacommunity_type"],\
                                                         self.paramsdict["nspecies"])
 
     def _resample_priors(self):
@@ -153,8 +154,6 @@ class Metacommunity(object):
                 else:
                     self.paramsdict[param] = tup
                 LOGGER.debug("{} {}".format(param, tup))
-            elif param == "metacommunity_type":
-                self.paramsdict[param] = newvalue
 
             elif param == "nspecies":
                 self.paramsdict[param] = int(float(newvalue))
@@ -229,7 +228,7 @@ class Metacommunity(object):
 
         random=True will set random trait values in the range [0-1]
         """
-        meta_type = self.paramsdict["metacommunity_type"]
+        meta_type = self._hackersonly["metacommunity_type"]
 
         if resample:
             self._resample_priors()
@@ -396,7 +395,6 @@ class Metacommunity(object):
 ## Metacommunity Parameter Info Dicts
 #############################
 LOCAL_PARAMS = {
-    "metacommunity_type" : "Options: uniform/logser/<filename>",\
     "nspecies" : "Number of species in the regional pool",\
     "J" : "Total # of individuals in the regional pool",\
     "birth_rate" : "Speciation rate of metacommunity",\
@@ -426,8 +424,6 @@ if __name__ == "__main__":
 
     for x in range(10):
         print(data.get_migrant())
-
-    data = set_params(data, "metacommunity_type", "logser")
 
     migs, traits = data.get_nmigrants(5)
     print(migs, traits)

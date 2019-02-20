@@ -51,7 +51,6 @@ class Region(object):
         self.paramsdict = OrderedDict([
                        ("simulation_name", name),
                        ("project_dir", "./default_MESS"),
-                       ("sgd_dimensions", 1),
                        ("generations", 0),
                        ("community_assembly_model", "neutral"),
                        ("speciation_model", "point_mutation"),
@@ -63,10 +62,14 @@ class Region(object):
         ## elite hackers only internal dictionary, normally you shouldn't mess with this
         ##  * population_growth: Rate of growth since colonization: exponential/constant/harmonic.
         ##      'harmonic' is the only sensible one, so we'll use this as the default always.
+        ##  * sgd_dimensions: Number of dimensions for simulated SGD: 1 or 2. 1 indicates
+        ##      the presence of only local pi information, and 2 indicates pi for 
+        ##      metacommunity species, so dxy is calculated.
         ##  * sgd_bins: Number of bins per axis for the SGD histogram
         ##  * recording_period: Number of forward-time ticks between samples for logging
         self._hackersonly = dict([
                        ("population_growth", "harmonic"),
+                       ("sgd_dimensions", 1),
                        ("sgd_bins", 10),
                        ("recording_period", 10000),
         ])
@@ -141,12 +144,7 @@ class Region(object):
         ## TODO: This should actually check the values and make sure they make sense
         try:
             ## Cast params to correct types
-            if param == "sgd_dimensions":
-                if int(newvalue) not in [1, 2]:
-                    raise MESSError("sgd_dimensions parameter must be either 1 or 2, you put: {}".format(newvalues))
-                self.paramsdict[param] = int(float(newvalue))
-
-            elif param == "project_dir":
+            if param == "project_dir":
                 ## If it already exists then just inform the user that we'll be adding
                 ## more simulations to the current project directory
                 self.paramsdict[param] = newvalue
@@ -575,7 +573,6 @@ def simulate(data, _lambda=0, nsteps=0, quiet=True):
 REGION_PARAMS = {
     "simulation_name" : "The name of this simulation scenario",\
     "project_dir" : "Where to save files",\
-    "sgd_dimensions" : "Number of dimensions for simulated SGD: 1 or 2",\
     "generations" : "Duration of simulations. Specify int range or 0 for lambda.",\
     "community_assembly_model" : "Model of Community Assembly: neutral, filtering, competition",\
     "speciation_model" : "Type of speciation process: none, point_mutation, protracted, random_fission",\

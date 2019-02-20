@@ -246,7 +246,7 @@ class LocalCommunity(object):
 
     def _set_region(self, region):
         self.region = region
-        self.SGD = SGD([], ndims=region.paramsdict["sgd_dimensions"], nbins=region._hackersonly["sgd_bins"])
+        self.SGD = SGD([], ndims=region._hackersonly["sgd_dimensions"], nbins=region._hackersonly["sgd_bins"])
 
 
     def _get_stats_header(self):
@@ -1018,7 +1018,7 @@ class LocalCommunity(object):
         self.SGD = SGD(pis,\
                        dxys,\
                        nbins = self.region._hackersonly["sgd_bins"],\
-                       ndims = self.region.paramsdict["sgd_dimensions"])
+                       ndims = self.region._hackersonly["sgd_dimensions"])
         LOGGER.debug("SGD - {}".format(self.SGD))
 
         try:
