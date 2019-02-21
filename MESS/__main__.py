@@ -288,17 +288,17 @@ def do_sims(data, args):
                 print("Clean up ipcluster {}".format(ipyclient))
                 ## send SIGINT (2) to all engines
                 try:
-                    ipyclient.abort()
+                    ipyclient.abort(block=False)
                     time.sleep(1)
                     for engine_id, pid in data._ipcluster["pids"].items():
-                        LOGGER.debug("Cleaning up ipcluster engine/pid {}/{}".format(engine_id, pid))
+                        LOGGER.debug("  Cleaning up ipcluster engine/pid {}/{}".format(engine_id, pid))
                         if ipyclient.queue_status()[engine_id]["tasks"]:
                             os.kill(pid, 2)
                             LOGGER.info('interrupted engine {} w/ SIGINT to {}'\
                                     .format(engine_id, pid))
                     time.sleep(1)
                 except ipp.NoEnginesRegistered as inst:
-                    LOGGER.debug(inst)
+                    LOGGER.debug("No engines registered: {}".format(inst))
 
                 ## if CLI, stop jobs and shutdown. Don't use _cli here 
                 ## because you can have a CLI object but use the --ipcluster

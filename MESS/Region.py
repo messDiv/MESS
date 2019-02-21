@@ -387,6 +387,18 @@ class Region(object):
         ## Parallelize
         else:
             parallel_jobs = {}
+
+            ## store ipyclient engine pids to the Assembly so we can
+            ## hard-interrupt them later if assembly is interrupted.
+            ## Only stores pids of engines that aren't busy at this moment,
+            ## otherwise it would block here while waiting to find their pids.
+            self._ipcluster["pids"] = {}
+            for eid in ipyclient.ids:
+                engine = ipyclient[eid]
+                if not engine.outstanding:
+                    pid = engine.apply(os.getpid).get()
+                    self._ipcluster["pids"][eid] = pid
+
             ## Magic to make the Region() object picklable
             ipyclient[:].use_dill()
             lbview = ipyclient.load_balanced_view()
@@ -410,18 +422,24 @@ class Region(object):
                         break
                 except KeyboardInterrupt as inst:
                     print("\n    Cancelling remaining simulations.")
-            progressbar(100, 100, "\n    Finished {} simulations\n".format(sims))
+                    break
+            progressbar(100, 100, "\n    Finished {} simulations\n".format(len(fin)))
 
             faildict = {}
             passdict = {}
             ## Gather results
             for result in parallel_jobs:
-                if not parallel_jobs[result].successful():
-                    faildict[result] = parallel_jobs[result].metadata.error
-                else:
-                    passdict[result] = parallel_jobs[result].result()
-                    res = passdict[result]
-                    SIMOUT.write("\t".join(map(str, res.values)) + "\n")
+                try:
+                    if not parallel_jobs[result].successful():
+                        faildict[result] = parallel_jobs[result].metadata.error
+                    else:
+                        passdict[result] = parallel_jobs[result].result()
+                        res = passdict[result]
+                        SIMOUT.write("\t".join(map(str, res.values)) + "\n")
+                except Exception as inst:
+                    LOGGER.error("Caught a failed simulation - {}".format(inst))
+                    ## Don't let one bad apple spoin the bunch,
+                    ## so keep trying through the rest of the asyncs
 
             ## TODO: Do something more intelligent in the event that any of them fails.
             LOGGER.error("Any failed simulations will report here: {}".format(faildict))
