@@ -368,18 +368,21 @@ class Region(object):
         printstr = " Performing Simulations    | {} |"
         if not ipyclient:
             start = time.time()
-            for i in xrange(sims):
-                elapsed = datetime.timedelta(seconds=int(time.time()-start))
-                progressbar(sims, i, printstr.format(elapsed))
+            try:
+                for i in xrange(sims):
+                    elapsed = datetime.timedelta(seconds=int(time.time()-start))
+                    progressbar(sims, i, printstr.format(elapsed))
 
-                if not do_lambda:
-                    res = self.simulate(nsteps=gens[i])
-                else:
-                    res = self.simulate(_lambda=gens[i], quiet=quiet)
+                    if not do_lambda:
+                        res = self.simulate(nsteps=gens[i])
+                    else:
+                        res = self.simulate(_lambda=gens[i], quiet=quiet)
 
-                SIMOUT.write("\t".join(map(str, res.values)) + "\n")
-                LOGGER.debug("Finished simulation {} stats:\n{}".format(i, res))
-            progressbar(100, 100, " Finished {} simulations\n".format(sims))
+                    SIMOUT.write("\t".join(map(str, res.values)) + "\n")
+                    LOGGER.debug("Finished simulation {} stats:\n{}".format(i, res))
+            except KeyboardInterrupt as inst:
+                print("\n    Cancelling remaining simulations")
+            progressbar(100, 100, " Finished {} simulations\n".format(i))
 
         ## Parallelize
         else:
@@ -396,14 +399,17 @@ class Region(object):
             ## Wait for all jobs to finish
             start = time.time()
             while 1:
-                fin = [i.ready() for i in parallel_jobs.values()]
-                elapsed = datetime.timedelta(seconds=int(time.time()-start))
-                progressbar(len(fin), sum(fin),
-                    printstr.format(elapsed))
-                time.sleep(0.1)
-                if len(fin) == sum(fin):
-                    print("")
-                    break
+                try:
+                    fin = [i.ready() for i in parallel_jobs.values()]
+                    elapsed = datetime.timedelta(seconds=int(time.time()-start))
+                    progressbar(len(fin), sum(fin),
+                        printstr.format(elapsed))
+                    time.sleep(0.1)
+                    if len(fin) == sum(fin):
+                        print("")
+                        break
+                except KeyboardInterrupt as inst:
+                    print("\n    Cancelling remaining simulations.")
             progressbar(100, 100, "\n    Finished {} simulations\n".format(sims))
 
             faildict = {}
