@@ -70,7 +70,9 @@ class LocalCommunity(object):
         ##      during the simulation, to allow for islands popping up at
         ##      at different times, but I never implemented this yet.
         ##  * trait_rate_local: The trait evolution rate parameter for local community,
-        ##      caluclate from the trait rate meta, birth rate, and death rate
+        ##      You can fix this value to something different if you really want,
+        ##      but by default we calculate from the trait rate meta divided by global 
+        ##      birth rate + death rate.
         self._hackersonly = dict([
                         ("allow_empty", True),
                         ("outdir", []),
@@ -704,7 +706,6 @@ class LocalCommunity(object):
         ## with mean of parent value, and stdv equal to stdv of BM
         ## process in metacommunity times average lineage lifetime
         trt = np.random.normal(parent_trait, self._hackersonly["trait_rate_local"], 1)
-
 
         self.region._record_local_speciation(sname, trt)
 
