@@ -49,8 +49,7 @@ class LocalCommunity(object):
                         ("K", K),
                         ("colrate", colrate),
                         ("speciation_rate", 0),
-                        ("background_death", 0.25),
-                        ("trait_rate_local", 5)
+                        ("background_death", 0.25)
         ])
 
         ## A dictionary for holding prior ranges for values we're interested in
@@ -70,11 +69,14 @@ class LocalCommunity(object):
         ##  * age: This was intended to be the time at which the "island" arises
         ##      during the simulation, to allow for islands popping up at
         ##      at different times, but I never implemented this yet.
+        ##  * trait_rate_local: The trait evolution rate parameter for local community,
+        ##      caluclate from the trait rate meta, birth rate, and death rate
         self._hackersonly = dict([
                         ("allow_empty", True),
                         ("outdir", []),
                         ("mig_clust_size", 1),
                         ("age", 100000),
+                        ("trait_rate_local", 0)
         ])
 
         ## list for storing the state of our local community. The list is much faster
@@ -246,6 +248,7 @@ class LocalCommunity(object):
     def _set_region(self, region):
         self.region = region
         self.SGD = SGD([], ndims=region._hackersonly["sgd_dimensions"], nbins=region._hackersonly["sgd_bins"])
+        self._hackersonly["trait_rate_local"] = _get_trait_rate_local(self.region)
 
 
     def _get_stats_header(self):
@@ -283,9 +286,6 @@ class LocalCommunity(object):
                 self.paramsdict[param] = float(newvalue)
 
             elif param == "background_death":
-                self.paramsdict[param] = float(newvalue)
-
-            elif param == "trait_rate_local":
                 self.paramsdict[param] = float(newvalue)
 
             else:
@@ -703,7 +703,7 @@ class LocalCommunity(object):
         ## Trait evolution. Offsprint trait is normally distributed
         ## with mean of parent value, and stdv equal to stdv of BM
         ## process in metacommunity times average lineage lifetime
-        trt = np.random.normal(parent_trait, self.paramsdict["trait_rate_local"], 1)
+        trt = np.random.normal(parent_trait, self._hackersonly["trait_rate_local"], 1)
 
 
         self.region._record_local_speciation(sname, trt)
@@ -978,7 +978,7 @@ class LocalCommunity(object):
         self.stats.speciation_rate = self.paramsdict["speciation_rate"]
         self.stats.sigma = self.region.paramsdict["sigma"]
         self.stats.trait_rate_meta = self.region.metacommunity.paramsdict["trait_rate_meta"]
-        self.stats.trait_rate_local = self.paramsdict["trait_rate_local"]
+        self.stats.trait_rate_local = self._hackersonly["trait_rate_local"]
         self.stats.ecological_strength = self.region.metacommunity.paramsdict["ecological_strength"]
         ## Pseudo-parameters
         self.stats.filtering_optimum = self.region.metacommunity._hackersonly["filtering_optimum"]
@@ -1071,6 +1071,14 @@ def _get_competition_death_prob(region, victim_trait, mean_local_trait):
         raise MESSError("Error in geting death prob using trait & mean - {} {}".format(victim_trait, mean_local_trait))
     return val
 
+@memoize
+def _get_trait_rate_local(region):
+    try:
+        ext = region.metacommunity.paramsdict["birth_rate"] * region.metacommunity.paramsdict["death_proportion"]
+        val = region.metacommunity.paramsdict["trait_rate_meta"]/ (region.metacommunity.paramsdict["birth_rate"] + ext)
+    except Exception as inst:
+        raise MESSError("Error in geting trait rate for local community")
+    return val
 
 #############################
 ## Model Parameter Info Dicts
@@ -1082,7 +1090,6 @@ LOCAL_PARAMS = {
     "colrate" : "Colonization rate into local community",\
     "speciation_rate" : "# of new species per forward-time generation",\
     "background_death" : "Baseline death probability in trait-based models",\
-    "trait_rate_local" : "Trait evolution rate parameter for local community",\
 }
 
 
