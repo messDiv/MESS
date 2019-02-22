@@ -344,9 +344,11 @@ class Metacommunity(object):
             raise MESSError(msg.format(self.paramsdict["nspecies"], len(ids)))
 
         ## Calculate immigration probabilities
-        self.paramsdict["J"] = np.sum(self.community["abundances"])
-        LOGGER.debug("Size of metacommunity - {}".format(self.paramsdict["J"]))
-        self.community['immigration_probabilities'] = self.community["abundances"]/float(self.paramsdict["J"])
+        ## Here the true Jm under the logseries model will not equal the true
+        ## sum of abundances, since it is a random variable per simulation.
+        Jm = np.sum(self.community["abundances"])
+        LOGGER.debug("Size of metacommunity - {}".format(Jm))
+        self.community['immigration_probabilities'] = self.community["abundances"]/float(Jm)
         LOGGER.debug("Metacommunity info: shape {}\n[:10] {}".format(self.community.shape, self.community[:10]))
 
 
