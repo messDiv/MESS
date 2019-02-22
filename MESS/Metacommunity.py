@@ -43,8 +43,8 @@ class Metacommunity(object):
                         ("nspecies", 100),
                         ("J", 100000),
                         ("birth_rate", 2),
-                        ("death_proportion", 0.5),
-                        ("trait_rate_meta", 5),
+                        ("death_proportion", 0.7),
+                        ("trait_rate_meta", 2),
                         ("ecological_strength", 25),
         ])
 
