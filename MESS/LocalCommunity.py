@@ -71,7 +71,7 @@ class LocalCommunity(object):
         ##      at different times, but I never implemented this yet.
         ##  * trait_rate_local: The trait evolution rate parameter for local community,
         ##      You can fix this value to something different if you really want,
-        ##      but by default we calculate from the trait rate meta divided by global 
+        ##      but by default we calculate from the trait rate meta divided by global
         ##      birth rate + death rate.
         self._hackersonly = dict([
                         ("allow_empty", True),
@@ -463,7 +463,7 @@ class LocalCommunity(object):
             ## for when the competition model goes off the rails. Here ratchet up the
             ## allowance for death so it doesn't just sit there spinning forever
             if reject % 5 == 0 and reject > 0:
-                survival_scalar += .2
+                survival_scalar += .05
                 LOGGER.debug("Survival scalar bump - {}".format(survival_scalar))
 
             death_thresh = np.random.uniform(0,1)
