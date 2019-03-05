@@ -270,6 +270,7 @@ class Metacommunity(object):
             tups = list(zip(traits["name"], traits["value"]))
             ids = np.array([x[0] for x in tups])
             trait_values = np.array([x[1] for x in tups])
+
             self._hackersonly["filtering_optimum"] = np.random.normal(loc=np.mean(trait_values), scale=np.std(trait_values), size=1)[0]
 
         ## Attempt to read tree/ids/abunds/traits from a file. If it fails, fall back to just
@@ -314,7 +315,10 @@ class Metacommunity(object):
         ## This next set of conditionals is responsible for filling in trait values and ids
         ## for the abundance only file and the 2 distributions specified at the beginning.
         ## TODO: optionally set random trait values?
+
+        ## was overwriting trait simulations so I commented this part out - MR
         if random or not trait_values.size:
+            #trait_values = trait_values
             trait_values = np.random.rand(self.paramsdict["nspecies"])
 
         ## If ids haven't been assigned yet, do that here

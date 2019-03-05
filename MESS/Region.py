@@ -63,7 +63,7 @@ class Region(object):
         ##  * population_growth: Rate of growth since colonization: exponential/constant/harmonic.
         ##      'harmonic' is the only sensible one, so we'll use this as the default always.
         ##  * sgd_dimensions: Number of dimensions for simulated SGD: 1 or 2. 1 indicates
-        ##      the presence of only local pi information, and 2 indicates pi for 
+        ##      the presence of only local pi information, and 2 indicates pi for
         ##      metacommunity species, so dxy is calculated.
         ##  * sgd_bins: Number of bins per axis for the SGD histogram
         ##  * recording_period: Number of forward-time ticks between samples for logging
@@ -111,7 +111,11 @@ class Region(object):
     def _link_metacommunity(self, metacommunity):
         """ Just import a metacommunity object that's been created externally."""
         LOGGER.debug("Linking metacommunity - {}".format(metacommunity))
-        self.metacommunity = metacommunity
+
+        #self.metacommunity = metacommunity
+        ## changed to lower version so MESS would work and not overwrite the traits
+        ## though something is wrong bc traits are being simulated 4 diff. times per simulation
+        self.metacommunity = MESS.Metacommunity()
         self.metacommunity.set_metacommunity()
 
         for locname in self.islands.keys():
@@ -326,7 +330,7 @@ class Region(object):
         return {"mutation_rate":self.paramsdict["mutation_rate"],
                 "sigma": self.paramsdict["sigma"],
                 "sequence_length":self.paramsdict["sequence_length"]}
-        
+
 
     ## Main function for managing cluster parallelized simulations
     def run(self, sims, force=False, ipyclient=None, quiet=False):
@@ -550,6 +554,7 @@ class Region(object):
             sp = list(set(local_com))
             mask = np.isin(self.metacommunity.community["ids"], sp)
             local_traits = self.metacommunity.community["trait_values"][mask]
+
         except Exception as inst:
             raise MESSError("Problem getting traits from local community: {}".format(local_com))
 
