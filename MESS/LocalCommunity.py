@@ -483,7 +483,6 @@ class LocalCommunity(object):
             elif self.region.paramsdict["community_assembly_model"] == "competition":
                 mean_local_trait = self.region.get_trait_stats(self.local_community, mean_only=True)
                 death_probability = _get_competition_death_prob(self.region, victim_trait, mean_local_trait)
-
                 death_probability = (1 - death_probability) * survival_scalar + death_probability
                 target_trait_val = mean_local_trait
 
@@ -1044,9 +1043,24 @@ class LocalCommunity(object):
             if self.region._log_files:
                 megalog = os.path.join(self._hackersonly["outdir"],
                                          self.paramsdict["name"] + "-{}-megalog.txt".format(self._lambda()))
+
                 ## concatenate all species results and transpose the data frame so rows are species
-                fullstats = pd.concat([sp.stats for sp in self.species], axis=1).T
-                fullstats.to_csv(megalog, index_label=False)
+                fullstats = pd.concat([sp.stats for sp in self.species] , axis=1).T
+
+                ## abundances for all species, these are NOT in correct corresponding order
+                abunds = pd.Series(self.get_abundances(raw_abunds=True), name="abundance")
+
+                ## get local trait info, these are also NOT in correct corresponding order
+                local_id = np.isin(self.region.metacommunity.community["ids"], list(set(self.local_community)))
+                local_traits = pd.Series(self.region.metacommunity.community["trait_values"][local_id], name="trait")
+
+                ## added fullstats_2 to include abundance info and trait info
+                ## To be replaced later by something better
+                fullstats_2 = pd.concat([fullstats, abunds, local_traits], axis=1)
+                #print(fullstats_2)
+                
+                fullstats_2.to_csv(megalog, index_label=False)
+
         except Exception as inst:
             #import pdb; pdb.set_trace()
             LOGGER.error("Error in get_stats() - {}".format(inst))
