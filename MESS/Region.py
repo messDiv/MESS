@@ -76,7 +76,7 @@ class Region(object):
                        ("population_growth", "harmonic"),
                        ("sgd_dimensions", 1),
                        ("sgd_bins", 10),
-                       ("recording_period", 20),
+                       ("recording_period", 10),
         ])
 
         ## Track local communities in this model and colonization rates among them
