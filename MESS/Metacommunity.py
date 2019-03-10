@@ -229,6 +229,7 @@ class Metacommunity(object):
         random=True will set random trait values in the range [0-1]
         """
         meta_type = self._hackersonly["metacommunity_type"]
+        LOGGER.debug("Enter set_metacommunity - {}".format(meta_type))
 
         if resample:
             self._resample_priors()
@@ -316,9 +317,8 @@ class Metacommunity(object):
         ## for the abundance only file and the 2 distributions specified at the beginning.
         ## TODO: optionally set random trait values?
 
-        ## was overwriting trait simulations so I commented this part out - MR
         if random or not trait_values.size:
-            #trait_values = trait_values
+            LOGGER.debug("Using random trait values")
             trait_values = np.random.rand(self.paramsdict["nspecies"])
 
         ## If ids haven't been assigned yet, do that here

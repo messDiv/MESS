@@ -79,12 +79,7 @@ class Region(object):
                        ("recording_period", 10),
         ])
 
-        ## Track local communities in this model and colonization rates among them
-        ## TODO: I think we want the default metacommunity type to be 'logser', but
-        ## the new _sim_metacommunity function takes a little time, so startup is laggy.
         self.metacommunity = MESS.Metacommunity()
-        ## Populate the default metacommunity
-        self.metacommunity.set_metacommunity()
 
         self.islands = {}
         self.colonization_matrix = []
@@ -117,11 +112,7 @@ class Region(object):
         """ Just import a metacommunity object that's been created externally."""
         LOGGER.debug("Linking metacommunity - {}".format(metacommunity))
 
-        #self.metacommunity = metacommunity
-        ## changed to lower version so MESS would work and not overwrite the traits
-        ## though something is wrong bc traits are being simulated 4 diff. times per simulation
-        self.metacommunity = MESS.Metacommunity()
-        self.metacommunity.set_metacommunity()
+        self.metacommunity = metacommunity
 
         for locname in self.islands.keys():
             self.islands[locname].prepopulate()
@@ -565,7 +556,7 @@ class Region(object):
             local_traits = self.metacommunity.community["trait_values"][mask]
 
         except Exception as inst:
-            raise MESSError("Problem getting traits from local community: {}".format(local_com))
+            raise MESSError("Problem getting traits from local community: {}".format(inst))
 
         if mean_only:
             return np.mean(local_traits)

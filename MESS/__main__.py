@@ -83,15 +83,15 @@ def getregion(args, region_params, meta_params, island_params):
             print(inst)
             sys.exit(-1)
 
-    ## We get a uniform metacommunity here because it's very fast, the default
-    ## simulates a large tree, so it's laggy
-    meta = MESS.Metacommunity(meta_type="uniform")
+    meta = MESS.Metacommunity()
     for param in meta_params:
         try:
             meta = set_params(meta, param, meta_params[param], quiet=args.quiet)
         except Exception as inst:
             print(inst)
             sys.exit(-1)
+    ## After parameterizing metacommunity finally simulate it
+    meta.set_metacommunity()
     data._link_metacommunity(meta)
         
     ## Populate the islands w/in the region

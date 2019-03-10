@@ -403,7 +403,7 @@ class LocalCommunity(object):
             try:
                 new_species, _ = self.region.get_most_abundant()
             except Exception as inst:
-                raise MESSException("Error in prepopulate - {}".format(inst))
+                raise MESSError("Error in prepopulate - {}".format(inst))
 
             ## prepopulate volcanic either with all the most abundant species in the metacommunity
             ## or with one sample of this species and a bunch of "emtpy deme space". The empty
