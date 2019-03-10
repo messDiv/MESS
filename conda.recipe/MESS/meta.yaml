@@ -37,7 +37,7 @@ requirements:
     - jupyter
     - notebook >=5.0
     - pandas
-    - numpy >=1.7
+    - numpy >=1.16
     - msprime
     - mpmath
     - rpy2
