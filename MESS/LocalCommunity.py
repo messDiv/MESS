@@ -15,7 +15,7 @@ import sys
 import os
 import MESS
 
-from .util import MESSError, _tuplecheck, sample_param_range, memoize
+from .util import MESSError, tuplecheck, sample_param_range, memoize
 from .stats import *
 from .species import species
 from .SGD import SGD
@@ -265,7 +265,7 @@ class LocalCommunity(object):
 
             ## Cast params to correct types
             if param in ["K"]:
-                tup = _tuplecheck(newvalue, dtype=int)
+                tup = tuplecheck(newvalue, dtype=int)
                 if isinstance(tup, tuple):
                     self._priors[param] = tup
                     self.paramsdict[param] = sample_param_range(tup)[0]
@@ -273,7 +273,7 @@ class LocalCommunity(object):
                     self.paramsdict[param] = tup
 
             elif param in ["colrate"]:
-                tup = _tuplecheck(newvalue, dtype=float)
+                tup = tuplecheck(newvalue, dtype=float)
                 if isinstance(tup, tuple):
                     self._priors[param] = tup
                     self.paramsdict[param] = sample_param_range(tup)[0]
@@ -607,7 +607,8 @@ class LocalCommunity(object):
 
 
     def step(self, nsteps=1):
-        for step in range(nsteps):
+        ## Convert time in generations to timesteps (WF -> Moran)
+        for step in range(nsteps * self.paramsdict["K"] / 2):
             ## Check probability of an immigration event
             if np.random.random_sample() < self.paramsdict["colrate"]:
                 ## If clustered migration remove the necessary number of additional individuals

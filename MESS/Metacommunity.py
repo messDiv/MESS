@@ -13,7 +13,7 @@ import random
 import sys
 import os
 import MESS
-from MESS.util import _tuplecheck, sample_param_range, MESSError, set_params
+from MESS.util import tuplecheck, sample_param_range, MESSError, set_params
 
 import logging
 LOGGER = logging.getLogger(__name__)
@@ -147,7 +147,7 @@ class Metacommunity(object):
             ## Cast params to correct types
             if param in ["birth_rate", "death_proportion", "trait_rate_meta",
                             "ecological_strength"]:
-                tup = _tuplecheck(newvalue, dtype=float)
+                tup = tuplecheck(newvalue, dtype=float)
                 if isinstance(tup, tuple):
                     self._priors[param] = tup
                     self.paramsdict[param] = sample_param_range(tup)[0]

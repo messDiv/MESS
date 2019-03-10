@@ -59,6 +59,11 @@ class Region(object):
                        ("sequence_length", 570),
         ])
 
+        ## A dictionary for holding prior ranges for values we're interested in
+        self._priors = dict([
+                        ("generations", []),
+        ])
+
         ## elite hackers only internal dictionary, normally you shouldn't mess with this
         ##  * population_growth: Rate of growth since colonization: exponential/constant/harmonic.
         ##      'harmonic' is the only sensible one, so we'll use this as the default always.
@@ -159,17 +164,21 @@ class Region(object):
                         print("    Project directory exists. Additional simulations will be appended.")
 
             elif param == "generations":
-                ## TODO: This is _not_ how the other prior ranges are specified now, which
-                ## uses the comma ',' delimiter, maybe stupidly. Make this test so it
-                ## uses tuplecheck and the comma like everything else. iao 2/19/19
-                if "-" in newvalue:
-                    low = int(float(newvalue.split("-")[0].strip()))
-                    high = int(float(newvalue.split("-")[1].strip()))
-                    if low >= high:
-                        raise MESSError("Bad parameter for generations: low must be < high value.")
-                    self.paramsdict[param] = tuple([low, high])
+                tup = tuplecheck(newvalue, dtype=float)
+
+                ## If specifying in generations then cast to int, otherwise it's
+                ## lambda (between 0 and 1) so leave it as float.
+                if isinstance(tup, tuple):
+                    if tup[0] > tup[1]:
+                        raise MESSError("Generations parameters malformed: {} must be < {}".format(tup[0], tup[1]))
+                    if tup[0] > 1:
+                        tup = tuple(map(int, tup))
+                    self._priors[param] = tup
+                    self.paramsdict[param] = tup
                 else:
-                    self.paramsdict[param] = int(float(newvalue))
+                    if tup > 1:
+                        tup = int(tup)
+                    self.paramsdict[param] = tup
 
             elif param == "community_assembly_model":
                 self.paramsdict[param] = newvalue

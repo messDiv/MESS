@@ -90,7 +90,7 @@ def sample_param_range(param, nsamps=1):
     return param
 
 
-def _tuplecheck(newvalue, dtype=str):
+def tuplecheck(newvalue, dtype=str):
     """
     Takes a string argument and returns value as a tuple.
     Needed for paramfile conversion from CLI to set_params args
@@ -103,7 +103,7 @@ def _tuplecheck(newvalue, dtype=str):
         try:
             newvalue = tuple(newvalue)
         except TypeError:
-            raise MESSError("_tuplecheck failed for {}, improper list format".format(newvalue))
+            raise MESSError("tuplecheck failed for {}, improper list format".format(newvalue))
     else:
         try:
             ## If it's just one value of the proper dtype this should
@@ -115,11 +115,11 @@ def _tuplecheck(newvalue, dtype=str):
             ## because we may want negative values in some priors.
             try:
                 newvalue = newvalue.rstrip(")").strip("(")
-                minval = dtype(newvalue.split(",")[0].strip())
-                maxval = dtype(newvalue.split(",")[1].strip())
+                minval = dtype(newvalue.split("-")[0].strip())
+                maxval = dtype(newvalue.split("-")[1].strip())
                 newvalue = tuple([minval, maxval])
             except Exception as inst:
-                raise MESSError("{}\t_tuplecheck() failed to cast to {} - {}"\
+                raise MESSError("{}\ttuplecheck() failed to cast to {} - {}"\
                             .format(inst, dtype, newvalue))
 
     LOGGER.debug("Returning tuple - {}".format(newvalue))
