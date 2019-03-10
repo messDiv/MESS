@@ -18,7 +18,7 @@ requirements:
     - ipyparallel >=6.0.2
     - scipy >=0.16
     - cython
-    - numpy >=1.7
+    - numpy >=1.16
     - ipython
     - numpy
     - pandas
