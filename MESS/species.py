@@ -19,7 +19,7 @@ class species(object):
     def __init__(self, name = "", species_params={"mutation_rate":0.00000222,
                                                   "sigma":1000,
                                                   "sequence_length":570},
-                growth="constant", abundance = 1,
+                trait_value = 0, growth="constant", abundance = 1,
                 meta_abundance = 1, divergence_time = 0, migration_rate=0,
                 abundance_through_time={}):
 
@@ -40,6 +40,8 @@ class species(object):
         ## da is what was called pi_net in msbayes
         self.stats = pd.Series(
             index=[ "name",
+                    "trait",
+                    "abundance",
                     "tdiv",
                     "migration_rate",
                     "growth_rate",
@@ -56,6 +58,8 @@ class species(object):
                     "tajd_local"]).astype(np.object)
 
         self.stats["name"] = name
+        self.stats["trait"] = trait_value
+        self.stats["abundance"] = abundance
         self.stats["Ne_local"] = abundance * self.paramsdict["sigma"]
         self.stats["Ne_meta"] = meta_abundance * self.paramsdict["sigma"]
         self.stats["tdiv"] = divergence_time * self.paramsdict["sigma"]

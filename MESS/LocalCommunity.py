@@ -907,6 +907,7 @@ class LocalCommunity(object):
 
                 sp_obj = species(name = sp,
                          species_params = self.region.get_species_params(),
+                         trait_value = self.region.get_trait(sp),
                          divergence_time = dat[sp].loc['colonization_times'],\
                          growth = self.region._hackersonly["population_growth"],\
                          abundance = dat[sp].loc["local_abund"],\
@@ -1047,20 +1048,7 @@ class LocalCommunity(object):
 
                 ## concatenate all species results and transpose the data frame so rows are species
                 fullstats = pd.concat([sp.stats for sp in self.species] , axis=1).T
-
-                ## abundances for all species, these are NOT in correct corresponding order
-                abunds = pd.Series(self.get_abundances(raw_abunds=True), name="abundance")
-
-                ## get local trait info, these are also NOT in correct corresponding order
-                local_id = np.isin(self.region.metacommunity.community["ids"], list(set(self.local_community)))
-                local_traits = pd.Series(self.region.metacommunity.community["trait_values"][local_id], name="trait")
-
-                ## added fullstats_2 to include abundance info and trait info
-                ## To be replaced later by something better
-                fullstats_2 = pd.concat([fullstats, abunds, local_traits], axis=1)
-                #print(fullstats_2)
-                
-                fullstats_2.to_csv(megalog, index_label=False)
+                fullstats.to_csv(megalog, index_label=False)
 
         except Exception as inst:
             #import pdb; pdb.set_trace()
