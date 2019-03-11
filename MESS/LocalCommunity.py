@@ -859,7 +859,7 @@ class LocalCommunity(object):
                     continue
                 sizechange_times = sorted(dat[sp]["abundances_through_time"], reverse=True)
 
-                size = hmean([dat[sp]["abundances_through_time"][x]*1000 for x in sizechange_times])
+                size = hmean([dat[sp]["abundances_through_time"][x] * self.region.paramsdict["sigma"] for x in sizechange_times])
                 pop_local = msprime.PopulationConfiguration(sample_size = 10, initial_size = size, growth_rate = 0)
                 pop_cfgs.append(pop_local)
 
@@ -885,8 +885,8 @@ class LocalCommunity(object):
             except:
                 raise
 
-            tree_sequence = msprime.simulate(length = 600,\
-                                            mutation_rate = 1e-7,\
+            tree_sequence = msprime.simulate(length = self.region.paramsdict["sequence_length"],\
+                                            mutation_rate = self.region.paramsdict["mutation_rate"],\
                                             population_configurations = pop_cfgs,\
                                             demographic_events = split_events)
 

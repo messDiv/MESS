@@ -62,7 +62,7 @@ class species(object):
         self.stats["abundance"] = abundance
         self.stats["Ne_local"] = abundance * self.paramsdict["sigma"]
         self.stats["Ne_meta"] = meta_abundance * self.paramsdict["sigma"]
-        self.stats["tdiv"] = divergence_time * self.paramsdict["sigma"]
+        self.stats["tdiv"] = divergence_time
 
         ## Parameters
         self.name = name
