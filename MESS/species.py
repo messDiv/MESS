@@ -16,8 +16,8 @@ LOGGER = logging.getLogger(__name__)
 
 class species(object):
 
-    def __init__(self, name = "", species_params={"mutation_rate":0.00000222,
-                                                  "sigma":1000,
+    def __init__(self, name = "", species_params={"mutation_rate":2.2e-8,
+                                                  "sigma":2000,
                                                   "sequence_length":570},
                 trait_value = 0, growth="constant", abundance = 1,
                 meta_abundance = 1, divergence_time = 0, migration_rate=0,
@@ -61,7 +61,7 @@ class species(object):
         self.stats["trait"] = trait_value
         self.stats["abundance"] = abundance
         self.stats["Ne_local"] = abundance * self.paramsdict["sigma"]
-        self.stats["Ne_meta"] = meta_abundance * self.paramsdict["sigma"]
+        self.stats["Ne_meta"] = meta_abundance
         self.stats["tdiv"] = divergence_time
 
         ## Parameters
@@ -80,10 +80,11 @@ class species(object):
         ## Take the harmonic mean of the abundance trajectory through time
         elif growth == "harmonic":
             try:
-                harmonic = hmean(np.array(abundance_through_time.values()) * self.paramsdict["sigma"])
-                LOGGER.debug("sname Ne hmean- {} {} {}".format(self.name, self.stats["Ne_local"], harmonic))
-                self.stats["Ne_local"] = harmonic
+                harmonic = hmean(np.array(abundance_through_time.values()))
+                self.stats["Ne_local"] = harmonic * self.paramsdict["sigma"]
                 self.stats["growth_rate"] = 0
+
+                LOGGER.debug("sname Ne hmean- {} {} {}".format(self.name, self.stats["Ne_local"], harmonic))
             except Exception as inst:
                 LOGGER.debug("Failed harmonic mean for {}".format(self))
                 raise inst
@@ -163,12 +164,17 @@ class species(object):
         return size_change_events
 
 
-    def _get_local_meta_split(self, founder_idx = 0, meta_idx = 1):
+    def _get_local_meta_split(self, source_idx = 1, dest_idx = 0):
         ## Going backwards in time, at colonization time throw all lineages from
         ## the local community back into the metacommunity
+
+        ## If dest_idx is empty this then the destination is the metacommunity
+        ## which by default is idx 0
+        if not dest_idx:
+            dest_idx = 0
         split_event = msprime.MassMigration(time = self.stats["tdiv"] + 1,\
-                                            source = founder_idx,\
-                                            destination = meta_idx,\
+                                            source = source_idx,\
+                                            destination = dest_idx,\
                                             proportion = 1)
 
         local_rate_change = msprime.PopulationParametersChange(\
@@ -182,7 +188,7 @@ class species(object):
         local_size_change = msprime.PopulationParametersChange(\
                                             time = self.stats["tdiv"],\
                                             initial_size = .01,\
-                                            population_id = founder_idx)
+                                            population_id = source_idx)
 
         migrate_change = msprime.MigrationRateChange(
                                             time = self.stats["tdiv"],\

@@ -41,7 +41,7 @@ class Metacommunity(object):
         ## Also be sure to add it to _paramschecker so the type gets set correctly
         self.paramsdict = OrderedDict([
                         ("nspecies", 100),
-                        ("J", 100000),
+                        ("J", 750000),
                         ("birth_rate", 2),
                         ("death_proportion", 0.7),
                         ("trait_rate_meta", 2),

@@ -371,6 +371,9 @@ def main():
         ## Create a tmp assembly, call write_params to make default params.txt
         try:
             tmpassembly = MESS.Region(args.new, quiet=True, cli=True)
+            tmpmeta = MESS.Metacommunity()
+            tmpmeta.set_metacommunity()
+            tmpassembly._link_metacommunity(tmpmeta)
             tmplocal = MESS.LocalCommunity("island1", quiet=True)
             tmpassembly._link_local(tmplocal)
             tmpassembly.write_params("params-{}.txt".format(args.new), 

@@ -54,8 +54,8 @@ class Region(object):
                        ("generations", 0),
                        ("community_assembly_model", "neutral"),
                        ("speciation_model", "point_mutation"),
-                       ("mutation_rate", 0.000022),
-                       ("sigma", 1000),
+                       ("mutation_rate", 2.2e-8),
+                       ("sigma", 2000),
                        ("sequence_length", 570),
         ])
 

@@ -852,54 +852,16 @@ class LocalCommunity(object):
             sp_idxs[''] = 0
 
             pop_cfgs = []
-            pop_meta = msprime.PopulationConfiguration(sample_size = 10, initial_size = 10000)
+            split_events = []
+            meta_abund = self.region.get_abundance(cname)
+            pop_meta = msprime.PopulationConfiguration(sample_size = 10, initial_size = meta_abund)
             pop_cfgs.append(pop_meta)
+            species_dict = {}
             for sp, idx in sp_idxs.items():
                 if not sp:
                     continue
-                sizechange_times = sorted(dat[sp]["abundances_through_time"], reverse=True)
-
-                size = hmean([dat[sp]["abundances_through_time"][x] * self.region.paramsdict["sigma"] for x in sizechange_times])
-                pop_local = msprime.PopulationConfiguration(sample_size = 10, initial_size = size, growth_rate = 0)
-                pop_cfgs.append(pop_local)
-
-            ## sp are added in chronological order of coltime, so the'll be in the right order here for
-            ## adding in reverse coltime
-            split_events = []
-            for col in dat.columns:
-                #print(col, dat[col].loc['colonization_times'])
-                #print(sp_idxs[col])
-                split_event = msprime.MassMigration(time = dat[col].loc['colonization_times'],\
-                                                    source = sp_idxs[col],\
-                                                    destination = sp_idxs[dat[col]["ancestor"]],\
-                                                    proportion = 1)
-                split_events.append(split_event)
-
-            try:
-                #print(sp_idxs, split_events)
-                debug = msprime.DemographyDebugger(population_configurations = pop_cfgs,\
-                                                 demographic_events = split_events)
-
-                ## Enable this at your own peril, it will dump a ton of shit to stdout
-                #debug.print_history()
-            except:
-                raise
-
-            tree_sequence = msprime.simulate(length = self.region.paramsdict["sequence_length"],\
-                                            mutation_rate = self.region.paramsdict["mutation_rate"],\
-                                            population_configurations = pop_cfgs,\
-                                            demographic_events = split_events)
-
-            ## Now we have the tree sequence for the clade and can go back through the species list
-            ## and pull out stats per species
-            LOGGER.debug("Done with hsitory now simulating seqs")
-            metasamps = tree_sequence.samples(population=0)
-            for sp, idx in sp_idxs.items():
-                ## Skip the metacommunity, which doesn't have a parent :'(
-                if sp == '':
-                    continue
                 try:
-                    migration_rate = dat[sp]["post_colonization_migrants"]/float(dat[col]['colonization_times'])
+                    migration_rate = dat[sp]["post_colonization_migrants"]/float(dat[sp]['colonization_times'])
                 except ZeroDivisionError as inst:
                     ## This should only happen when coltime is 0, which should be never
                     LOGGER.error("Got bad coltime - {}".format(dat[col]))
@@ -914,6 +876,53 @@ class LocalCommunity(object):
                          meta_abundance = dat[sp]["meta_abund"],
                          migration_rate = migration_rate,\
                          abundance_through_time = {self.current_time - x:y for x, y in list(dat[sp]["abundances_through_time"].items())})
+
+                pop_local = sp_obj._get_local_configuration()
+                pop_cfgs.append(pop_local)
+                split_event = sp_obj._get_local_meta_split(source_idx = idx, dest_idx = sp_idxs[dat[sp]["ancestor"]])
+                split_events.extend(split_event)
+                species_dict[idx] = sp_obj
+
+            ## Make sure demographic events are sorted increasing backward in time
+            split_events.sort(key = lambda x: x.time)
+            try:
+                #print("\n", sp_idxs, split_events)
+                debug = msprime.DemographyDebugger(population_configurations = pop_cfgs,\
+                                                 demographic_events = split_events)
+
+                ## Enable this at your own peril, it will dump a ton of shit to stdout
+                #debug.print_history()
+            except:
+                raise
+
+            tree_sequence = msprime.simulate(length = self.region.paramsdict["sequence_length"],\
+                                            mutation_rate = self.region.paramsdict["mutation_rate"],\
+                                            population_configurations = pop_cfgs,\
+                                            demographic_events = split_events)
+
+            ## This block of code is for debugging the msprime demography
+            ## It might be cute to add a command line flag to optionally
+            ## save these somewhere smart, but.... 
+            if True:
+                tree = tree_sequence.first()
+                colour_map = {0:"red", 1:"blue"}
+                for idx in range(len(sp_idxs) - 2):
+                    r, g, b = np.random.randint(0, 255, 3)
+                    colour_map[idx+2] = "rgb({}, {}, {})".format(r, g, b)
+                node_colours = {u: colour_map[tree.population(u)] for u in tree.nodes()}
+                node_labels = {u: (str(u)) for u in tree.nodes()}
+                tree.draw(path="/tmp/sp-{}.svg".format(cname), format='svg',\
+                            height=500, width=1000, node_labels=node_labels,\
+                            node_colours=node_colours)
+
+            ## Now we have the tree sequence for the clade and can go back through the species list
+            ## and pull out stats per species
+            metasamps = tree_sequence.samples(population=0)
+            for sp, idx in sp_idxs.items():
+                ## Skip the metacommunity, which doesn't have a parent :'(
+                if sp == '':
+                    continue
+                sp_obj = species_dict[idx]
                 sp_obj.tree_sequence = tree_sequence
                 samps = tree_sequence.samples(population=idx)
                 sp_obj.get_sumstats(samps, metasamps)
