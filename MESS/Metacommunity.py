@@ -424,9 +424,6 @@ if __name__ == "__main__":
     print("Test full file")
     data = Metacommunity("../SpInfo.txt")
     print("{} {}".format(data, data.community[:10]))
-    print("Test abunds only file")
-    data = Metacommunity("../metacommunity_LS4.txt")
-    print("{} {}".format(data, data.community[:10]))
 
     for x in range(10):
         print(data.get_migrant())
