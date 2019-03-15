@@ -72,11 +72,17 @@ class Region(object):
         ##      metacommunity species, so dxy is calculated.
         ##  * sgd_bins: Number of bins per axis for the SGD histogram
         ##  * recording_period: Number of forward-time ticks between samples for logging
+        ##  * abundance_speciation_ratio: Relationship between abundance and speciation 
+        ##      probability: proportional, inverse, uniform. This is something that
+        ##      Rosie mentioned and could be worth trying in the future. Right now
+        ##      it is wholly unimplemented. TODO
+
         self._hackersonly = dict([
                        ("population_growth", "harmonic"),
                        ("sgd_dimensions", 1),
                        ("sgd_bins", 10),
                        ("recording_period", 10),
+                       ("abundance_speciation_ratio", "proportional"),
         ])
 
         self.metacommunity = MESS.Metacommunity()
