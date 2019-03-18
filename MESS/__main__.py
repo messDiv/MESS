@@ -91,7 +91,7 @@ def getregion(args, region_params, meta_params, island_params):
             print(inst)
             sys.exit(-1)
     ## After parameterizing metacommunity finally simulate it
-    meta.set_metacommunity()
+    #meta.set_metacommunity()
     data._link_metacommunity(meta)
         
     ## Populate the islands w/in the region
@@ -372,7 +372,7 @@ def main():
         try:
             tmpassembly = MESS.Region(args.new, quiet=True, cli=True)
             tmpmeta = MESS.Metacommunity()
-            tmpmeta.set_metacommunity()
+            #tmpmeta.set_metacommunity()
             tmpassembly._link_metacommunity(tmpmeta)
             tmplocal = MESS.LocalCommunity("island1", quiet=True)
             tmpassembly._link_local(tmplocal)

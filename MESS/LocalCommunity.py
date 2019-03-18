@@ -798,6 +798,8 @@ class LocalCommunity(object):
     ################################################
     ## I always forget how to do this in pandas: self.local_info.iloc[:, idxs]
     def _get_singleton_species(self):
+        ## TODO: Unused. All lineages are handled with the _get_clades() function.
+        ##       Should just remove this.
         ## A function to return any species that are not involved in a speciation
         ## event. These are "easier" to handle individually, so we'll do them separately.
         ## First get the candidate list of species.

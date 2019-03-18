@@ -76,6 +76,7 @@ class Metacommunity(object):
         ## probabilities and trait values
         self.community = []
 
+        self.set_metacommunity()
         LOGGER.debug("Metacommunity paramsdict - {}".format(self.paramsdict))
 
 
