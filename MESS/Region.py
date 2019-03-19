@@ -85,9 +85,11 @@ class Region(object):
                        ("abundance_speciation_ratio", "proportional"),
         ])
 
+        ## Add simple default local and metacommunities
         self.metacommunity = MESS.Metacommunity()
-
         self.islands = {}
+        self._link_local(MESS.LocalCommunity())
+
         self.colonization_matrix = []
 
 
@@ -105,13 +107,20 @@ class Region(object):
             raise MESSError(BAD_MESS_NAME.format(name))
 
 
-    def _link_local(self, local_community):
+    def _link_local(self, local_community, add=False):
         """ Just link a local community that was created externally.
-        This is primarily used by __main__ during the initialization process."""
+        This is primarily used by __main__ during the initialization process.
+
+        add: Wether to add this local community to the pool, or link and replace."""
         LOGGER.debug("Linking local community - {}".format(local_community))
         local_community._set_region(self)
+        ## TODO: This is somewhat hax. If we want to link and replace
+        ## here we're just blanking whatever's there and replacing.
+        ## In the context of a multi island system this might be ugly.
+        if not add:
+            self.islands = {}
         self.islands[local_community.paramsdict["name"]] = local_community
-        local_community.prepopulate(quiet=True)
+        local_community.prepopulate()
 
 
     def _link_metacommunity(self, metacommunity):
@@ -211,7 +220,7 @@ class Region(object):
         LOGGER.debug("_reset_local_community()")
         for name, island in self.islands.items():
             new = island._copy()
-            new.prepopulate(quiet=True)
+            new.prepopulate()
             self.islands[name] = new
 
 
@@ -219,6 +228,23 @@ class Region(object):
         ## Calling set_metacommunity() again will regenerate a new
         ## metacommunity using the same parameters each time.
         self.metacommunity.set_metacommunity(resample=True)
+
+
+    ## A convenience function for setting a parameter in the API
+    ## mode, which turns out to be a little annoying if you don't
+    ## allow this.
+    def set_param(self, param, value):
+        try:
+            self = set_params(self, param, value)
+        except:
+            try:
+                self.metacommunity = set_params(self.metacommunity, param, value)
+            except:
+                try:
+                    name, loc = self.islands.items()[0]
+                    self.islands[name] = set_params(loc, param, value)
+                except:
+                    raise MESSError("Bad param/value {}/{}".format(param, value))
 
 
     def write_params(self, outfile=None, outdir=None, force=False):

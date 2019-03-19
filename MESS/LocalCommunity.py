@@ -30,7 +30,7 @@ MAX_DUPLICATE_REDRAWS_FROM_METACOMMUNITY = 1500
 
 class LocalCommunity(object):
 
-    def __init__(self, name=None, K=1000, colrate=0.01, quiet=False):
+    def __init__(self, name="Loc1", K=1000, colrate=0.01, quiet=False):
         self.quiet = quiet
 
         if name is None:
@@ -379,7 +379,7 @@ class LocalCommunity(object):
         return "<LocalCommunity {}>".format(self.name)
 
 
-    def prepopulate(self, quiet=False):
+    def prepopulate(self, verbose=False):
         LOGGER.debug("prepopulating local_community - {}".format(self))
         if not self.region:
             msg = "Skip populating the local community as it is unlinked to a region."
@@ -431,7 +431,7 @@ class LocalCommunity(object):
             self.local_info[sp] = [0, 0, OrderedDict(), "", [], 0]
 
         self.founder_flags = [True] * len(self.local_community)
-        if not quiet:
+        if verbose:
             print("    Initializing local community:")
             print("      N species = {}".format(len(set(self.local_community))))
             print("      N individuals = {}".format(len(self.local_community)))
