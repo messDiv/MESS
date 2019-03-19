@@ -167,7 +167,7 @@ class Region(object):
                     os.mkdir(self.paramsdict["project_dir"])
                 else:
                     if not quiet:
-                        print("    Project directory exists. Additional simulations will be appended.")
+                        print("  Project directory exists. Additional simulations will be appended.")
 
             elif param == "generations":
                 tup = tuplecheck(newvalue, dtype=float)

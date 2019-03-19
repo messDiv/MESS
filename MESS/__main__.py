@@ -101,7 +101,7 @@ def getregion(args, region_params, meta_params, island_params):
             try:
                 loc = set_params(loc, param, island[param], quiet=args.quiet)
             except Exception as inst:
-                LOGGER.error("Error setting param {} - {}".format(param, island[param]))
+                print("    Error setting param {} - {}".format(param, island[param]))
                 sys.exit(-1)
         data._link_local(loc)
 

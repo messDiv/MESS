@@ -45,7 +45,6 @@ class LocalCommunity(object):
         ## Also be sure to add it to _paramschecker so the type gets set correctly
         self.paramsdict = OrderedDict([
                         ("name", self.name),
-                        ("mode", "volcanic"),
                         ("K", K),
                         ("colrate", colrate),
                         ("speciation_rate", 0),
@@ -73,12 +72,15 @@ class LocalCommunity(object):
         ##      You can fix this value to something different if you really want,
         ##      but by default we calculate from the trait rate meta divided by global
         ##      birth rate + death rate.
+        ##  * mode: Whether to prepopulate the local community as a 'volcanic' or
+        ##      'landbridge' style origin.
         self._hackersonly = dict([
                         ("allow_empty", True),
                         ("outdir", []),
                         ("mig_clust_size", 1),
                         ("age", 100000),
-                        ("trait_rate_local", 0)
+                        ("trait_rate_local", 0),
+                        ("mode", "volcanic"),
         ])
 
         ## list for storing the state of our local community. The list is much faster
@@ -390,12 +392,12 @@ class LocalCommunity(object):
         ## Clean up local_community if it already exists
         self.local_community = []
 
-        if self.paramsdict["mode"] == "landbridge":
+        if self._hackersonly["mode"] == "landbridge":
             ## prepopulate the island w/ a random sample from the metacommunity
             ## TODO: The underscore here is ignoring trait values
             self.local_community, _ = self.region.get_nmigrants(self.paramsdict["K"])
 
-        elif self.paramsdict["mode"]  == "volcanic":
+        elif self._hackersonly["mode"]  == "volcanic":
             ## If not landbridge then doing volcanic, so sample just the most abundant
             ## from the metacommunity
             ## TODO: The _ is a standin for trait values, have to do something with them
@@ -1100,7 +1102,6 @@ def _get_trait_rate_local(region):
 #############################
 LOCAL_PARAMS = {
     "name" : "Local community name",\
-    "mode" : "Local community formation mode (volcanic/landbridge)",\
     "K" : "Local carrying capacity",\
     "colrate" : "Colonization rate into local community",\
     "speciation_rate" : "# of new species per forward-time generation",\
@@ -1125,12 +1126,12 @@ if __name__ == "__main__":
     print(loc.local_info)
     ## Allow for either having or not having empty demes
     assert(len(collections.Counter(loc.local_community)) <= 2)
-    loc.paramsdict["mode"] = "landbridge"
+    loc._hackersonly["mode"] = "landbridge"
     loc.prepopulate()
     assert(len(collections.Counter(loc.local_community)) > 3)
     print(loc.get_abundances())
 
-    loc.paramsdict["mode"] = "volcanic"
+    loc._hackersonly["mode"] = "volcanic"
     loc.prepopulate()
     loc.step(100000)
     print(len(set(loc.local_community)))
