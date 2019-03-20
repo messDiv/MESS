@@ -188,6 +188,9 @@ def parse_command_line():
     parser.add_argument('-q', action='store_true', dest="quiet",
         help="do not print to stderror or stdout.")
 
+    parser.add_argument('-Q', action='store_true', dest="very_quiet",
+        help="do not print anything ever.")
+
     parser.add_argument('-d', action='store_true', dest="debug",
         help="print lots more info to mess_log.txt.")
 
@@ -226,8 +229,10 @@ def parse_command_line():
 
     ## parse args
     args = parser.parse_args()
-    ## TODO: Clean this up
-    print(args)
+
+    ## very_quiet implies quiet
+    if args.very_quiet:
+        args.quiet = True
 
     if not any(x in ["params", "new"] for x in vars(args).keys()):
         print("\nBad arguments: must include at least one of"\
@@ -260,7 +265,7 @@ def do_sims(data, args):
     ## If args.cores is negative then don't use ipcluster
     else:
         ipyclient = None
-        print("    Parallelization disabled.")
+        if not args.quiet: print("    Parallelization disabled.")
     try:
         ## Do stuff here
         data.run(
@@ -349,11 +354,12 @@ def fancy_plots(data, args):
 
 def main():
     """ main function """
-    print(MESS_HEADER)
     MESS.__interactive__ = 0  ## Turn off API output
 
     ## parse params file input (returns to stdout if --help or --version)
     args = parse_command_line()
+
+    if not args.very_quiet: print(MESS_HEADER)
 
     ## Turn the debug output written to mess_log.txt up to 11!
     ## Clean up the old one first, it's cleaner to do this here than
@@ -362,7 +368,7 @@ def main():
         os.remove(MESS.__debugflag__)
 
     if args.debug:
-        print("\n  ** Enabling debug mode **\n")
+        if not args.quiet: print("\n  ** Enabling debug mode **\n")
         MESS._debug_on()
         atexit.register(MESS._debug_off)
 
@@ -439,6 +445,13 @@ def main():
                 print("\n    {}".format(data))
 
             try:
+                ## Some binary logic trickery here. If very_quiet is False, and
+                ## quiet is True, then we still print this information here. If
+                ## very_quiet is false, and quiet is false, the Region.run() 
+                ## prints this information. This allows for API mode to have 
+                ## the power of the quiet flag as well. 
+                if not args.very_quiet and args.quiet: print("    Generating {} simulation(s).".format(args.sims))
+
                 do_sims(data, args)
             except Exception as inst:
                 print("  Unexpected error - {}".format(inst))

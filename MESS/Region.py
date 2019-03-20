@@ -367,7 +367,7 @@ class Region(object):
     ## Main function for managing cluster parallelized simulations
     def run(self, sims, force=False, ipyclient=None, quiet=False):
         """ Do the heavy lifting here"""
-        print("    Generating {} simulations.".format(sims))
+        if not quiet: print("    Generating {} simulation(s).".format(sims))
 
         simfile = os.path.join(self.paramsdict["project_dir"], "SIMOUT.txt")
         ## Open output file. If force then overwrite existing, otherwise just append.
@@ -407,7 +407,7 @@ class Region(object):
             try:
                 for i in xrange(sims):
                     elapsed = datetime.timedelta(seconds=int(time.time()-start))
-                    progressbar(sims, i, printstr.format(elapsed))
+                    if not quiet: progressbar(sims, i, printstr.format(elapsed))
 
                     if not do_lambda:
                         res = self.simulate(nsteps=gens[i])
@@ -418,7 +418,7 @@ class Region(object):
                     LOGGER.debug("Finished simulation {} stats:\n{}".format(i, res))
             except KeyboardInterrupt as inst:
                 print("\n    Cancelling remaining simulations")
-            progressbar(100, 100, " Finished {} simulations\n".format(i))
+            if not quiet: progressbar(100, 100, " Finished {} simulations\n".format(i))
 
         ## Parallelize
         else:
