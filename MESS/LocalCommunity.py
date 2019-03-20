@@ -116,8 +116,7 @@ class LocalCommunity(object):
 
         ## summary stats dict. Use all params except the name
         self.stats = pd.Series(
-            index = list(self.paramsdict.keys())[1:] +\
-                   ["_lambda",
+            index = ["_lambda",
                    "generation",
                    "trait_rate_local",
                    "filtering_optimum",
@@ -980,10 +979,6 @@ class LocalCommunity(object):
         LOGGER.debug("Entering get_stats()")
         self.simulate_seqs()
         LOGGER.debug("First 5 species - \n{}".format(self.species[:5]))
-        ## Model parameters
-        for p, v in self.paramsdict.items():
-            if p == "name": continue
-            self.stats[p] = v
         self.stats._lambda = self._lambda()
         self.stats.generation = self.current_time * 2 / self.paramsdict["K"]
         self.stats.colrate = self.paramsdict["colrate"]

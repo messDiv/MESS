@@ -384,15 +384,18 @@ class Region(object):
         ## Decide whether to print the header, if stuff is already in there then
         ## don't print the header, unless you're doing force because this opens
         ## in overwrite mode.
-        header = list(self.metacommunity.paramsdict.keys()) + list(self.paramsdict.keys())[2:]
-        header = "\t".join(list(self.islands.values()[0]._get_stats_header()) + header) + "\n"
+        params = list(self.islands.values()[0].paramsdict.keys())[1:] +\
+                 list(self.metacommunity.paramsdict.keys()) +\
+                 list(self.paramsdict.keys())[2:]
+        header = "\t".join(params + list(self.islands.values()[0]._get_stats_header())) + "\n"
         if len(open(simfile, 'a+').readline()) > 0 and not force:
             header = ""
         SIMOUT = open(simfile, append)
         SIMOUT.write(header)
 
         ## Regional params don't change over simulations so get them once here
-        regional_params = list(self.metacommunity.paramsdict.values()) +\
+        regional_params = list(self.islands.values()[0].paramsdict.values())[1:] +\
+                            list(self.metacommunity.paramsdict.values()) +\
                             list(self.paramsdict.values())[2:]
 
         ## Just get all the time values to simulate up front
@@ -419,7 +422,7 @@ class Region(object):
                     else:
                         res = self.simulate(_lambda=gens[i], quiet=quiet)
 
-                    SIMOUT.write("\t".join(map(str, list(res.values) + regional_params)) + "\n")
+                    SIMOUT.write("\t".join(map(str, regional_params + list(res.values))) + "\n")
                     LOGGER.debug("Finished simulation {} stats:\n{}".format(i, res))
             except KeyboardInterrupt as inst:
                 print("\n    Cancelling remaining simulations")
@@ -476,7 +479,7 @@ class Region(object):
                     else:
                         passdict[result] = parallel_jobs[result].result()
                         res = passdict[result]
-                        SIMOUT.write("\t".join(map(str, list(res.values) + regional_params)) + "\n")
+                        SIMOUT.write("\t".join(map(str, regional_params + list(res.values))) + "\n")
                 except Exception as inst:
                     LOGGER.error("Caught a failed simulation - {}".format(inst))
                     ## Don't let one bad apple spoin the bunch,
