@@ -384,11 +384,16 @@ class Region(object):
         ## Decide whether to print the header, if stuff is already in there then
         ## don't print the header, unless you're doing force because this opens
         ## in overwrite mode.
-        header = "\t".join(self.islands.values()[0]._get_stats_header()) + "\n"
+        header = list(self.metacommunity.paramsdict.keys()) + list(self.paramsdict.keys())[2:]
+        header = "\t".join(list(self.islands.values()[0]._get_stats_header()) + header) + "\n"
         if len(open(simfile, 'a+').readline()) > 0 and not force:
             header = ""
         SIMOUT = open(simfile, append)
         SIMOUT.write(header)
+
+        ## Regional params don't change over simulations so get them once here
+        regional_params = list(self.metacommunity.paramsdict.values()) +\
+                            list(self.paramsdict.values())[2:]
 
         ## Just get all the time values to simulate up front
         ## Doesn't save time really, just makes housekeeping easier
@@ -414,7 +419,7 @@ class Region(object):
                     else:
                         res = self.simulate(_lambda=gens[i], quiet=quiet)
 
-                    SIMOUT.write("\t".join(map(str, res.values)) + "\n")
+                    SIMOUT.write("\t".join(map(str, list(res.values) + regional_params)) + "\n")
                     LOGGER.debug("Finished simulation {} stats:\n{}".format(i, res))
             except KeyboardInterrupt as inst:
                 print("\n    Cancelling remaining simulations")
@@ -450,7 +455,7 @@ class Region(object):
                 try:
                     fin = [i.ready() for i in parallel_jobs.values()]
                     elapsed = datetime.timedelta(seconds=int(time.time()-start))
-                    progressbar(len(fin), sum(fin),
+                    if not quiet: progressbar(len(fin), sum(fin),
                         printstr.format(elapsed))
                     time.sleep(0.1)
                     if len(fin) == sum(fin):
@@ -459,7 +464,7 @@ class Region(object):
                 except KeyboardInterrupt as inst:
                     print("\n    Cancelling remaining simulations.")
                     break
-            progressbar(100, 100, "\n    Finished {} simulations\n".format(len(fin)))
+            if not quiet: progressbar(100, 100, "\n    Finished {} simulations\n".format(len(fin)))
 
             faildict = {}
             passdict = {}
@@ -471,7 +476,7 @@ class Region(object):
                     else:
                         passdict[result] = parallel_jobs[result].result()
                         res = passdict[result]
-                        SIMOUT.write("\t".join(map(str, res.values)) + "\n")
+                        SIMOUT.write("\t".join(map(str, list(res.values) + regional_params)) + "\n")
                 except Exception as inst:
                     LOGGER.error("Caught a failed simulation - {}".format(inst))
                     ## Don't let one bad apple spoin the bunch,

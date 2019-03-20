@@ -114,17 +114,12 @@ class LocalCommunity(object):
                 "full_output": [],
                 })
 
-        ## summary stats dict
+        ## summary stats dict. Use all params except the name
         self.stats = pd.Series(
-            index = ["_lambda",
+            index = list(self.paramsdict.keys())[1:] +\
+                   ["_lambda",
                    "generation",
-                   "K",
-                   "colrate",
-                   "speciation_rate",
-                   "sigma",
-                   "trait_rate_meta",
                    "trait_rate_local",
-                   "ecological_strength",
                    "filtering_optimum",
                    "colrate_calculated",
                    "extrate_calculated",
@@ -986,15 +981,14 @@ class LocalCommunity(object):
         self.simulate_seqs()
         LOGGER.debug("First 5 species - \n{}".format(self.species[:5]))
         ## Model parameters
+        for p, v in self.paramsdict.items():
+            if p == "name": continue
+            self.stats[p] = v
         self.stats._lambda = self._lambda()
         self.stats.generation = self.current_time * 2 / self.paramsdict["K"]
-        self.stats.K = self.paramsdict["K"]
         self.stats.colrate = self.paramsdict["colrate"]
         self.stats.speciation_rate = self.paramsdict["speciation_rate"]
-        self.stats.sigma = self.region.paramsdict["sigma"]
-        self.stats.trait_rate_meta = self.region.metacommunity.paramsdict["trait_rate_meta"]
         self.stats.trait_rate_local = self._hackersonly["trait_rate_local"]
-        self.stats.ecological_strength = self.region.metacommunity.paramsdict["ecological_strength"]
         ## Pseudo-parameters
         self.stats.filtering_optimum = self.region.metacommunity._hackersonly["filtering_optimum"]
         try:
