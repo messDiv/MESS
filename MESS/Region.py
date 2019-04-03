@@ -1,15 +1,16 @@
-from .util import *
-from collections import OrderedDict
 import datetime
+import logging
 import numpy as np
-from scipy.stats import kurtosis, skew
-import time
-import string
 import os
+import string
+import time
+
+from collections import OrderedDict
 
 import MESS
+from .stats import *
+from .util import *
 
-import logging
 LOGGER = logging.getLogger(__name__)
 
 class Region(object):
@@ -230,6 +231,16 @@ class Region(object):
         self.metacommunity.set_metacommunity(resample=True)
 
 
+    ## Getting parameters header and parameters carves off
+    ## the simulation name and the project directory
+    def _get_params_header(self):
+        return list(self.paramsdict.keys())[2:]
+
+
+    def _get_params_values(self):
+        return list(self.paramsdict.values())[2:]
+
+
     ## A convenience function for setting a parameter in the API
     ## mode, which turns out to be a little annoying if you don't
     ## allow this.
@@ -384,19 +395,21 @@ class Region(object):
         ## Decide whether to print the header, if stuff is already in there then
         ## don't print the header, unless you're doing force because this opens
         ## in overwrite mode.
-        params = list(self.islands.values()[0].paramsdict.keys())[1:] +\
-                 list(self.metacommunity.paramsdict.keys()) +\
-                 list(self.paramsdict.keys())[2:]
-        header = "\t".join(params + list(self.islands.values()[0]._get_stats_header())) + "\n"
+        params = self.metacommunity._get_params_header() +\
+                 self._get_params_header() +\
+                 self.islands.values()[0]._get_params_header()
+        header = "\t".join(params + MESS.stats._get_sumstats_header(sgd_bins=self._hackersonly["sgd_bins"],\
+                                                                    sgd_dims=self._hackersonly["sgd_dimensions"],
+                                                                    metacommunity_traits=self.metacommunity._get_trait_values())) + "\n"
+        LOGGER.debug("SIMOUT header - {}".format(header))
         if len(open(simfile, 'a+').readline()) > 0 and not force:
             header = ""
         SIMOUT = open(simfile, append)
         SIMOUT.write(header)
 
         ## Regional params don't change over simulations so get them once here
-        regional_params = list(self.islands.values()[0].paramsdict.values())[1:] +\
-                            list(self.metacommunity.paramsdict.values()) +\
-                            list(self.paramsdict.values())[2:]
+        regional_params = self.metacommunity._get_params_values() +\
+                            self._get_params_values()
 
         ## Just get all the time values to simulate up front
         ## Doesn't save time really, just makes housekeeping easier
@@ -422,7 +435,7 @@ class Region(object):
                     else:
                         res = self.simulate(_lambda=gens[i], quiet=quiet)
 
-                    SIMOUT.write("\t".join(map(str, regional_params + list(res.values))) + "\n")
+                    SIMOUT.write("\t".join(map(str, regional_params + list(res.T.values[0]))) + "\n")
                     LOGGER.debug("Finished simulation {} stats:\n{}".format(i, res))
             except KeyboardInterrupt as inst:
                 print("\n    Cancelling remaining simulations")
@@ -589,7 +602,7 @@ class Region(object):
         return trt
 
 
-    def get_trait_stats(self, local_com, mean_only=False):
+    def get_trait_mean(self, local_com):
         try:
             sp = list(set(local_com))
             mask = np.isin(self.metacommunity.community["ids"], sp)
@@ -598,24 +611,8 @@ class Region(object):
         except Exception as inst:
             raise MESSError("Problem getting traits from local community: {}".format(inst))
 
-        if mean_only:
-            return np.mean(local_traits)
-        else:
-            trts = []
-            try:
-                trts = [np.mean(local_traits),
-                        np.var(local_traits),
-                        np.mean(self.metacommunity.community["trait_values"]),
-                        np.var(self.metacommunity.community["trait_values"]),
-                        np.mean(self.metacommunity.community["trait_values"]) - np.mean(local_traits),
-                        np.var(self.metacommunity.community["trait_values"]) - np.var(local_traits),
-                        kurtosis(local_traits),
-                        skew(local_traits)]
-            except:
-                msg = "Error calculating local trait stats: {}".format(local_traits)
-                raise MESSError(msg)
+        return np.mean(local_traits)
 
-        return trts
 
     def get_phy_stats(self, tree):
         total = []

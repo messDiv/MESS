@@ -4,7 +4,6 @@ from __future__ import print_function
 
 from scipy.stats import logser
 from collections import OrderedDict
-from scipy.stats import iqr,hmean
 import collections
 import pandas as pd
 import numpy as np
@@ -114,41 +113,6 @@ class LocalCommunity(object):
                 "full_output": [],
                 })
 
-        ## summary stats dict. Use all params except the name
-        self.stats = pd.Series(
-            index = ["_lambda",
-                   "generation",
-                   "trait_rate_local",
-                   "filtering_optimum",
-                   "colrate_calculated",
-                   "extrate_calculated",
-                   "R",
-                   "abund_h1",
-                   "abund_h2",
-                   "abund_h3",
-                   "abund_h4",
-                   "pi_h1",
-                   "pi_h2",
-                   "pi_h3",
-                   "pi_h4",
-                   "mean_pi",
-                   "stdv_pi",
-                   "median_pi",
-                   "iqr_pi",
-                   "mean_dxy",
-                   "stdv_dxy",
-                   "median_dxy",
-                   "iqr_dxy",
-                   "trees",
-                   "mn_local_traits",
-                   "var_local_traits",
-                   "mn_regional_traits",
-                   "var_regional_traits",
-                   "reg_loc_mn_trait_dif",
-                   "reg_loc_var_trait_dif",
-                   "kurtosis_local_traits",
-                   "skewness_local_traits"]).astype(np.object)
-
         ## Will be initialized as a pd series when the region is linked
         self.SGD = ""
 
@@ -249,8 +213,27 @@ class LocalCommunity(object):
         self._hackersonly["trait_rate_local"] = _get_trait_rate_local(self.region)
 
 
-    def _get_stats_header(self):
-        return pd.concat([self.stats, self.SGD.to_series()]).keys()
+    ## Getting params header and parameter values drops the local
+    ## community name (param 0), and adds a bunch of pseudo-parameters
+    def _get_params_header(self):
+        params_header = list(self.paramsdict.keys())[1:]
+        params_header = params_header + ["generation", "_lambda", "colrate_calculated", "extrate_calculated",\
+                                            "trait_rate_local", "filtering_optimum"]
+        return params_header
+
+
+    def _get_params_values(self):
+        ## Get params and drop name
+        params_vals = list(self.paramsdict.values())[1:]
+        ## We are reporting generations scaled to WF time
+        params_vals = params_vals + [self.current_time * 2 / self.paramsdict["K"],\
+                                    self._lambda(),\
+                                    self.colonizations/float(self.current_time),\
+                                    self.extinctions/float(self.current_time),\
+                                    self._hackersonly["trait_rate_local"],\
+                                    self.region.metacommunity._hackersonly["filtering_optimum"]]
+        params_vals = pd.DataFrame(params_vals, index=self._get_params_header())
+        return params_vals
 
 
     def _paramschecker(self, param, newvalue, quiet=False):
@@ -477,7 +460,7 @@ class LocalCommunity(object):
                 target_trait_val = self.region.metacommunity._hackersonly["filtering_optimum"]
 
             elif self.region.paramsdict["community_assembly_model"] == "competition":
-                mean_local_trait = self.region.get_trait_stats(self.local_community, mean_only=True)
+                mean_local_trait = self.region.get_trait_mean(self.local_community)
                 death_probability = _get_competition_death_prob(self.region, victim_trait, mean_local_trait)
                 death_probability = (1 - death_probability) * survival_scalar + death_probability
                 target_trait_val = mean_local_trait
@@ -979,85 +962,35 @@ class LocalCommunity(object):
         LOGGER.debug("Entering get_stats()")
         self.simulate_seqs()
         LOGGER.debug("First 5 species - \n{}".format(self.species[:5]))
-        self.stats._lambda = self._lambda()
-        self.stats.generation = self.current_time * 2 / self.paramsdict["K"]
-        self.stats.colrate = self.paramsdict["colrate"]
-        self.stats.speciation_rate = self.paramsdict["speciation_rate"]
-        self.stats.trait_rate_local = self._hackersonly["trait_rate_local"]
-        ## Pseudo-parameters
-        self.stats.filtering_optimum = self.region.metacommunity._hackersonly["filtering_optimum"]
-        try:
-            self.stats.colrate_calculated = self.colonizations/float(self.current_time)
-            self.stats.extrate_calculated = self.extinctions/float(self.current_time)
-        except ZeroDivisionError as inst:
-            raise MESSError("Current time should never be zero, check parameter settings.")
-        ## Model sumstats
-        self.stats.R = len(set(self.local_community))
-        sad = self.get_abundances(raw_abunds=True)
 
+        abunds = np.array([x.stats["abundance"] for x in self.species])
         pis = np.array([x.stats["pi_local"] for x in self.species])
         dxys = np.array([x.stats["dxy"] for x in self.species])
+        traits = np.array([x.stats["trait"] for x in self.species])
 
-        self.stats.abund_h1 = hill_number(sad, order=1)
-        self.stats.abund_h2 = hill_number(sad, order=2)
-        self.stats.abund_h3 = hill_number(sad, order=3)
-        self.stats.abund_h4 = hill_number(sad, order=4)
+        dat = pd.DataFrame([], columns=["pis", "dxys", "abunds", "traits"])
+        dat["abunds"] = abunds
+        dat["pis"] = pis
+        dat["dxys"] = dxys
+        dat["traits"] = traits
 
-        self.stats.pi_h1 = hill_number(pis, order=1)
-        self.stats.pi_h2 = hill_number(pis, order=2)
-        self.stats.pi_h3 = hill_number(pis, order=3)
-        self.stats.pi_h4 = hill_number(pis, order=4)
+        ss = calculate_sumstats(dat, sgd_bins=self.region._hackersonly["sgd_bins"],\
+                                    sgd_dims=self.region._hackersonly["sgd_dimensions"],\
+                                    metacommunity_traits=self.region.metacommunity._get_trait_values()) 
 
-        self.stats.mean_pi = np.mean(pis)
-        self.stats.stdv_pi = np.std(pis)
-        self.stats.median_pi = np.median(pis)
-        self.stats.iqr_pi = iqr(pis)
-        self.stats.mean_dxy = np.mean(dxys)
-        self.stats.stdv_dxy = np.std(dxys)
-        self.stats.median_dxy= np.median(dxys)
-        self.stats.iqr_dxy = iqr(dxys)
+        ## If you don't actually want all the intermediate files then we won't make them
+        if self.region._log_files:
+            megalog = os.path.join(self._hackersonly["outdir"],
+                                self.paramsdict["name"] + "-{}-megalog.txt".format(self._lambda()))
 
-        self.SGD = SGD(pis,\
-                       dxys,\
-                       nbins = self.region._hackersonly["sgd_bins"],\
-                       ndims = self.region._hackersonly["sgd_dimensions"])
-        LOGGER.debug("SGD - {}".format(self.SGD))
+            ## concatenate all species results and transpose the data frame so rows are species
+            fullstats = pd.concat([sp.stats for sp in self.species] , axis=1).T
+            fullstats.to_csv(megalog, index_label=False)
 
-        try:
-            trait_stats = self.region.get_trait_stats(self.local_community)
-            self.stats.mn_local_traits = trait_stats[0]
-            self.stats.var_local_traits = trait_stats[1]
-            self.stats.mn_regional_traits = trait_stats[2]
-            self.stats.var_regional_traits = trait_stats[3]
-            self.stats.reg_loc_mn_trait_dif = trait_stats[4]
-            self.stats.reg_loc_var_trait_dif = trait_stats[5]
-            self.stats.kurtosis_local_traits = trait_stats[6]
-            self.stats.skewness_local_traits = trait_stats[7]
+        ## paste on the local parameters and pseudo-parameters
+        params = self._get_params_values()
 
-            ## This line will get you phy stats (mean and var of branch lenghts) from the regional/metacommuntiy tree
-            ## Not sure what to do about local tree yet..
-            #phy_stats = self.region.get_phy_stats(self.region.metacommunity.metacommunity_tree)
-
-            ## Log to file
-            #statsfile = os.path.join(self._hackersonly["outdir"],
-            #                         self.paramsdict["name"] + "-simout.txt")
-            #self.stats.to_csv(statsfile, na_rep=0, float_format='%.5f')
-
-            ## If you don't actually want all the intermediate files then we won't make them
-            if self.region._log_files:
-                megalog = os.path.join(self._hackersonly["outdir"],
-                                         self.paramsdict["name"] + "-{}-megalog.txt".format(self._lambda()))
-
-                ## concatenate all species results and transpose the data frame so rows are species
-                fullstats = pd.concat([sp.stats for sp in self.species] , axis=1).T
-                fullstats.to_csv(megalog, index_label=False)
-
-        except Exception as inst:
-            #import pdb; pdb.set_trace()
-            LOGGER.error("Error in get_stats() - {}".format(inst))
-            raise
-
-        return pd.concat([self.stats, self.SGD.to_series()])
+        return params.append(ss.T)
 
 
 @memoize

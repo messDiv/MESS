@@ -1,9 +1,11 @@
 from __future__ import print_function
 
-import collections
 import numpy as np
+import pandas as pd
 import math
-from scipy.stats import entropy
+from collections import Counter, OrderedDict
+from scipy.stats import entropy, kurtosis, iqr, skew
+from MESS.SGD import SGD
 
 
 ## Get one hill humber from a list of abundances (a column vector from the OTU table)
@@ -51,7 +53,7 @@ def SAD(community, from_abundances=False, octaves=False, raw_abunds=False):
 
     ## Make a counter for the local_community, counts the number of
     ## individuals w/in each species
-    abundances = collections.Counter(community)
+    abundances = Counter(community)
 
     ## If we were doing mode=volcanic then there may be some remaining
     ## space in our carrying capacity that is unoccupied (indicated by
@@ -68,10 +70,10 @@ def SAD(community, from_abundances=False, octaves=False, raw_abunds=False):
 
     ## Now for each abundance class you have to go through and
     ## count the number of species at that abundance.
-    abundance_distribution = collections.Counter(list(abundances.values()))
-    abundance_distribution = collections.OrderedDict(sorted(abundance_distribution.items()))
+    abundance_distribution = Counter(list(abundances.values()))
+    abundance_distribution = OrderedDict(sorted(abundance_distribution.items()))
     if octaves:
-        dist_in_octaves = collections.OrderedDict()
+        dist_in_octaves = OrderedDict()
         minval = 1
         maxval = 2
         maxabund = max(abundance_distribution.keys())
@@ -134,6 +136,72 @@ def dxy(ihaps_t, mhaps_t):
     return dxy
 
 
+def _get_sumstats_header(sgd_bins=10, sgd_dims=2, metacommunity_traits=None):
+    ## Create some random data so the sumstats calculation doesn't freak out
+    pis = np.random.random(10)/10
+    dxys = np.random.random(10)/10
+    abunds = np.random.randint(1, 100, 10)
+    trts = np.random.random(10)*10
+    meta_trts = np.random.random(10)*10
+
+    dat = pd.DataFrame([], columns=["pis", "dxys", "abunds", "traits"])
+    dat["pis"] = pis
+    dat["dxys"] = dxys
+    dat["abunds"] = abunds
+    dat["traits"] = trts
+
+    header = list(calculate_sumstats(dat, sgd_bins, sgd_dims, metacommunity_traits=metacommunity_traits).columns)
+    return header
+
+
+def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=2, metacommunity_traits=None):
+
+    moments = OrderedDict({"mean":np.mean,
+                "std":np.std,
+                "skewness":skew,
+                "kurtosis":kurtosis,
+                "median":np.median,
+                "iqr":iqr})
+
+    stat_dict = OrderedDict({})
+    stat_dict["R"] = len(diversity_df)
+
+    ## Abundance Hill #s
+    for order in range(1,5):
+        stat_dict["abund_h{}".format(order)] = hill_number(diversity_df["abunds"], order=order)
+
+    ## pi/dxy stats
+    for order in range(1,5):
+        stat_dict["pi_h{}".format(order)] = hill_number(diversity_df["pis"], order=order)
+
+    for name, func in moments.items():
+        stat_dict["{}_pi".format(name)] = func(diversity_df["pis"])
+
+    for name, func in moments.items():
+        stat_dict["{}_dxys".format(name)] = func(diversity_df["dxys"])
+
+    ## Tree stats
+    stat_dict["trees"] = 0
+
+    ## Trait stats
+    for name, func in moments.items():
+        stat_dict["{}_local_traits".format(name)] = func(diversity_df["traits"])
+
+    if np.any(metacommunity_traits):
+        for name, func in moments.items():
+            val = func(metacommunity_traits)
+            stat_dict["{}_regional_traits".format(name)] = val
+            stat_dict["reg_loc_{}_trait_dif".format(name)] = val - stat_dict["{}_local_traits".format(name)]
+
+    sgd = SGD(diversity_df["pis"],\
+              diversity_df["dxys"],\
+              nbins = sgd_bins, ndims = sgd_dims)
+
+    stat_dict.update(sgd.to_dict())
+
+    return pd.DataFrame(stat_dict, index=[0])
+
+
 if __name__ == "__main__":
     ## Test SAD()
     dat = [1,2,3,3,4,4,4,4,4,5,5,5,5,5,5,5,5,5,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,7,7,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
@@ -144,3 +212,19 @@ if __name__ == "__main__":
     #assert(cmp(sad_oct.values(), [2, 2, 1, 1, 2, 0, 1])) 
     print("SAD - {}".format(sad))
     print("SAD octaves - {}".format(sad_oct))
+
+    pis = np.random.random(10)/10
+    dxys = np.random.random(10)/10
+    abunds = np.random.randint(1, 100, 10)
+    trts = np.random.random(10)*10
+
+    dat = pd.DataFrame([], columns=["pis", "dxys", "abunds", "traits"])
+    dat["pis"] = pis
+    dat["dxys"] = dxys
+    dat["abunds"] = abunds
+    dat["traits"] = trts
+
+    ss = calculate_sumstats(dat, sgd_bins=10, sgd_dims=1)
+    print("sumstats", len(ss.values), ss)
+    header = _get_sumstats_header(sgd_bins=10, sgd_dims=1)
+    print("header", len(header), header)

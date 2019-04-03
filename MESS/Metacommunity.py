@@ -170,6 +170,18 @@ class Metacommunity(object):
             raise MESSError("Error {}\n    Bad parameter {} - Bad value {}".format(inst, param, newvalue))
 
 
+    def _get_params_header(self):
+        return list(self.paramsdict.keys())
+
+
+    def _get_params_values(self):
+        return list(self.paramsdict.values())
+
+
+    def _get_trait_values(self):
+        return list(self.community["trait_values"])
+
+
     def write_params(self, outfile=None, append=True):
         """
         Write out the parameters for this island to a file.
