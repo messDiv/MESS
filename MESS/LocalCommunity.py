@@ -22,10 +22,6 @@ from .SGD import SGD
 import logging
 LOGGER = logging.getLogger(__name__)
 
-## Limit on the number of redraws in the event of disallowed
-## multiple migration, error out and warn if exceeded
-MAX_DUPLICATE_REDRAWS_FROM_METACOMMUNITY = 1500
-
 
 class LocalCommunity(object):
 
@@ -534,38 +530,6 @@ class LocalCommunity(object):
         return ancestor
 
 
-    def migrate_no_dupes_step(self):
-        ## Loop until you draw species unique in the local community
-        ## The flag to tell 'while when we're done, set when you successfully
-        ## draw a non-local-doop from the metacommunity
-        unique = 0
-
-        ## If you set your carrying capacity too high relative to the size of your
-        ## metacommunity then you'll get stuck drawing duplicates over and over
-        idiot_count = 0
-        while not unique:
-            ## Sample from the metacommunity
-            ## TODO: _ here is the ignored trait value, for now
-            new_species, _ = self.region.get_migrant()
-            if new_species not in self.local_community:
-                ## Got a species not in the local community
-                unique = 1
-            else:
-                #print("multiple colonization forbidden: sp id {}".format(new_species[0]))
-                idiot_count +=1
-            if idiot_count > MAX_DUPLICATE_REDRAWS_FROM_METACOMMUNITY:
-               msg = """\nMetacommunity is exhausted w/ respect to local
-               community. Either expand the size of the metacommunity,
-               decrease the carrying capacity, or switch on multiple
-               migration (unimplemented)."""
-               sys.exit(msg)
-
-        ## This is a new migrant so init local_info for it
-        self._add_local_info(sname = new_species)
-
-        return new_species
-
-
     def migrate_step(self):
         """ Allow multiple colonizations. In this case we return the sampled species
         as well as a bool reporting whether or not this is the first colonization of
@@ -599,8 +563,6 @@ class LocalCommunity(object):
                 ## Removed the if statement because multiple colonizations are always allowed
                 #if self.region.paramsdict["allow_multiple_colonizations"]:
                 new_species = self.migrate_step()
-                #else:
-                #    new_species = self.migrate_no_dupes_step()
 
                 ## Only set the invasive species once at the time of next migration post invasion time
                 ## If invasion time is < 0 this means "Don't do invasive"
