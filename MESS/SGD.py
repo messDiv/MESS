@@ -2,14 +2,14 @@
 
 import numpy as np
 import pandas as pd
-import collections      # For Counter
+import collections
 import itertools
 import math
 import os
 # pylint: disable=C0103
 # pylint: disable=R0903
 
-from .stats import *
+from MESS.stats import *
 
 import logging
 LOGGER = logging.getLogger(__name__)
@@ -72,6 +72,10 @@ class SGD(object):
         return pd.Series(dat, index=self._sgd_header)
 
 
+    def to_dict(self):
+        return collections.OrderedDict(sorted(self.to_series().to_dict().items()))
+
+
 if __name__ == "__main__":
     ## Test SAD()
     import numpy as np
@@ -87,3 +91,4 @@ if __name__ == "__main__":
 
     print(SGD([]))
     print(SGD([], ndims=1))
+    print(sgd2.to_dict())
