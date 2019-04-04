@@ -492,7 +492,7 @@ class Region(object):
                     else:
                         passdict[result] = parallel_jobs[result].result()
                         res = passdict[result]
-                        SIMOUT.write("\t".join(map(str, regional_params + list(res.values))) + "\n")
+                        SIMOUT.write("\t".join(map(str, regional_params + list(res.T.values[0]))) + "\n")
                 except Exception as inst:
                     LOGGER.error("Caught a failed simulation - {}".format(inst))
                     ## Don't let one bad apple spoin the bunch,
