@@ -25,7 +25,7 @@ LOGGER = logging.getLogger(__name__)
 
 class LocalCommunity(object):
 
-    def __init__(self, name="Loc1", K=1000, colrate=0.01, quiet=False):
+    def __init__(self, name="Loc1", J=1000, m=0.01, quiet=False):
         self.quiet = quiet
 
         if name is None:
@@ -40,22 +40,22 @@ class LocalCommunity(object):
         ## Also be sure to add it to _paramschecker so the type gets set correctly
         self.paramsdict = OrderedDict([
                         ("name", self.name),
-                        ("K", K),
-                        ("colrate", colrate),
+                        ("J", J),
+                        ("m", m),
                         ("speciation_rate", 0),
                         ("background_death", 0.25)
         ])
 
         ## A dictionary for holding prior ranges for values we're interested in
         self._priors = dict([
-                        ("K", []),
-                        ("colrate", []),
+                        ("J", []),
+                        ("m", []),
         ])
 
         ## Dictionary of 'secret' parameters that most people won't want to mess with
         ##  * allow_empty is a switch on whether to fully populate local community
         ##      with one species for 'volcanic' mode or to introduce just one
-        ##      individual and populate the rest of K with 'empty' demes.
+        ##      individual and populate the rest of J with 'empty' demes.
         ##  * outdir is inherited from the Region.simulate() command, so users
         ##      should normally not mess with this.
         ##  * mig_clust_size: number of incoming migrants during colonization events.
@@ -152,7 +152,7 @@ class LocalCommunity(object):
 
         new.paramsdict = self.paramsdict
         ## Get sample from prior range on params that may have priors
-        for param in ["K", "colrate"]:
+        for param in ["J", "m"]:
             ## if _priors is empty then this param is fixed
             if np.any(self._priors[param]):
                 self.paramsdict[param] = sample_param_range(new._priors[param])[0]
@@ -213,7 +213,7 @@ class LocalCommunity(object):
     ## community name (param 0), and adds a bunch of pseudo-parameters
     def _get_params_header(self):
         params_header = list(self.paramsdict.keys())[1:]
-        params_header = params_header + ["generation", "_lambda", "colrate_calculated", "extrate_calculated",\
+        params_header = params_header + ["generation", "_lambda", "migrate_calculated", "extrate_calculated",\
                                             "trait_rate_local", "filtering_optimum"]
         return params_header
 
@@ -222,7 +222,7 @@ class LocalCommunity(object):
         ## Get params and drop name
         params_vals = list(self.paramsdict.values())[1:]
         ## We are reporting generations scaled to WF time
-        params_vals = params_vals + [self.current_time * 2 / self.paramsdict["K"],\
+        params_vals = params_vals + [self.current_time * 2 / self.paramsdict["J"],\
                                     self._lambda(),\
                                     self.colonizations/float(self.current_time),\
                                     self.extinctions/float(self.current_time),\
@@ -239,7 +239,7 @@ class LocalCommunity(object):
         try:
 
             ## Cast params to correct types
-            if param in ["K"]:
+            if param in ["J"]:
                 tup = tuplecheck(newvalue, dtype=int)
                 if isinstance(tup, tuple):
                     self._priors[param] = tup
@@ -247,7 +247,7 @@ class LocalCommunity(object):
                 else:
                     self.paramsdict[param] = tup
 
-            elif param in ["colrate"]:
+            elif param in ["m"]:
                 tup = tuplecheck(newvalue, dtype=float)
                 if isinstance(tup, tuple):
                     self._priors[param] = tup
@@ -334,7 +334,7 @@ class LocalCommunity(object):
 
         ## Every once in a while test to be sure our community is the same size
         ## as we think it should be.
-        if not len(self.local_community) == self.paramsdict["K"]:
+        if not len(self.local_community) == self.paramsdict["J"]:
             msg = "k = {} r = {}".format(len(self.local_community),\
                                                 len(set(self.local_community)))
             raise MESSError("  Community size violation - {}".format(msg))
@@ -368,7 +368,7 @@ class LocalCommunity(object):
         if self._hackersonly["mode"] == "landbridge":
             ## prepopulate the island w/ a random sample from the metacommunity
             ## TODO: The underscore here is ignoring trait values
-            self.local_community, _ = self.region.get_nmigrants(self.paramsdict["K"])
+            self.local_community, _ = self.region.get_nmigrants(self.paramsdict["J"])
 
         elif self._hackersonly["mode"]  == "volcanic":
             ## If not landbridge then doing volcanic, so sample just the most abundant
@@ -384,10 +384,10 @@ class LocalCommunity(object):
             ## or with one sample of this species and a bunch of "emtpy deme space". The empty
             ## demes screw up competition/environmental filtering models
             if self._hackersonly["allow_empty"]:
-                self.local_community = [None] * self.paramsdict["K"]
+                self.local_community = [None] * self.paramsdict["J"]
                 self.local_community[0] = new_species
             else:
-                self.local_community = [new_species] * self.paramsdict["K"]
+                self.local_community = [new_species] * self.paramsdict["J"]
         else:
             raise MESSError(BAD_MODE_PARAMETER.format(mode))
 
@@ -489,7 +489,6 @@ class LocalCommunity(object):
             ## If the species of the victim went locally extinct then clean up local_info
             self._test_local_extinction(victim)
         except Exception as inst:
-            #import pdb; pdb.set_trace()
             raise inst
 
 
@@ -551,9 +550,10 @@ class LocalCommunity(object):
 
     def step(self, nsteps=1):
         ## Convert time in generations to timesteps (WF -> Moran)
-        for step in range(nsteps * self.paramsdict["K"] / 2):
+        for step in range(nsteps * self.paramsdict["J"] / 2):
+            chx = ''
             ## Check probability of an immigration event
-            if np.random.random_sample() < self.paramsdict["colrate"]:
+            if np.random.random_sample() < self.paramsdict["m"]:
                 ## If clustered migration remove the necessary number of additional individuals
                 for _ in range(self._hackersonly["mig_clust_size"]):
                     self.death_step()
@@ -563,6 +563,7 @@ class LocalCommunity(object):
                 ## Removed the if statement because multiple colonizations are always allowed
                 #if self.region.paramsdict["allow_multiple_colonizations"]:
                 new_species = self.migrate_step()
+                chx = new_species
 
                 ## Only set the invasive species once at the time of next migration post invasion time
                 ## If invasion time is < 0 this means "Don't do invasive"
@@ -586,7 +587,6 @@ class LocalCommunity(object):
                     idx = self.local_community.index(chx)
                     self.founder_flags.append(self.founder_flags[idx])
                 except Exception as inst:
-                    #import pdb; pdb.set_trace()
                     LOGGER.error("Exception in step() - {}".format(inst))
                     raise inst
 
@@ -594,9 +594,10 @@ class LocalCommunity(object):
             ## Speciation process
             ##############################################
             if self.region.paramsdict["speciation_model"] != "none" and\
-               np.random.random_sample() < self.paramsdict["speciation_rate"]:
+               np.random.random_sample() < self.paramsdict["speciation_rate"] and\
+               chx != None:
 
-               self.speciate()
+               self.speciate(chx)
 
             ## update current time
             self.current_time += 1
@@ -606,7 +607,7 @@ class LocalCommunity(object):
         return SAD(self.local_community, octaves=octaves, raw_abunds=raw_abunds)
 
 
-    def speciate(self):
+    def speciate(self, chx):
         """ Occassionally initiate the speciation process. In all modes, one
             one individual is randomly selected to undergo speciation.
             Speciation does not change the founder_flag state.
@@ -621,14 +622,13 @@ class LocalCommunity(object):
                 sizes are equally likely.
             - protracted:
         """
-        LOGGER.debug("Initiate speciation process")
+        LOGGER.debug("Initiate speciation process - {}".format(chx))
 
         ## Sample the individual to undergo speciation. Remove all
         ## empty deme space prior to this, if it exists, since we don't
         ## want empty deme space speciating.
-        chx = random.choice([sp for sp in self.local_community if sp != None])
+#        chx = random.choice([sp for sp in self.local_community if sp != None])
         idx = self.local_community.index(chx)
-
 
         ## Construct the new species name.
         ## We want the new name to be globally unique but we don't
@@ -666,8 +666,11 @@ class LocalCommunity(object):
             ## immediately inherits the parent population history of size change.
             ## _test_local_extinction() handles all the ancestor inheritence logic.
             self._add_local_info(sname = sname, abundances_through_time=parent_abunds , ancestor = ancestor)
+            ## Speciation flips the founder_flag for the new species
+            self.founder_flags[idx] = False
 
         elif self.region.paramsdict["speciation_model"] == "random_fission":
+            ## TODO: This doesn't handle the founder_flag housekeeping AT ALL!
 
             ## Remove all individuals of the target species from the local community.
             ## We'll have to add some back as the original species, but doing it
@@ -675,7 +678,7 @@ class LocalCommunity(object):
             self.local_community = [sp for sp in self.local_community if sp != chx]
             ## Get abundance of the target species so we can perform
             ## the random fission.
-            sp_abund = self.paramsdict["K"] - len(self.local_community)
+            sp_abund = self.paramsdict["J"] - len(self.local_community)
 
             ## Get the number of individuals to carve off for the new species.
             ## If sp_abund == 1, or if new_abund == sp_abund then this is
@@ -716,7 +719,7 @@ class LocalCommunity(object):
     ## How strong is the bottleneck? Strength should be interpreted as percent of local
     ## community to retain
     def bottleneck(self, strength=1):
-        reduction = int(round(self.paramsdict["K"] * strength))
+        reduction = int(round(self.paramsdict["J"] * strength))
         self.local_community = self.local_community[:reduction]
 
         ## First remove the extinct species from the species list
@@ -884,7 +887,7 @@ class LocalCommunity(object):
                 meta_abund = self.region.get_abundance(name.split(":")[0])
                 local_abund = self.local_community.count(name)
                 tdiv = self.current_time - coltime
-                tdiv = tdiv / float(self.paramsdict["K"])
+                tdiv = tdiv / float(self.paramsdict["J"])
                 ## Rescale abundances through time so they are "backwards" values
                 abundances_through_time = {self.current_time - x:y for x, y in list(self.local_info[name]["abundances_through_time"].items())}
                 try:
@@ -986,9 +989,9 @@ def _get_trait_rate_local(region):
 #############################
 LOCAL_PARAMS = {
     "name" : "Local community name",\
-    "K" : "Local carrying capacity",\
-    "colrate" : "Colonization rate into local community",\
-    "speciation_rate" : "# of new species per forward-time generation",\
+    "J" : "Number of individuals in the local community",\
+    "m" : "Migration rate into local community",\
+    "speciation_rate" : "Speciation rate in the local community",\
     "background_death" : "Baseline death probability in trait-based models",\
 }
 
@@ -1004,7 +1007,7 @@ BAD_MODE_PARAMETER = """
 
 if __name__ == "__main__":
     data = MESS.Region("tmp")
-    loc = LocalCommunity("wat", K=5000)
+    loc = LocalCommunity("wat", J=5000)
     data._link_local(loc)
     print(loc)
     print(loc.local_info)

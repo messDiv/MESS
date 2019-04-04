@@ -115,7 +115,7 @@ class species(object):
         ## TODO: this doesn't pull in the growth model so will always be constant
         ## I guess you can set it yourself downstream
         ## TODO: This also isn't even close to right. Colonization time is still forward time,
-        ## and consequently both divergence time and migration rate aren't scaled / K
+        ## and consequently both divergence time and migration rate aren't scaled / J
         name = df.columns[0]
         sp_info = df[name]
         sp = species(name = name,

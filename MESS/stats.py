@@ -156,15 +156,13 @@ def _get_sumstats_header(sgd_bins=10, sgd_dims=2, metacommunity_traits=None):
 
 def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=2, metacommunity_traits=None):
 
-    moments = OrderedDict({"mean":np.mean,
-                "std":np.std,
-                "skewness":skew,
-                "kurtosis":kurtosis,
-                "median":np.median,
-                "iqr":iqr})
+    moments = OrderedDict()
+    for name, func in zip(["mean", "std", "skewness", "kurtosis", "median", "iqr"],\
+                            [np.mean, np.std, skew, kurtosis, np.median, iqr]):
+        moments[name] = func
 
     stat_dict = OrderedDict({})
-    stat_dict["R"] = len(diversity_df)
+    stat_dict["S"] = len(diversity_df)
 
     ## Abundance Hill #s
     for order in range(1,5):
@@ -191,6 +189,9 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=2, metacommunity_trai
         for name, func in moments.items():
             val = func(metacommunity_traits)
             stat_dict["{}_regional_traits".format(name)] = val
+        ## Double for-loop here so the traits stay together in the sumstats output
+        for name, func in moments.items():
+            val = func(metacommunity_traits)
             stat_dict["reg_loc_{}_trait_dif".format(name)] = val - stat_dict["{}_local_traits".format(name)]
 
     sgd = SGD(diversity_df["pis"],\

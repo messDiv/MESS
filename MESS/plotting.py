@@ -553,7 +553,7 @@ if __name__ == "__main__":
     import collections
     import numpy as np
     reg = MESS.Region("tmp")
-    loc = MESS.LocalCommunity("tmp", K=1000)
+    loc = MESS.LocalCommunity("tmp", J=1000)
     reg._link_local(loc)
     loc.step(1000)
     loc.simulate_seqs()

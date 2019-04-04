@@ -40,8 +40,8 @@ class Metacommunity(object):
         ##
         ## Also be sure to add it to _paramschecker so the type gets set correctly
         self.paramsdict = OrderedDict([
-                        ("nspecies", 100),
-                        ("J", 750000),
+                        ("S_m", 100),
+                        ("J_m", 750000),
                         ("birth_rate", 2),
                         ("death_proportion", 0.7),
                         ("trait_rate_meta", 2),
@@ -82,7 +82,7 @@ class Metacommunity(object):
 
     def __str__(self):
         return "<Metacommunity: {} Richness {}>".format(self._hackersonly["metacommunity_type"],\
-                                                        self.paramsdict["nspecies"])
+                                                        self.paramsdict["S_m"])
 
     def _resample_priors(self):
         for k,v in self._priors.items():
@@ -90,7 +90,7 @@ class Metacommunity(object):
                 self.paramsdict[k] = sample_param_range(v)[0]
 
 
-    def _simulate_metacommunity(self, J, nspecies, birth_rate, death_proportion, trait_rate_meta):
+    def _simulate_metacommunity(self, J, S_m, birth_rate, death_proportion, trait_rate_meta):
         import rpy2.robjects as robjects
         from rpy2.robjects import r, pandas2ri
 
@@ -101,7 +101,7 @@ class Metacommunity(object):
         ##    pika
         ## arguments:
         #' @param J the number of individuals in the meta community
-        #' @param nspecies the number of species in the meta community
+        #' @param S_m the number of species in the meta community
         #' @param birth_rate the speciation rate
         #' @param death_proportion the proportional extinction rate
         #' @param trait_rate_meta the rate of brownian motion
@@ -130,7 +130,7 @@ class Metacommunity(object):
         }"""
 
         make_meta_func = robjects.r(make_meta)
-        res = pandas2ri.ri2py(make_meta_func(J, nspecies, birth_rate, death_proportion, trait_rate_meta))
+        res = pandas2ri.ri2py(make_meta_func(J, S_m, birth_rate, death_proportion, trait_rate_meta))
         tree = res[0][0]
         traits = pandas2ri.ri2py(res[1])
         abunds = pandas2ri.ri2py(res[2])
@@ -156,13 +156,13 @@ class Metacommunity(object):
                     self.paramsdict[param] = tup
                 LOGGER.debug("{} {}".format(param, tup))
 
-            elif param == "nspecies":
+            elif param == "S_m":
                 self.paramsdict[param] = int(float(newvalue))
 
             elif param == "logser_shape":
                 self.paramsdict[param] = float(newvalue)
 
-            elif param == "J":
+            elif param == "J_m":
                 self.paramsdict[param] = int(float(newvalue))
 
         except Exception as inst:
@@ -260,18 +260,18 @@ class Metacommunity(object):
         if meta_type == "lognorm":
             abundances = lognorm.rvs(self._hackersonly["lognorm_shape"],\
                                         loc=1,
-                                        size=self.paramsdict["nspecies"])
+                                        size=self.paramsdict["S_m"])
 
         elif meta_type == "uniform":
-            abundances = np.array([self.paramsdict["J"] / self.paramsdict["nspecies"]]\
-                               * self.paramsdict["nspecies"])
+            abundances = np.array([self.paramsdict["J_m"] / self.paramsdict["S_m"]]\
+                               * self.paramsdict["S_m"])
 
         ## Get Abundances by simulating a tree, evolving traits on it, and sprinkling abundances
         ## This is the primary means of setting the metacommunity that is driven by Andy's
         ## R code.
         elif meta_type == "logser":
-            tree, abunds, traits = self._simulate_metacommunity(self.paramsdict["J"],\
-                                                                self.paramsdict["nspecies"],\
+            tree, abunds, traits = self._simulate_metacommunity(self.paramsdict["J_m"],\
+                                                                self.paramsdict["S_m"],\
                                                                 self.paramsdict["birth_rate"],\
                                                                 self.paramsdict["death_proportion"],\
                                                                 self.paramsdict["trait_rate_meta"])
@@ -319,10 +319,10 @@ class Metacommunity(object):
                     raise MESSError("  Malformed metacommunity specification file - {}\n    {}".format(meta_type, inst))
 
             ## If reading from a file then the number of species will not correspond
-            ## with the value already in the paramsdict, so we need to update the nspecies count
+            ## with the value already in the paramsdict, so we need to update the S_m count
             ## and reup the community ndarray
-            LOGGER.debug("Read nspecies from file - {}".format(len(abundances)))
-            self.paramsdict["nspecies"] = len(abundances)
+            LOGGER.debug("Read S_m from file - {}".format(len(abundances)))
+            self.paramsdict["S_m"] = len(abundances)
         else:
             raise MESSError("  Unrecognized metacommunity input - {}".format(meta_type))
 
@@ -332,18 +332,18 @@ class Metacommunity(object):
 
         if random or not trait_values.size:
             LOGGER.debug("Using random trait values")
-            trait_values = np.random.rand(self.paramsdict["nspecies"])
+            trait_values = np.random.rand(self.paramsdict["S_m"])
 
         ## If ids haven't been assigned yet, do that here
         if not ids.size:
-            ids = np.array(["t"+str(x) for x in range(0, self.paramsdict["nspecies"])])
+            ids = np.array(["t"+str(x) for x in range(0, self.paramsdict["S_m"])])
 
         ## TODO: You can use msprime to simulate a random coalescent tree and get a newick from it.
         ## Is this worth doing?
         if not self.metacommunity_tree:
             pass
 
-        self.community = np.zeros([self.paramsdict["nspecies"]], dtype=METACOMMUNITY_DTYPE)
+        self.community = np.zeros([self.paramsdict["S_m"]], dtype=METACOMMUNITY_DTYPE)
         ## Populate the metacommunity ndarray
         ## FIXME: Sometimes the logser R call returns a number of species not == to the #
         ##        requested, so this will raise. The better thing to do here would be to
@@ -358,7 +358,7 @@ class Metacommunity(object):
   Attempting to set metacommunity size {} with {} species. This can happen sometimes
   with the `logser` metacommunity simulation. Simplest to ignore and rerun it.
 """
-            raise MESSError(msg.format(self.paramsdict["nspecies"], len(ids)))
+            raise MESSError(msg.format(self.paramsdict["S_m"], len(ids)))
 
         ## Calculate immigration probabilities
         ## Here the true Jm under the logseries model will not equal the true
@@ -414,8 +414,8 @@ class Metacommunity(object):
 ## Metacommunity Parameter Info Dicts
 #############################
 LOCAL_PARAMS = {
-    "nspecies" : "Number of species in the regional pool",\
-    "J" : "Total # of individuals in the regional pool",\
+    "S_m" : "Number of species in the regional pool",\
+    "J_m" : "Total # of individuals in the regional pool",\
     "birth_rate" : "Speciation rate of metacommunity",\
     "death_proportion" : "Proportion of speciation rate to be extinction rate",\
     "logser_shape" : "If logser: Shape parameter of the distribution",\

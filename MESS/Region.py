@@ -321,8 +321,8 @@ class Region(object):
     ########################
     ## Model functions/API
     ########################
-    def add_local_community(self, name, K, c, quiet=False):
-        loc = MESS.LocalCommunity(name=name, K=K, colrate=c, quiet=quiet)
+    def add_local_community(self, name, J, m, quiet=False):
+        loc = MESS.LocalCommunity(name=name, J=J, m=m, quiet=quiet)
         ## TODO: Ensure island names aren't dupes
         self._link_local(loc)
 
@@ -527,13 +527,13 @@ class Region(object):
             msg = "Either _lambda or nsteps must be specified."
             raise MESSError(msg)
 
-        ## Not as big of a deal on ipp simulations, but if you're running on a local computer
-        ## the local communities need to get reupped for each simulation.
-        self._reset_local_communities()
-
         ## Flip the metacommunity per simulation so we get new draws of trait values.
         ## This is a little slow for logser, and also performance scales with metacommunity size
         self._reset_metacommunity()
+
+        ## Not as big of a deal on ipp simulations, but if you're running on a local computer
+        ## the local communities need to get reupped for each simulation.
+        self._reset_local_communities()
 
         if self._log_files:
             ## Get an output directory for dumping data

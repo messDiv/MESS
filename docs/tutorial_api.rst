@@ -18,8 +18,8 @@ Example API::
   data.set_metacommunity("logseries")
   
   ## Add local communities to the region
-  loc1 = data.add_local_community("Island1", K=5000, c=0.01)
-  loc2 = data.add_local_community("Island2", K=1000, c=0.05)
+  loc1 = data.add_local_community("Island1", J=5000, c=0.01)
+  loc2 = data.add_local_community("Island2", J=1000, c=0.05)
   
   ## Define the potentially asymmetric migration matrix
   ## Migration matrix should be square with dimension equal to # of local communities and,
