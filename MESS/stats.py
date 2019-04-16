@@ -12,6 +12,9 @@ from MESS.SGD import SGD
 def hill_number(abunds, order):
     ## Make sure abunds is a np array or else order > 2 will act crazy
     abunds = np.array(abunds)
+    ## Degenerate edge cases can cause all zero values, particulary for pi
+    if not np.any(abunds):
+        return 0
     if order == 0:
         return len(np.nonzero(abunds)[0])
     if order == 1:
