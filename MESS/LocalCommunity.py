@@ -50,6 +50,7 @@ class LocalCommunity(object):
         self._priors = dict([
                         ("J", []),
                         ("m", []),
+                        ("speciation_rate", []),
         ])
 
         ## Dictionary of 'secret' parameters that most people won't want to mess with
@@ -152,7 +153,7 @@ class LocalCommunity(object):
 
         new.paramsdict = self.paramsdict
         ## Get sample from prior range on params that may have priors
-        for param in ["J", "m"]:
+        for param in ["J", "m", "speciation_rate"]:
             ## if _priors is empty then this param is fixed
             if np.any(self._priors[param]):
                 self.paramsdict[param] = sample_param_range(new._priors[param])[0]
@@ -260,7 +261,12 @@ class LocalCommunity(object):
                 self.paramsdict[param] = newvalue
 
             elif param == "speciation_rate":
-                self.paramsdict[param] = float(newvalue)
+                tup = tuplecheck(newvalue, dtype=float)
+                if isinstance(tup, tuple):
+                    self._priors[param] = tup
+                    self.paramsdict[param] = sample_param_range(tup)[0]
+                else:
+                    self.paramsdict[param] = tup
 
             elif param == "background_death":
                 self.paramsdict[param] = float(newvalue)
