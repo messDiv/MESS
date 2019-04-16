@@ -99,7 +99,10 @@ def tuplecheck(newvalue, dtype=str):
 
     ## If it's a list then this is probably api mode so the types
     ## of the values should be fine.
-    if isinstance(newvalue, list):
+    if isinstance(newvalue, tuple):
+        ## Already a tuple so we good to go
+        pass
+    elif isinstance(newvalue, list):
         try:
             newvalue = tuple(newvalue)
         except TypeError:

@@ -582,7 +582,8 @@ class LocalCommunity(object):
                     self.death_step()
                     ## Sample all available from local community (community grows slow in volcanic model)
                     ## This is the fastest way to sample from a list. >4x faster than np.random.choice
-                    chx = random.choice(self.local_community)
+                    ## Don't allow empty space to reproduce
+                    chx = random.choice([x for x in self.local_community if x != None])
                     self.local_community.append(chx)
                     idx = self.local_community.index(chx)
                     self.founder_flags.append(self.founder_flags[idx])
@@ -643,7 +644,7 @@ class LocalCommunity(object):
         ## Identify parent's trait value
         parent_trait = self.region.get_trait(chx)
 
-        ## Trait evolution. Offsprint trait is normally distributed
+        ## Trait evolution. Offspring trait is normally distributed
         ## with mean of parent value, and stdv equal to stdv of BM
         ## process in metacommunity times average lineage lifetime
         trt = np.random.normal(parent_trait, self._hackersonly["trait_rate_local"], 1)
@@ -849,7 +850,7 @@ class LocalCommunity(object):
             ## This block of code is for debugging the msprime demography
             ## It might be cute to add a command line flag to optionally
             ## save these somewhere smart, but.... 
-            if True:
+            if False:
                 tree = tree_sequence.first()
                 colour_map = {0:"red", 1:"blue"}
                 for idx in range(len(sp_idxs) - 2):
