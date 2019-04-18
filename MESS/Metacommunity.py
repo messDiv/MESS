@@ -170,11 +170,11 @@ class Metacommunity(object):
         return tree, abunds, traits
 
 
-    def _paramschecker(self, param, newvalue, quiet=False):
+    def _paramschecker(self, param, newvalue, quiet=True):
         """ Raises exceptions when params are set to values they should not be"""
         ## TODO: This should actually check the values and make sure they make sense
         try:
-            if not quiet and MESS.__interactive__:
+            if (not quiet) and MESS.__interactive__:
                 print("  Updating Metacommunity parameters requires running set_metacommunity()"\
                         + " to apply the changes.")
 
@@ -212,7 +212,7 @@ class Metacommunity(object):
         return list(self.community["trait_values"])
 
 
-    def write_params(self, outfile=None, append=True):
+    def write_params(self, outfile=None, full=False, append=True):
         """
         Write out the parameters for this island to a file.
         Normally this isn't called directly, but by the main

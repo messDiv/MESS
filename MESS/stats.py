@@ -36,7 +36,7 @@ def generalized_hill_number(abunds, vals=None, order=1):
         h = np.exp(-np.sum(proportions * np.log(abunds/V_bar)))
     else:
         h = np.sum(vals*(abunds/V_bar)**order)**(1./(1-order))
-    #h = h/V_bar
+    h = h/V_bar
     return h
 
 
@@ -246,6 +246,7 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=2, metacommunity_trai
         sgd = SGD(diversity_df["pi"],\
                   diversity_df["dxy"],\
                   nbins = sgd_bins, ndims = sgd_dims)
+        stat_dict.update(sgd.to_dict())
     except KeyError as inst:
         ## No Dxy data, try just py
         try:

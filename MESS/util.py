@@ -161,7 +161,7 @@ def read_sequence(fastafile):
         return(np.array(datlines))
 
 
-def set_params(data, param, newvalue, quiet=False):
+def set_params(data, param, newvalue, quiet=True):
     """
     Set a parameter to a new value. Raises error if newvalue is wrong type.
     This is used to set parameters on both the Region and LocalCommunity
