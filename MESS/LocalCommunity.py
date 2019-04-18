@@ -279,7 +279,7 @@ class LocalCommunity(object):
             raise
 
 
-    def write_params(self, outfile=None, append=True):
+    def write_params(self, outfile=None, full=False, append=True):
         """
         Write out the parameters for this island to a file.
         Normally this isn't called directly, but by the main
