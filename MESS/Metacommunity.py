@@ -63,6 +63,7 @@ class Metacommunity(object):
 
         ## A dictionary for holding prior ranges for values we're interested in
         self._priors = dict([
+                        ("S_m", []),
                         ("J_m", []),
                         ("speciation_rate", []),
                         ("death_proportion", []),
@@ -147,7 +148,7 @@ class Metacommunity(object):
                         + " to apply the changes.")
 
             ## Cast params to correct types
-            if param in ["J_m", "speciation_rate", "death_proportion", "trait_rate_meta",
+            if param in ["S_m", "J_m", "speciation_rate", "death_proportion", "trait_rate_meta",
                             "ecological_strength"]:
                 tup = tuplecheck(newvalue, dtype=float)
                 if isinstance(tup, tuple):
@@ -156,12 +157,6 @@ class Metacommunity(object):
                 else:
                     self.paramsdict[param] = tup
                 LOGGER.debug("{} {}".format(param, tup))
-
-            elif param == "S_m":
-                self.paramsdict[param] = int(float(newvalue))
-
-            elif param == "logser_shape":
-                self.paramsdict[param] = float(newvalue)
 
         except Exception as inst:
             ## Do something intelligent here?
@@ -209,11 +204,15 @@ class Metacommunity(object):
             paramsfile.write(header)
 
             for key, val in self.paramsdict.items():
-                ## If multiple elements, write them out comma separated
-                if isinstance(val, list) or isinstance(val, tuple):
-                    paramvalue = ", ".join([str(i) for i in val])
-                else:
-                    paramvalue = str(val)
+                paramvalue = str(val)
+
+                ## If it's one of the params with a prior, and if the prior is not
+                ## empty and if writing out full, then write the prior, and not
+                ## the sampled value
+                if full:
+                    if key in list(self._priors.keys()):
+                        if self._priors[key]:
+                            paramvalue = "-".join([str(i) for i in self._priors[key]])
 
                 padding = (" "*(20-len(paramvalue)))
                 paramkey = list(self.paramsdict.keys()).index(key)
@@ -416,7 +415,6 @@ LOCAL_PARAMS = {
     "J_m" : "Total # of individuals in the regional pool",\
     "speciation_rate" : "Speciation rate of metacommunity",\
     "death_proportion" : "Proportion of speciation rate to be extinction rate",\
-    "logser_shape" : "If logser: Shape parameter of the distribution",\
     "trait_rate_meta" : "Trait evolution rate parameter for metacommunity",\
     "ecological_strength" : "Strength of community assembly process on phenotypic change",\
 }
