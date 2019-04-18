@@ -250,16 +250,16 @@ class Region(object):
     ## A convenience function for setting a parameter in the API
     ## mode, which turns out to be a little annoying if you don't
     ## allow this.
-    def set_param(self, param, value):
+    def set_param(self, param, value, quiet=True):
         try:
-            self = set_params(self, param, value)
+            self = set_params(self, param, value, quiet)
         except:
             try:
-                self.metacommunity = set_params(self.metacommunity, param, value)
+                self.metacommunity = set_params(self.metacommunity, param, value, quiet)
             except:
                 try:
                     name, loc = self.islands.items()[0]
-                    self.islands[name] = set_params(loc, param, value)
+                    self.islands[name] = set_params(loc, param, value, quiet)
                 except:
                     raise MESSError("Bad param/value {}/{}".format(param, value))
 
