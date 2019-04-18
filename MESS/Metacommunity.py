@@ -182,7 +182,11 @@ class Metacommunity(object):
             ## Cast params to correct types
             if param in ["S_m", "J_m", "speciation_rate", "death_proportion", "trait_rate_meta",
                             "ecological_strength"]:
-                tup = tuplecheck(newvalue, dtype=float)
+                dtype = float 
+                if param in ["S_m", "J_m"]:
+                    dtype = int
+
+                tup = tuplecheck(newvalue, dtype=dtype)
                 if isinstance(tup, tuple):
                     self._priors[param] = tup
                     self.paramsdict[param] = sample_param_range(tup)[0]
@@ -309,10 +313,8 @@ class Metacommunity(object):
             self.metacommunity_tree = handle
 
             abundances = abunds
-            ## TODO: This is dumb
-            tups = list(zip(traits["name"], traits["value"]))
-            ids = np.array([x[0] for x in tups])
-            trait_values = np.array([x[1] for x in tups])
+            ids = traits["name"].values
+            trait_values = traits["value"].values
 
             self._hackersonly["filtering_optimum"] = np.random.normal(loc=np.mean(trait_values), scale=np.std(trait_values), size=1)[0]
 
