@@ -8,8 +8,41 @@ from scipy.stats import entropy, kurtosis, iqr, skew
 from MESS.SGD import SGD
 
 
+def generalized_hill_number(abunds, vals=None, order=1):
+    ## This is the Chao et al generalized Hill # formula
+    ## Get one hill humber from a list of abundances (a column vector from the OTU table)
+    ## Generalized function to calculate one hill number from a distribution
+    ## of values of some statistic and abundances.
+    ## vals:   A list of statistics calculated per species (e.g. pi)
+    ## abunds: A list of corresponding abundances per species
+
+    ## Degenerate edge cases can cause all zero values, particulary for pi
+    ## in which case we bail out immediately
+    if not np.any(abunds):
+        return 0
+
+    ## If vals is empty then populate the vector with a list of ones
+    ## and this function collapses to the standard Hill number for abundance
+    if vals is None:
+        vals = np.ones(len(abunds))
+
+    ## Make sure vals is a np array or else order > 2 will act crazy
+    vals = np.array(vals)
+    ## sum of values weighted by abundance
+    V_bar = np.sum(vals*abunds)
+
+    if order == 1:
+        proportions = vals*(abunds/V_bar)
+        h = np.exp(-np.sum(proportions * np.log(proportions)))
+        return h
+    else:
+        h = np.sum(vals*(abunds/V_bar)**order)**(1./(1-order))
+
+    return h
+
+
 ## Get one hill humber from a list of abundances (a column vector from the OTU table)
-def hill_number(abunds, order):
+def hill_number(abunds, order=0):
     ## Make sure abunds is a np array or else order > 2 will act crazy
     abunds = np.array(abunds)
     ## Degenerate edge cases can cause all zero values, particulary for pi
@@ -147,17 +180,17 @@ def _get_sumstats_header(sgd_bins=10, sgd_dims=2, metacommunity_traits=None):
     trts = np.random.random(10)*10
     meta_trts = np.random.random(10)*10
 
-    dat = pd.DataFrame([], columns=["pis", "dxys", "abunds", "traits"])
-    dat["pis"] = pis
-    dat["dxys"] = dxys
-    dat["abunds"] = abunds
-    dat["traits"] = trts
+    dat = pd.DataFrame([], columns=["pi", "dxy", "abundance", "trait"])
+    dat["pi"] = pis
+    dat["dxy"] = dxys
+    dat["abundance"] = abunds
+    dat["trait"] = trts
 
     header = list(calculate_sumstats(dat, sgd_bins, sgd_dims, metacommunity_traits=metacommunity_traits).columns)
     return header
 
 
-def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=2, metacommunity_traits=None):
+def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=2, metacommunity_traits=None, verbose=False):
 
     moments = OrderedDict()
     for name, func in zip(["mean", "std", "skewness", "kurtosis", "median", "iqr"],\
@@ -167,26 +200,39 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=2, metacommunity_trai
     stat_dict = OrderedDict({})
     stat_dict["S"] = len(diversity_df)
 
-    ## Abundance Hill #s
-    for order in range(1,5):
-        stat_dict["abund_h{}".format(order)] = hill_number(diversity_df["abunds"], order=order)
+    try:
+        ## Abundance Hill #s
+        for order in range(1,5):
+            stat_dict["abund_h{}".format(order)] = hill_number(diversity_df["abundance"], order=order)
+    except KeyError as inst:
+        if verbose: print("  No abundance data present")
 
-    ## pi/dxy stats
-    for order in range(1,5):
-        stat_dict["pi_h{}".format(order)] = hill_number(diversity_df["pis"], order=order)
+    try:
+        for order in range(1,5):
+            stat_dict["pi_h{}".format(order)] = hill_number(diversity_df["pi"], order=order)
 
-    for name, func in moments.items():
-        stat_dict["{}_pi".format(name)] = func(diversity_df["pis"])
+        for name, func in moments.items():
+            stat_dict["{}_pi".format(name)] = func(diversity_df["pi"])
+    except KeyError as inst:
+        if verbose: print("  No pi data present")
 
-    for name, func in moments.items():
-        stat_dict["{}_dxys".format(name)] = func(diversity_df["dxys"])
+    try:
+        for name, func in moments.items():
+            stat_dict["{}_dxys".format(name)] = func(diversity_df["dxy"])
+    except KeyError as inst:
+        if verbose: print("  No dxy data present")
 
     ## Tree stats
     stat_dict["trees"] = 0
 
-    ## Trait stats
-    for name, func in moments.items():
-        stat_dict["{}_local_traits".format(name)] = func(diversity_df["traits"])
+    try:
+        ## TODO: Doesn't work for traits yet
+        # for order in range(1,5):
+        #     stat_dict["trait_h{}".format(order)] = hill_number(diversity_df["trait"], order=order)
+        for name, func in moments.items():
+            stat_dict["{}_local_traits".format(name)] = func(diversity_df["trait"])
+    except:
+        if verbose: print("  No trait data present")
 
     if np.any(metacommunity_traits):
         for name, func in moments.items():
@@ -197,11 +243,19 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=2, metacommunity_trai
             val = func(metacommunity_traits)
             stat_dict["reg_loc_{}_trait_dif".format(name)] = val - stat_dict["{}_local_traits".format(name)]
 
-    sgd = SGD(diversity_df["pis"],\
-              diversity_df["dxys"],\
-              nbins = sgd_bins, ndims = sgd_dims)
-
-    stat_dict.update(sgd.to_dict())
+    try:
+        sgd = SGD(diversity_df["pi"],\
+                  diversity_df["dxy"],\
+                  nbins = sgd_bins, ndims = sgd_dims)
+    except KeyError as inst:
+        ## No Dxy data, try just py
+        try:
+            sgd = SGD(diversity_df["pi"],\
+                      nbins = sgd_bins, ndims = 1)
+            stat_dict.update(sgd.to_dict())
+        except KeyError as inst:
+            ## No py data. Skip SGD.
+            pass
 
     return pd.DataFrame(stat_dict, index=[0])
 
