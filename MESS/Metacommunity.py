@@ -99,7 +99,7 @@ class Metacommunity(object):
         ## required packages:
         ##    ape,
         ##    TreeSim,
-        ##    pika
+        ##    nleqslv
         ## arguments:
         #' @param J the number of individuals in the meta community
         #' @param S_m the number of species in the meta community
@@ -122,8 +122,40 @@ class Metacommunity(object):
           b <- -log(p)
 
           ## the abundances
+          sad_logseries = function(S, N) {
+              expit = function(x) {
+                  return(1 / (1 + exp(-x)))
+              }
+              
+              f = function(ax, S, N) {
+                  ax[2] <- expit(ax[2])
+                  
+                  return(c(-ax[1] * log(1 - ax[2]) - S, prod(ax) / (1 - ax[2]) - N))
+              }
+              
+              Pn = function(n, ax) {
+                  o <- ax[1] / n * ax[2]^n
+                  S <- -ax[1] * log(1 - ax[2])
+                  
+                  return(o / S)
+              }
+              
+              axSol = nleqslv::nleqslv(c(20, 2), f, S = S, N = N, control = list(maxit = 1000))$x
+              axSol[2] = expit(axSol[2])
+              
+              PP = cumsum(Pn(1:(N - S + 1), axSol))
+              p2match = seq(1, 1/S, length.out = S) - 1 / (2 * S)
+              nn = rep(0, S)
+              
+              for(i in 1:S) {
+                  nn[i] = which.min(abs(p2match[i] - PP))
+              }
+    
+              return(nn)
+          }
           #abund <- sads::rls(length(trt), length(trt), 0.01)
-          abund <- meteR::sad(meteR::meteESF(S0 = S, N0 = Jm))$r(S)
+          #abund <- meteR::sad(meteR::meteESF(S0 = S, N0 = Jm))$r(S)
+          abund <- sad_logseries(S, Jm)
 
           ## return it all in a list
           tre <- ape::write.tree(tre)
