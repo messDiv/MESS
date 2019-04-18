@@ -42,7 +42,7 @@ class Metacommunity(object):
         self.paramsdict = OrderedDict([
                         ("S_m", 100),
                         ("J_m", 750000),
-                        ("birth_rate", 2),
+                        ("speciation_rate", 2),
                         ("death_proportion", 0.7),
                         ("trait_rate_meta", 2),
                         ("ecological_strength", 5),
@@ -63,7 +63,8 @@ class Metacommunity(object):
 
         ## A dictionary for holding prior ranges for values we're interested in
         self._priors = dict([
-                        ("birth_rate", []),
+                        ("J_m", []),
+                        ("speciation_rate", []),
                         ("death_proportion", []),
                         ("trait_rate_meta", []),
                         ("ecological_strength", []),
@@ -90,7 +91,7 @@ class Metacommunity(object):
                 self.paramsdict[k] = sample_param_range(v)[0]
 
 
-    def _simulate_metacommunity(self, J, S_m, birth_rate, death_proportion, trait_rate_meta):
+    def _simulate_metacommunity(self, J, S_m, speciation_rate, death_proportion, trait_rate_meta):
         import rpy2.robjects as robjects
         from rpy2.robjects import r, pandas2ri
 
@@ -102,7 +103,7 @@ class Metacommunity(object):
         ## arguments:
         #' @param J the number of individuals in the meta community
         #' @param S_m the number of species in the meta community
-        #' @param birth_rate the speciation rate
+        #' @param speciation_rate the speciation rate
         #' @param death_proportion the proportional extinction rate
         #' @param trait_rate_meta the rate of brownian motion
 
@@ -130,7 +131,7 @@ class Metacommunity(object):
         }"""
 
         make_meta_func = robjects.r(make_meta)
-        res = pandas2ri.ri2py(make_meta_func(J, S_m, birth_rate, death_proportion, trait_rate_meta))
+        res = pandas2ri.ri2py(make_meta_func(J, S_m, speciation_rate, death_proportion, trait_rate_meta))
         tree = res[0][0]
         traits = pandas2ri.ri2py(res[1])
         abunds = pandas2ri.ri2py(res[2])
@@ -146,7 +147,7 @@ class Metacommunity(object):
                         + " to apply the changes.")
 
             ## Cast params to correct types
-            if param in ["birth_rate", "death_proportion", "trait_rate_meta",
+            if param in ["J_m", "speciation_rate", "death_proportion", "trait_rate_meta",
                             "ecological_strength"]:
                 tup = tuplecheck(newvalue, dtype=float)
                 if isinstance(tup, tuple):
@@ -161,9 +162,6 @@ class Metacommunity(object):
 
             elif param == "logser_shape":
                 self.paramsdict[param] = float(newvalue)
-
-            elif param == "J_m":
-                self.paramsdict[param] = int(float(newvalue))
 
         except Exception as inst:
             ## Do something intelligent here?
@@ -272,7 +270,7 @@ class Metacommunity(object):
         elif meta_type == "logser":
             tree, abunds, traits = self._simulate_metacommunity(self.paramsdict["J_m"],\
                                                                 self.paramsdict["S_m"],\
-                                                                self.paramsdict["birth_rate"],\
+                                                                self.paramsdict["speciation_rate"],\
                                                                 self.paramsdict["death_proportion"],\
                                                                 self.paramsdict["trait_rate_meta"])
             #handle = Phylo.read(StringIO(tree), "newick")
@@ -416,7 +414,7 @@ class Metacommunity(object):
 LOCAL_PARAMS = {
     "S_m" : "Number of species in the regional pool",\
     "J_m" : "Total # of individuals in the regional pool",\
-    "birth_rate" : "Speciation rate of metacommunity",\
+    "speciation_rate" : "Speciation rate of metacommunity",\
     "death_proportion" : "Proportion of speciation rate to be extinction rate",\
     "logser_shape" : "If logser: Shape parameter of the distribution",\
     "trait_rate_meta" : "Trait evolution rate parameter for metacommunity",\

@@ -17,7 +17,7 @@ LOGGER = logging.getLogger(__name__)
 class species(object):
 
     def __init__(self, name = "", species_params={"mutation_rate":2.2e-8,
-                                                  "sigma":2000,
+                                                  "alpha":2000,
                                                   "sequence_length":570},
                 trait_value = 0, growth="constant", abundance = 1,
                 meta_abundance = 1, divergence_time = 0, migration_rate=0,
@@ -27,7 +27,7 @@ class species(object):
         ## a 'parameter' even though I know migration rate is a
         ## parameter too
         self.paramsdict = dict([
-                            ("sigma", species_params["sigma"]),
+                            ("alpha", species_params["alpha"]),
                             ("sequence_length", species_params["sequence_length"]),
                             ("mutation_rate", species_params["mutation_rate"]),
                             ("sample_size_local", 10),
@@ -60,7 +60,7 @@ class species(object):
         self.stats["name"] = name
         self.stats["trait"] = trait_value
         self.stats["abundance"] = abundance
-        self.stats["Ne_local"] = abundance * self.paramsdict["sigma"]
+        self.stats["Ne_local"] = abundance * self.paramsdict["alpha"]
         self.stats["Ne_meta"] = meta_abundance
         self.stats["tdiv"] = divergence_time
 
@@ -81,7 +81,7 @@ class species(object):
         elif growth == "harmonic":
             try:
                 harmonic = hmean(np.array(abundance_through_time.values()))
-                self.stats["Ne_local"] = harmonic * self.paramsdict["sigma"]
+                self.stats["Ne_local"] = harmonic * self.paramsdict["alpha"]
                 self.stats["growth_rate"] = 0
 
                 LOGGER.debug("sname Ne hmean- {} {} {}".format(self.name, self.stats["Ne_local"], harmonic))
@@ -313,7 +313,7 @@ class species(object):
     ## This is hackish and is used by the LocalCommunity.bottleneck() function
     ## that is more or less untested
     def update_abundance(self, abund):
-        self.stats["Ne_local"] = abund * self.paramsdict["sigma"]
+        self.stats["Ne_local"] = abund * self.paramsdict["alpha"]
 
 
 #######################################

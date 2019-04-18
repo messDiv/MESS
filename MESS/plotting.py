@@ -69,8 +69,8 @@ def plot_rank_abundance_through_time(outdir, sp_through_time, equilibria,\
         ## Make the Plot
         fig = plt.figure(figsize=(12,5))
 
-        ## Make the SAD subplot, convert Ne back to abundance by dividing by sigma
-        abund = SAD([x.stats["Ne_local"]/x.paramsdict["sigma"] for x in species], from_abundances=True, octaves=True)
+        ## Make the SAD subplot, convert Ne back to abundance by dividing by alpha
+        abund = SAD([x.stats["Ne_local"]/x.paramsdict["alpha"] for x in species], from_abundances=True, octaves=True)
         ax1 = plt.subplot(121)
         plot_sad(abund, max_n_species, max_n_bins, max_class_count, octave_bin_labels, verbose)
 
@@ -377,7 +377,7 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
 def prep_normalized_plots(sp_through_time):
     ## GET MAX values for abundance and num species so we can normalize the plot axes
     max_n_species = max([len(x) for x in sp_through_time.values()])
-    max_abundance = max([max([y.stats["Ne_local"]/y.paramsdict["sigma"] for y in sp]) for sp in sp_through_time.values()])
+    max_abundance = max([max([y.stats["Ne_local"]/y.paramsdict["alpha"] for y in sp]) for sp in sp_through_time.values()])
 
     ## Get max values for abundance class count and abundance octave
     max_octave = 0
@@ -385,7 +385,7 @@ def prep_normalized_plots(sp_through_time):
     max_n_bins = 0
     octave_bin_labels = []
     for sp in sp_through_time.values():
-        abund = SAD([x.stats["Ne_local"]/x.paramsdict["sigma"] for x in sp], from_abundances=True, octaves=True)
+        abund = SAD([x.stats["Ne_local"]/x.paramsdict["alpha"] for x in sp], from_abundances=True, octaves=True)
         octave = max(abund.keys())
         class_count = max(abund.values())
         if octave > max_octave:
@@ -430,11 +430,11 @@ def plot_rank_abundance(sp_list, max_n_species, max_abundance, stats_models=Fals
     species = species[::-1]
     X = np.arange(0,len(species))
     if as_curve:
-        Y = [xx.stats["Ne_local"]/xx.paramsdict["sigma"] for xx in species]
+        Y = [xx.stats["Ne_local"]/xx.paramsdict["alpha"] for xx in species]
         plt.semilogy(X, Y, label="simulated")
         ymax = max_abundance
     else:
-        Y = [np.log10(xx.stats["Ne_local"]/xx.paramsdict["sigma"]) for xx in species]
+        Y = [np.log10(xx.stats["Ne_local"]/xx.paramsdict["alpha"]) for xx in species]
         plt.scatter(X, Y, color="blue", s=100, label="simulated")
         ymax = int(math.ceil(np.log10(max_abundance)))
 
@@ -447,7 +447,7 @@ def plot_rank_abundance(sp_list, max_n_species, max_abundance, stats_models=Fals
     ## Whether or not to include a couple common statistical models in the plots
 ##    if stats_models:
 ##        import macroeco as meco
-##        abund = [xx.stats["Ne_local"]/xx.paramsdict["sigma"] for xx in species]
+##        abund = [xx.stats["Ne_local"]/xx.paramsdict["alpha"] for xx in species]
 ##        ## Lognormal
 ##        mu, s = meco.models.lognorm.fit_mle(abund)
 ##        lognorm_rad = meco.models.lognorm.rank(len(abund), mu, s)
@@ -481,7 +481,7 @@ def plot_rank_abundance(sp_list, max_n_species, max_abundance, stats_models=Fals
 
 def plot_abund_vs_colon(species, max_coltime, max_abundance):
     x = [np.log10(s.stats["coltime"]) for s in species]
-    y = [np.log10(s.stats["Ne_local"]/s.paramsdict["sigma"]) for s in species]
+    y = [np.log10(s.stats["Ne_local"]/s.paramsdict["alpha"]) for s in species]
     plt.scatter(x, y, color="blue", s=100)
     plt.ylim(0, int(math.ceil(np.log10(max_abundance))))
     plt.xlim(0, 8) #int(math.ceil(np.log10(max_coltime))))

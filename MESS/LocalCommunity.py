@@ -42,7 +42,7 @@ class LocalCommunity(object):
                         ("name", self.name),
                         ("J", J),
                         ("m", m),
-                        ("speciation_rate", 0),
+                        ("speciation_prob", 0),
                         ("background_death", 0.25)
         ])
 
@@ -50,7 +50,7 @@ class LocalCommunity(object):
         self._priors = dict([
                         ("J", []),
                         ("m", []),
-                        ("speciation_rate", []),
+                        ("speciation_prob", []),
         ])
 
         ## Dictionary of 'secret' parameters that most people won't want to mess with
@@ -153,7 +153,7 @@ class LocalCommunity(object):
 
         new.paramsdict = self.paramsdict
         ## Get sample from prior range on params that may have priors
-        for param in ["J", "m", "speciation_rate"]:
+        for param in ["J", "m", "speciation_prob"]:
             ## if _priors is empty then this param is fixed
             if np.any(self._priors[param]):
                 self.paramsdict[param] = sample_param_range(new._priors[param])[0]
@@ -260,7 +260,7 @@ class LocalCommunity(object):
                 ## Must reup the local community if you change the mode
                 self.paramsdict[param] = newvalue
 
-            elif param == "speciation_rate":
+            elif param == "speciation_prob":
                 tup = tuplecheck(newvalue, dtype=float)
                 if isinstance(tup, tuple):
                     self._priors[param] = tup
@@ -601,7 +601,7 @@ class LocalCommunity(object):
             ## Speciation process
             ##############################################
             if self.region.paramsdict["speciation_model"] != "none" and\
-               np.random.random_sample() < self.paramsdict["speciation_rate"] and\
+               np.random.random_sample() < self.paramsdict["speciation_prob"] and\
                chx != None:
 
                self.speciate(chx)
@@ -940,11 +940,11 @@ class LocalCommunity(object):
         dxys = np.array([x.stats["dxy"] for x in self.species])
         traits = np.array([x.stats["trait"] for x in self.species])
 
-        dat = pd.DataFrame([], columns=["pis", "dxys", "abunds", "traits"])
-        dat["abunds"] = abunds
-        dat["pis"] = pis
-        dat["dxys"] = dxys
-        dat["traits"] = traits
+        dat = pd.DataFrame([], columns=["pi", "dxy", "abundance", "trait"])
+        dat["abundance"] = abunds
+        dat["pi"] = pis
+        dat["dxy"] = dxys
+        dat["trait"] = traits
 
         ss = calculate_sumstats(dat, sgd_bins=self.region._hackersonly["sgd_bins"],\
                                     sgd_dims=self.region._hackersonly["sgd_dimensions"],\
@@ -985,8 +985,8 @@ def _get_competition_death_prob(region, victim_trait, mean_local_trait):
 @memoize
 def _get_trait_rate_local(region):
     try:
-        ext = region.metacommunity.paramsdict["birth_rate"] * region.metacommunity.paramsdict["death_proportion"]
-        val = region.metacommunity.paramsdict["trait_rate_meta"]/ (region.metacommunity.paramsdict["birth_rate"] + ext)
+        ext = region.metacommunity.paramsdict["speciation_rate"] * region.metacommunity.paramsdict["death_proportion"]
+        val = region.metacommunity.paramsdict["trait_rate_meta"]/ (region.metacommunity.paramsdict["speciation_rate"] + ext)
     except Exception as inst:
         raise MESSError("Error in geting trait rate for local community")
     return val
@@ -998,7 +998,7 @@ LOCAL_PARAMS = {
     "name" : "Local community name",\
     "J" : "Number of individuals in the local community",\
     "m" : "Migration rate into local community",\
-    "speciation_rate" : "Speciation rate in the local community",\
+    "speciation_prob" : "Probability of speciation per timestep in local community",\
     "background_death" : "Baseline death probability in trait-based models",\
 }
 

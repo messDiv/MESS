@@ -56,12 +56,13 @@ class Region(object):
                        ("community_assembly_model", "neutral"),
                        ("speciation_model", "point_mutation"),
                        ("mutation_rate", 2.2e-8),
-                       ("sigma", 2000),
+                       ("alpha", 2000),
                        ("sequence_length", 570),
         ])
 
         ## A dictionary for holding prior ranges for values we're interested in
         self._priors = dict([
+                        ("alpha", []),
                         ("generations", []),
         ])
 
@@ -196,8 +197,13 @@ class Region(object):
             elif param == "mutation_rate":
                 self.paramsdict[param] = float(newvalue)
 
-            elif param == "sigma":
-                self.paramsdict[param] = float(newvalue)
+            elif param == "alpha":
+                tup = tuplecheck(newvalue, dtype=int)
+                if isinstance(tup, tuple):
+                    self._priors[param] = tup
+                    self.paramsdict[param] = sample_param_range(tup)[0]
+                else:
+                    self.paramsdict[param] = tup
 
             elif param == "sequence_length":
                 self.paramsdict[param] = float(newvalue)
@@ -371,7 +377,7 @@ class Region(object):
 
     def get_species_params(self):
         return {"mutation_rate":self.paramsdict["mutation_rate"],
-                "sigma": self.paramsdict["sigma"],
+                "alpha": self.paramsdict["alpha"],
                 "sequence_length":self.paramsdict["sequence_length"]}
 
 
@@ -527,6 +533,10 @@ class Region(object):
             msg = "Either _lambda or nsteps must be specified."
             raise MESSError(msg)
 
+        ## If priors for alpha are set then resample alpha
+        if self._priors["alpha"]:
+            self.paramsdict["alpha"] = sample_param_range(self._priors["alpha"])[0]
+            LOGGER.debug("alpha - {}".format(self.paramsdict["alpha"]))
         ## Flip the metacommunity per simulation so we get new draws of trait values.
         ## This is a little slow for logser, and also performance scales with metacommunity size
         self._reset_metacommunity()
@@ -643,7 +653,7 @@ REGION_PARAMS = {
     "community_assembly_model" : "Model of Community Assembly: neutral, filtering, competition",\
     "speciation_model" : "Type of speciation process: none, point_mutation, protracted, random_fission",\
     "mutation_rate" : "Mutation rate scaled per base per generation",\
-    "sigma" : "Abundance/Ne scaling factor",\
+    "alpha" : "Abundance/Ne scaling factor",\
     "sequence_length" : "Length in bases of the sequence to simulate",\
 }
 
