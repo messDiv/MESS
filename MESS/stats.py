@@ -33,11 +33,10 @@ def generalized_hill_number(abunds, vals=None, order=1):
 
     if order == 1:
         proportions = vals*(abunds/V_bar)
-        h = np.exp(-np.sum(proportions * np.log(proportions)))
-        return h
+        h = np.exp(-np.sum(proportions * np.log(abunds/V_bar)))
     else:
         h = np.sum(vals*(abunds/V_bar)**order)**(1./(1-order))
-
+    #h = h/V_bar
     return h
 
 
