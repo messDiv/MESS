@@ -264,7 +264,7 @@ class Region(object):
                     raise MESSError("Bad param/value {}/{}".format(param, value))
 
 
-    def write_params(self, outfile=None, outdir=None, force=False):
+    def write_params(self, outfile=None, outdir=None, full=False, force=False):
         """ Write out the parameters of this model to a file properly
         formatted as input for `MESS -p <params.txt>`. A good and
         simple way to share/archive parameter settings for simulations.
@@ -317,11 +317,11 @@ class Region(object):
             paramsfile.write("\n")
 
         ## Write parameters of the metacommunity
-        self.metacommunity.write_params(outfile)
+        self.metacommunity.write_params(outfile, full=full)
 
         ## Write parameters for each island
         for island in self.islands.values():
-            island.write_params(outfile)
+            island.write_params(outfile, full=full)
 
 
     ########################
@@ -413,10 +413,6 @@ class Region(object):
         SIMOUT = open(simfile, append)
         SIMOUT.write(header)
 
-        ## Regional params don't change over simulations so get them once here
-        regional_params = self.metacommunity._get_params_values() +\
-                            self._get_params_values()
-
         ## Just get all the time values to simulate up front
         ## Doesn't save time really, just makes housekeeping easier
         gens = sample_param_range(self.paramsdict["generations"], nsamps=sims)
@@ -441,7 +437,7 @@ class Region(object):
                     else:
                         res = self.simulate(_lambda=gens[i], quiet=quiet)
 
-                    SIMOUT.write("\t".join(map(str, regional_params + list(res.T.values[0]))) + "\n")
+                    SIMOUT.write(res + "\n")
                     LOGGER.debug("Finished simulation {} stats:\n{}".format(i, res))
             except KeyboardInterrupt as inst:
                 print("\n    Cancelling remaining simulations")
@@ -498,7 +494,7 @@ class Region(object):
                     else:
                         passdict[result] = parallel_jobs[result].result()
                         res = passdict[result]
-                        SIMOUT.write("\t".join(map(str, regional_params + list(res.T.values[0]))) + "\n")
+                        SIMOUT.write(res + "\n")
                 except Exception as inst:
                     LOGGER.error("Caught a failed simulation - {}".format(inst))
                     ## Don't let one bad apple spoin the bunch,
@@ -573,7 +569,20 @@ class Region(object):
         for name, island in self.islands.items():
             statsdf = island.get_stats()
 
-        return statsdf
+        ## Paste regional parameters on the front of the local community
+        ## parameters and simulations
+        regional_params = self.metacommunity._get_params_values() +\
+                            self._get_params_values()
+        tmpsimout = regional_params + list(statsdf.T.values[0])
+        simout = []
+        for x in tmpsimout:
+            try:
+                simout.append(np.round(x, 4))
+            except:
+                simout.append(x)
+        simout = "\t".join(map(str, np.array(simout)))
+
+        return simout
 
 
     def fancy_plots(self, quiet=True):
