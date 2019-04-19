@@ -274,12 +274,13 @@ class Region(object):
         if outfile is None:
             outfile = "params-"+self.paramsdict["simulation_name"]+".txt"
 
-        if not outdir is None:
-            if os.path.exists(outdir):
-                outfile = os.path.join(outdir, outfile)
-            else:
-                raise MESSError(NO_OUTDIR).format(outdir)
+        ## If outdir is blank then default to writing to the project dir
+        if outdir is None:
+            outdir = self.paramsdict["project_dir"]
+        elif not os.path.exists(outdir):
+            raise MESSError(NO_OUTDIR).format(outdir)
 
+        outfile = os.path.join(outdir, outfile)
         ## Test if params file already exists?
         ## If not forcing, test for file and bail out if it exists
         if not force:
