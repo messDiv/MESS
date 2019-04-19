@@ -298,11 +298,15 @@ class Region(object):
             ## get the short description from paramsinfo. Make it look pretty,
             ## pad nicely if at all possible.
             for key, val in self.paramsdict.iteritems():
-                ## If multiple elements, write them out comma separated
-                if isinstance(val, list) or isinstance(val, tuple):
-                    paramvalue = ", ".join([str(i) for i in val])
-                else:
-                    paramvalue = str(val)
+                paramvalue = str(val)
+
+                ## If it's one of the params with a prior, and if the prior is not
+                ## empty and if writing out full, then write the prior, and not
+                ## the sampled value
+                if full:
+                    if key in list(self._priors.keys()):
+                        if self._priors[key]:
+                            paramvalue = "-".join([str(i) for i in self._priors[key]])
 
                 padding = (" "*(20-len(paramvalue)))
                 paramkey = self.paramsdict.keys().index(key)
