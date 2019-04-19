@@ -382,7 +382,7 @@ def main():
             tmpassembly._link_metacommunity(tmpmeta)
             tmplocal = MESS.LocalCommunity("island1", quiet=True)
             tmpassembly._link_local(tmplocal)
-            tmpassembly.write_params("params-{}.txt".format(args.new), 
+            tmpassembly.write_params("params-{}.txt".format(args.new), outdir="./", 
                                      force=args.force)
         except Exception as inst:
             print(inst)
