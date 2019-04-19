@@ -79,7 +79,7 @@ def sample_param_range(param, nsamps=1):
     LOGGER.debug("Sampled from range {}".format(param))
     if isinstance(param, tuple):
         if isinstance(param[0], float):
-            param = np.round(np.random.uniform(param[0], param[1], nsamps), 4)
+            param = np.round(np.random.uniform(param[0], param[1], nsamps), 5)
         else:
             param = np.random.randint(param[0], param[1], nsamps)
     elif param == 0:
