@@ -114,8 +114,6 @@ def tuplecheck(newvalue, dtype=str):
             newvalue = dtype(newvalue)
         except Exception as inst:
             ## Failed to cast to dtype, so this is probably a prior range
-            ## Using comma as seperator here to avoid ugliness of using -,
-            ## because we may want negative values in some priors.
             try:
                 newvalue = newvalue.rstrip(")").strip("(")
                 minval = dtype(newvalue.split("-")[0].strip())

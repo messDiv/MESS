@@ -185,7 +185,6 @@ class Metacommunity(object):
                 dtype = float 
                 if param in ["S_m", "J_m"]:
                     dtype = int
-
                 tup = tuplecheck(newvalue, dtype=dtype)
                 if isinstance(tup, tuple):
                     self._priors[param] = tup
