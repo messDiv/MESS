@@ -5,6 +5,7 @@ import pandas as pd
 import math
 from collections import Counter, OrderedDict
 from scipy.stats import entropy, kurtosis, iqr, skew
+from sklearn.metrics import pairwise_distances
 from MESS.SGD import SGD
 
 
@@ -38,6 +39,16 @@ def generalized_hill_number(abunds, vals=None, order=1):
         h = np.sum(vals*(abunds/V_bar)**order)**(1./(1-order))
     h = h/V_bar
     return h
+
+
+def trait_hill_number(abunds, traits, order=1):
+    ## Create the outer product of the abundances, flatten to a vector and divide
+    ## by J**2 (essentially converting all pairwise abundance to proportion).
+    pij = np.outer(abunds, abunds).flatten()/(np.sum(abunds)**2.)
+    ## Reshape the np.array to make sklearn happy about it, then flatten it to a vector
+    ## Then get the pairwise euclidean distances between all species trait values
+    dij = pairwise_distances(traits.values.reshape(-1, 1)).flatten()
+    return generalized_hill_number(abunds=pij, vals=dij, order=order)
 
 
 ## Get one hill humber from a list of abundances (a column vector from the OTU table)
@@ -225,9 +236,10 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=2, metacommunity_trai
     stat_dict["trees"] = 0
 
     try:
-        ## TODO: Doesn't work for traits yet
-        # for order in range(1,5):
-        #     stat_dict["trait_h{}".format(order)] = hill_number(diversity_df["trait"], order=order)
+        for order in range(1,5):
+            stat_dict["trait_h{}".format(order)] = trait_hill_number(diversity_df["abundance"],\
+                                                                    diversity_df["trait"],\
+                                                                    order=order)
         for name, func in moments.items():
             stat_dict["{}_local_traits".format(name)] = func(diversity_df["trait"])
     except:
