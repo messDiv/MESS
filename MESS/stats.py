@@ -265,6 +265,13 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=2, metacommunity_trai
     ## Here we'll just call this 0, even though it's not technically correct
     ## it's close enough to what we want. Would be better to do something smrter.
     for pair in combinations(diversity_df.columns, r=2):
+        ## If doing traits then transform the trait values into distance from
+        ## local trait mean. Should see positive correlation in filtering and
+        ## negative in competition.
+        if "trait" in pair[0]:
+            diversity_df[pair[0]] = np.abs(diversity_df[pair[0]] - np.sum(diversity_df[pair[0]])/len(diversity_df))
+        elif "trait" in pair[1]:
+            diversity_df[pair[1]] = np.abs(diversity_df[pair[1]] - np.sum(diversity_df[pair[1]])/len(diversity_df))
         cor = spearmanr(diversity_df[pair[0]], diversity_df[pair[1]])[0]
         if np.isnan(cor): cor = 0
         stat_dict["{}_{}_cor".format(pair[0], pair[1])] = cor
