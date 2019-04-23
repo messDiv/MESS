@@ -4,7 +4,8 @@ import numpy as np
 import pandas as pd
 import math
 from collections import Counter, OrderedDict
-from scipy.stats import entropy, kurtosis, iqr, skew
+from itertools import combinations
+from scipy.stats import entropy, kurtosis, iqr, skew, spearmanr
 from sklearn.metrics import pairwise_distances
 from MESS.SGD import SGD
 
@@ -253,6 +254,14 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=2, metacommunity_trai
         for name, func in moments.items():
             val = func(metacommunity_traits)
             stat_dict["reg_loc_{}_trait_dif".format(name)] = val - stat_dict["{}_local_traits".format(name)]
+
+    ## Calculate correlations between all the distributions we have
+    ## This may not make much sense for the trait data at this point.
+    ## Here we take the spearmanr()[0] because it returns a tuple of
+    ## corellation and p-value.
+    for pair in combinations(diversity_df.columns, r=2):
+        stat_dict["{}_{}_cor".format(pair[0], pair[1])] = spearmanr(diversity_df[pair[0]],\
+                                                                    diversity_df[pair[1]])[0]
 
     try:
         sgd = SGD(diversity_df["pi"],\
