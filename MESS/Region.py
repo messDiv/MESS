@@ -582,7 +582,7 @@ class Region(object):
         simout = []
         for x in tmpsimout:
             try:
-                simout.append(np.round(x, 4))
+                simout.append(np.round(x, 5))
             except:
                 simout.append(x)
         simout = "\t".join(map(str, np.array(simout)))
