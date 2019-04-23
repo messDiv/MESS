@@ -49,7 +49,7 @@ def trait_hill_number(abunds, traits, order=1):
     ## Reshape the np.array to make sklearn happy about it, then flatten it to a vector
     ## Then get the pairwise euclidean distances between all species trait values
     dij = pairwise_distances(traits.values.reshape(-1, 1)).flatten()
-    return generalized_hill_number(abunds=pij, vals=dij, order=order)
+    return generalized_hill_number(abunds=pij, vals=dij, order=order)**(1/2.)
 
 
 ## Get one hill humber from a list of abundances (a column vector from the OTU table)
