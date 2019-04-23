@@ -1,0 +1,9 @@
+snails<-read.csv("masterspectra14to18.csv")
+spectra<-snails[,-(1:11)]
+head(spectra)
+spectra.std<-spectra/brightness
+brightness<-snails$brightness
+spectra.std<-spectra/brightness
+spectra.std
+head(spectra.std)
+rowSums(spectra.std)
