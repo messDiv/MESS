@@ -264,7 +264,10 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=2, metacommunity_trai
     ## if all pi values are 0, then spearmanr is undefined and returns nan.
     ## Here we'll just call this 0, even though it's not technically correct
     ## it's close enough to what we want. Would be better to do something smrter.
-    for pair in combinations(diversity_df.columns, r=2):
+    ## Only look at the valid columns, in case the input df has some weird shit
+    ## going on.
+    valid = set(["abundance", "pi", "dxy", "trait"])
+    for pair in combinations(sorted(set(diversity_df.columns).intersection(valid)), r=2):
         ## If doing traits then transform the trait values into distance from
         ## local trait mean. Should see positive correlation in filtering and
         ## negative in competition.
