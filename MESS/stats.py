@@ -259,9 +259,15 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=2, metacommunity_trai
     ## This may not make much sense for the trait data at this point.
     ## Here we take the spearmanr()[0] because it returns a tuple of
     ## corellation and p-value.
+    ##
+    ## TODO: If the variance of either of the variables is 0, e.g.
+    ## if all pi values are 0, then spearmanr is undefined and returns nan.
+    ## Here we'll just call this 0, even though it's not technically correct
+    ## it's close enough to what we want. Would be better to do something smrter.
     for pair in combinations(diversity_df.columns, r=2):
-        stat_dict["{}_{}_cor".format(pair[0], pair[1])] = spearmanr(diversity_df[pair[0]],\
-                                                                    diversity_df[pair[1]])[0]
+        cor = spearmanr(diversity_df[pair[0]], diversity_df[pair[1]])[0]
+        if np.isnan(cor): cor = 0
+        stat_dict["{}_{}_cor".format(pair[0], pair[1])] = cor
 
     try:
         sgd = SGD(diversity_df["pi"],\
