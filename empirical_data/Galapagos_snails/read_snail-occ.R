@@ -1,7 +1,7 @@
 library(readxl)
 library(reshape2)
 
-setwd('~/Dropbox/Research/continuousity/MESS')
+readOWD <- setwd('~/Dropbox/Research/continuousity/MESS')
 
 # read and clean occurrence data ----
 
@@ -59,3 +59,18 @@ numMt <- sapply(paste(x$island, x$species), function(i) {
     sum(paste(mt$island, mt$species) == i)
 })
 x$num_mtSeq <- numMt
+
+# read size data ----
+snailSize <- read.csv('empirical_data/galapagos_snails/RawSnailMorphoColorData/shape/LSmeans.spCsize.csv', 
+                      as.is = TRUE)
+names(snailSize) <- c('species', 'size')
+
+# match size to species in `x`
+sizes <- snailSize$size[match(x$species, snailSize$species)]
+x$matched2size <- !is.na(sizes)
+x$size <- sizes
+
+# write it all out ----
+write.csv(x, file = 'empirical_data/galapagos_snails/data_summary.csv', row.names = FALSE)
+
+setwd(readOWD)
