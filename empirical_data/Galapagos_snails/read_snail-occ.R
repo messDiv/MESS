@@ -3,6 +3,8 @@ library(reshape2)
 
 setwd('~/Dropbox/Research/continuousity/MESS')
 
+# read and clean occurrence data ----
+
 sheets <- 1:17
 snailOcc <- lapply(sheets, function(i) {
     thisDat <- read_excel('empirical_data/Galapagos_snails/Incidence_GalapagosSnails.xlsx', 
@@ -28,4 +30,32 @@ snailOcc <- lapply(sheets, function(i) {
     return(thisDat)
 })
 
-bla <- do.call(rbind, snailOcc)
+snailOcc <- do.call(rbind, snailOcc)
+
+# get the two most species rich islands
+islandDiv <- tapply(snailOcc$species, snailOcc$island, function(x) length(unique(x)))
+snailOccMaxRich <- snailOcc[snailOcc$island %in% names(sort(islandDiv, TRUE))[1:2], ]
+
+# compress data down to just number of occs per species per island
+x <- aggregate(list(num_occ = snailOccMaxRich[, 'occ']), 
+               snailOccMaxRich[, c('island', 'species')], 
+               sum)
+
+
+# read and clean mt data ----
+
+mt <- read_excel('empirical_data/galapagos_snails/MtDNAspecimenList.xlsx')
+mt <- mt[mt$Island %in% snailOccMaxRich$island, ]
+mt <- as.data.frame(mt)
+names(mt) <- c('phyloID', 'island', 'pop', 'species')
+mt <- mt[, c('island', 'species', 'phyloID')]
+
+# record whether we have spp by island matches
+mt$matched2occ <- paste(mt$island, mt$species) %in% paste(x$island, x$species)
+x$matched2mt <- paste(x$island, x$species) %in% paste(mt$island, mt$species)
+
+# get number of mt seq per spp per island
+numMt <- sapply(paste(x$island, x$species), function(i) {
+    sum(paste(mt$island, mt$species) == i)
+})
+x$num_mtSeq <- numMt
