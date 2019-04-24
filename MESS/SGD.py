@@ -6,10 +6,6 @@ import collections
 import itertools
 import math
 import os
-# pylint: disable=C0103
-# pylint: disable=R0903
-
-from MESS.stats import *
 
 import logging
 LOGGER = logging.getLogger(__name__)
