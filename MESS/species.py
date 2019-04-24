@@ -345,7 +345,7 @@ def pairwise_diffs(haplotypes):
 
 
 def watt_theta(n, S):
-    return S/sum([1./x for x in xrange(1,n)])
+    return S/sum([1./x for x in range(1,n)])
 
 
 ## Fuckin helps if you do it right. This page has a nice worked example with values for each
@@ -353,10 +353,10 @@ def watt_theta(n, S):
 ## https://ocw.mit.edu/courses/health-sciences-and-technology/hst-508-quantitative-genomics-fall-2005/study-materials/tajimad1.pdf
 def tajD_denom(n, S):
     b1 = (n+1)/float(3*(n-1))
-    a1 = sum([1./x for x in xrange(1, n)])
+    a1 = sum([1./x for x in range(1, n)])
     c1 = b1 - (1./a1)
     e1 = c1/a1
-    a2 = sum([1./(x**2) for x in xrange(1, n)])
+    a2 = sum([1./(x**2) for x in range(1, n)])
     b2 = (2.*(n**2 + n + 3))/(9*n*(n-1))
     c2 = b2 - (n+2)/(a1*n) + (a2/(a1**2))
     e2 = c2/(a1**2+a2)

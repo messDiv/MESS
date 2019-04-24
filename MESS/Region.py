@@ -402,13 +402,12 @@ class Region(object):
             except FileNotFoundError:
                 ## If the simfile doesn't exist catch the error and move on
                 pass
-
         ## Decide whether to print the header, if stuff is already in there then
         ## don't print the header, unless you're doing force because this opens
         ## in overwrite mode.
         params = self.metacommunity._get_params_header() +\
                  self._get_params_header() +\
-                 self.islands.values()[0]._get_params_header()
+                 list(self.islands.values())[0]._get_params_header()
         header = "\t".join(params + MESS.stats._get_sumstats_header(sgd_bins=self._hackersonly["sgd_bins"],\
                                                                     sgd_dims=self._hackersonly["sgd_dimensions"],
                                                                     metacommunity_traits=self.metacommunity._get_trait_values())) + "\n"
@@ -433,7 +432,7 @@ class Region(object):
         if not ipyclient:
             start = time.time()
             try:
-                for i in xrange(sims):
+                for i in range(sims):
                     elapsed = datetime.timedelta(seconds=int(time.time()-start))
                     if not quiet: progressbar(sims, i, printstr.format(elapsed))
 
@@ -466,7 +465,7 @@ class Region(object):
             ## Magic to make the Region() object picklable
             ipyclient[:].use_dill()
             lbview = ipyclient.load_balanced_view()
-            for i in xrange(sims):
+            for i in range(sims):
                 if do_lambda:
                     parallel_jobs[i] = lbview.apply(simulate, self, gens[i], 0)
                 else:
