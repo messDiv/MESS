@@ -17,15 +17,18 @@ import os as _os
 import atexit as _atexit
 
 ## Force matplotlib to behave on headless environments
+## If running inside a jupyter notebook and you call %matplotlib inline
+## then this call to matplotlib.use will raise a warning, which is safe
+## to ignore.
 import matplotlib
-matplotlib.use("agg")
+import warnings
+with warnings.catch_warnings(record=True) as w:
+    matplotlib.use("agg")
 
 from .util import *
 from .Region import Region 
 from .LocalCommunity import LocalCommunity
 from .Metacommunity import Metacommunity
-from . import plotting
-from . import stats
 
 ####################################################################
 ## create logger for debugging
