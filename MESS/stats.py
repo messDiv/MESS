@@ -43,6 +43,13 @@ def generalized_hill_number(abunds, vals=None, order=1):
 
 
 def trait_hill_number(abunds, traits, order=1):
+    ## If there's only one species in the community then the pairwise_distances
+    ## function will return 0, and generalized_hill will return inf,
+    ## and you'll get nans in the final output. Not good. If only one species
+    ## in local, then just return 1 for trait hills. This agrees with the other
+    ## hill functions calc'd on just one species.
+    if len(traits) == 1:
+        return 1
     ## Create the outer product of the abundances, flatten to a vector and divide
     ## by J**2 (essentially converting all pairwise abundance to proportion).
     pij = np.outer(abunds, abunds).flatten()/(np.sum(abunds)**2.)
