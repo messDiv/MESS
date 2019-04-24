@@ -1,8 +1,11 @@
 # Written by Andrew Kraemer - last edited 12 April 2019
+# modified by A Rominger on 24 April 2019 
 
-rm(list=ls()) 
-library(geomorph) 
+
+library(geomorph)
 library(abind)
+
+gps_gmm_owd <- setwd('~/Dropbox/Research/continuousity/MESS/empirical_data/galapagos_snails/RawSnailMorphoColorData/shape')
 
 # Read in data (shells were digitized twice, and the code here will get shape variables and an average for each shell before analyses)
 scansA<-readland.tps("scansA2019.tps",specID="ID",readcurves=T)
@@ -59,3 +62,4 @@ write.csv(shape.var$Procrustes.var,'shapevar.csv')
 plot(LSmeans.spshape[,1],LSmeans.spshape[,2],asp=1,pch=21,bg='magenta')
 text(LSmeans.spshape[,1],LSmeans.spshape[,2],labels= rownames(LSmeans.spshape),cex = 0.5,pos=2)
 
+setwd(gps_gmm_owd)
