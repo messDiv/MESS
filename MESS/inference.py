@@ -14,9 +14,41 @@ from sklearn.pipeline import Pipeline
 import logging
 LOGGER = logging.getLogger(__name__)
 
-class Classifier(object):
-    def __init__(self):
-        print("init clf")
+class Ensemble(object):
+    def __init__(self, empirical_df, simfile, algorithm="rf", verbose=False):
+        ## Fetch empirical data and calculate the sumstats for the datatypes passed in
+        self.empirical_df = empirical_df
+        try:
+            self.empirical_sumstats = MESS.stats.calculate_sumstats(empirical_df)
+            if verbose: print("Got empirical summary statistics: {}".format(self.empirical_sumstats))
+        except Exception as inst:
+            print("  Malformed input dataframe: {}".format(inst))
+
+        try:
+            ## Read in simulated data, split it into features and targets,
+            ## and prune the features to correspond to the loaded empirical data
+            self.sim_df = pd.read_csv(simfile, sep="\t", header=0)
+            ## Species richness is the first summary statistic, so split to
+            ## features and targets here. We're keeping all features and
+            ## targets in the _X and _y variables, and can selectively prune
+            ## them later
+            S_idx = list(self.sim_df.columns).index("S")
+            self._X = self.sim_df.iloc[:, S_idx:]
+            self._y = self.sim_df.iloc[:, :S_idx]
+        except Exception as inst:
+            print("  Failed loading simulations file: {}".format(inst))
+            raise
+
+class Classifier(Ensemble):
+    def __init__(self, empirical_df, simfile, algorithm="rf", verbose=False):
+        super(Classifier, self).__init__(empirical_df, simfile, algorithm="rf", verbose=False)
+
+        if algorithm == "rf":
+            self._base_model = RandomForestClassifier
+        elif algorithm == "gb":
+            self._base_model = GradientBoostingClassifier
+        self._param_grid = _get_param_grid(algorithm)
+
 
 class Regressor(object):
     def __init__(self, empirical_df, simfile, algorithm="rf", verbose=False):
