@@ -14,47 +14,11 @@ from sklearn.pipeline import Pipeline
 import logging
 LOGGER = logging.getLogger(__name__)
 
+## The base Ensemble class takes care of reading in the empirical dataframe,
+## calculating summary stats, reading the simulated date, and reshaping the sim 
+## sumstats to match the stats of the real data.
 class Ensemble(object):
     def __init__(self, empirical_df, simfile, algorithm="rf", verbose=False):
-        ## Fetch empirical data and calculate the sumstats for the datatypes passed in
-        self.empirical_df = empirical_df
-        try:
-            self.empirical_sumstats = MESS.stats.calculate_sumstats(empirical_df)
-            if verbose: print("Got empirical summary statistics: {}".format(self.empirical_sumstats))
-        except Exception as inst:
-            print("  Malformed input dataframe: {}".format(inst))
-
-        try:
-            ## Read in simulated data, split it into features and targets,
-            ## and prune the features to correspond to the loaded empirical data
-            self.sim_df = pd.read_csv(simfile, sep="\t", header=0)
-            ## Species richness is the first summary statistic, so split to
-            ## features and targets here. We're keeping all features and
-            ## targets in the _X and _y variables, and can selectively prune
-            ## them later
-            S_idx = list(self.sim_df.columns).index("S")
-            self._X = self.sim_df.iloc[:, S_idx:]
-            self._y = self.sim_df.iloc[:, :S_idx]
-        except Exception as inst:
-            print("  Failed loading simulations file: {}".format(inst))
-            raise
-
-class Classifier(Ensemble):
-    def __init__(self, empirical_df, simfile, algorithm="rf", verbose=False):
-        super(Classifier, self).__init__(empirical_df, simfile, algorithm="rf", verbose=False)
-
-        if algorithm == "rf":
-            self._base_model = RandomForestClassifier
-        elif algorithm == "gb":
-            self._base_model = GradientBoostingClassifier
-        self._param_grid = _get_param_grid(algorithm)
-
-
-class Regressor(object):
-    def __init__(self, empirical_df, simfile, algorithm="rf", verbose=False):
-
-        self._default_targets = ["alpha", "J_m", "ecological_strength", "m", "speciation_prob", "_lambda"]
-
         ## Fetch empirical data and calculate the sumstats for the datatypes passed in
         self.empirical_df = empirical_df
         try:
@@ -83,15 +47,17 @@ class Regressor(object):
         ## Set features to correspond to real data
         self.set_features(self.empirical_sumstats.columns)
 
-        ## If you want to estimate parameters independently then
-        ## we keep track of which features are most relevant per target
-        self.relevant_features_per_target = {x:[] for x in self.y.columns}
 
-        if algorithm == "rf":
-            self._base_model = RandomForestRegressor
-        elif algorithm == "gb":
-            self._base_model = GradientBoostingRegressor
-        self._param_grid = _get_param_grid(algorithm)
+    def set_features(self, feature_list=''):
+        if not len(feature_list):
+            self.features = self._X.columns
+        else:
+            self.features = feature_list
+        try:
+            self.X = self._X[self.features]
+        except exception as inst:
+            print("  Failed setting features: {}".format(inst))
+            raise
 
 
     def set_targets(self, target_list=''):
@@ -108,16 +74,34 @@ class Regressor(object):
             raise
 
 
-    def set_features(self, feature_list=''):
-        if not len(feature_list):
-            self.features = self._X.columns
-        else:
-            self.features = feature_list
-        try:
-            self.X = self._X[self.features]
-        except exception as inst:
-            print("  Failed setting features: {}".format(inst))
-            raise
+class Classifier(Ensemble):
+    _default_targets = ["community_assembly_model"]
+
+    def __init__(self, empirical_df, simfile, algorithm="rf", verbose=False):
+        super(Classifier, self).__init__(empirical_df, simfile, algorithm=algorithm, verbose=verbose)
+
+        if algorithm == "rf":
+            self._base_model = RandomForestClassifier
+        elif algorithm == "gb":
+            self._base_model = GradientBoostingClassifier
+        self._param_grid = _get_param_grid(algorithm)
+
+
+class Regressor(Ensemble):
+    _default_targets = ["alpha", "J_m", "ecological_strength", "m", "speciation_prob", "_lambda"]
+
+    def __init__(self, empirical_df, simfile, algorithm="rf", verbose=False):
+        super(Regressor, self).__init__(empirical_df, simfile, algorithm="rf", verbose=False)
+
+        ## If you want to estimate parameters independently then
+        ## we keep track of which features are most relevant per target
+        self.relevant_features_per_target = {x:[] for x in self.y.columns}
+
+        if algorithm == "rf":
+            self._base_model = RandomForestRegressor
+        elif algorithm == "gb":
+            self._base_model = GradientBoostingRegressor
+        self._param_grid = _get_param_grid(algorithm)
 
 
     ## The feature selection method only takes one target vector
