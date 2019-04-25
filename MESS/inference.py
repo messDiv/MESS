@@ -90,7 +90,10 @@ class Regressor(object):
 
     ## The feature selection method only takes one target vector
     ## at a time, so we'll do each target seperately and then
-    ## take the union of the results, I guess
+    ## take the union of the results.
+    ## Uses BorutaPy, an all-relevant feature selection method
+    ## https://github.com/scikit-learn-contrib/boruta_py
+    ## http://danielhomola.com/2015/05/08/borutapy-an-all-relevant-feature-selection-method/
     def feature_selection(self, quick=False, verbose=False):
         mask = np.zeros(len(self.X.columns), dtype=bool)
         if verbose: print("Selecting features:")
@@ -149,6 +152,7 @@ class Regressor(object):
                                        n_iter=n_iter, cv=4, verbose=verbose, n_jobs=-1)
         cvsearch.fit(tmpX, tmpy)
         if verbose: print(cvsearch.best_params_)
+        self._cvsearch = cvsearch
         self.best_model = cvsearch.best_estimator_
 
 
