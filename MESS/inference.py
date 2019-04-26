@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from boruta import BorutaPy
+from skgarden import RandomForestQuantileRegressor
 from sklearn import metrics
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier, GradientBoostingClassifier, GradientBoostingRegressor
 from sklearn.model_selection import train_test_split, cross_val_score, RandomizedSearchCV
@@ -42,9 +43,11 @@ class Ensemble(object):
             print("  Failed loading simulations file: {}".format(inst))
             raise
 
-        ## Take the default targets
+        ## Take the default targets intelligently depending on whether this
+        ## is a classifier or a regressor.
         self.set_targets()
-        ## Set features to correspond to real data
+        ## Set features to correspond to real data. Trims self.X to only
+        ## the features necessary, leaves self._X intact.
         self.set_features(self.empirical_sumstats.columns)
 
 
@@ -90,17 +93,28 @@ class Classifier(Ensemble):
 class Regressor(Ensemble):
     _default_targets = ["alpha", "J_m", "ecological_strength", "m", "speciation_prob", "_lambda"]
 
-    def __init__(self, empirical_df, simfile, algorithm="rf", verbose=False):
+    def __init__(self, empirical_df, simfile, algorithm="rfq", verbose=False):
         super(Regressor, self).__init__(empirical_df, simfile, algorithm="rf", verbose=False)
 
         ## If you want to estimate parameters independently then
-        ## we keep track of which features are most relevant per target
-        self.relevant_features_per_target = {x:[] for x in self.y.columns}
+        ## we keep track of which features are most relevant per target.
+        ## By default we'll just assume you want to use all features,
+        ## if you mod this variable or call the feature_selection method
+        ## then this will get over-written.
+        #self.relevant_features_per_target = {x:list(self.X.columns) for x in self.y.columns}
+        self.model_by_target = {x:{"features":list(self.X.columns)} for x in self.y.columns}
 
         if algorithm == "rf":
+            self.algorithm = "rf"
             self._base_model = RandomForestRegressor
+        elif algorithm == "rfq":
+            self.algorithm = "rfq"
+            self._base_model = RandomForestQuantileRegressor
         elif algorithm == "gb":
+            self.algorithm = "gb"
             self._base_model = GradientBoostingRegressor
+        else:
+            raise Exception(" Unsupported regression algorithm: {}".format(algorithm))
         self._param_grid = _get_param_grid(algorithm)
 
 
@@ -135,8 +149,12 @@ class Regressor(Ensemble):
 
             # check ranking of features
             if verbose: print("{}".format(list(self.features[feat_selector.support_])))
+
+            ## Remember the relevant features for this target, for later prediction
             ## Use feat_selector.support_weak_ to include more variables
-            self.relevant_features_per_target[t] = list(self.features[feat_selector.support_])
+            #self.relevant_features_per_target[t] = list(self.features[feat_selector.support_])
+            self.model_by_target[t]["features"] = list(self.features[feat_selector.support_])
+
             mask += feat_selector.support_
             #X_filtered = pd.DataFrame(X_filtered, columns = X.columns[feat_selector.support_])
 
@@ -150,7 +168,7 @@ class Regressor(Ensemble):
         self.features = selected_features
 
 
-    def param_search_cv(self, quick=False, verbose=False):
+    def param_search_cv(self, by_target=False, quick=False, verbose=False):
 
         if verbose: print("Finding best model parameters.")
         if quick:
@@ -166,34 +184,104 @@ class Regressor(Ensemble):
         cvsearch = RandomizedSearchCV(estimator=self._base_model(),\
                                        param_distributions=self._param_grid,
                                        n_iter=n_iter, cv=4, verbose=verbose, n_jobs=-1)
-        cvsearch.fit(tmpX, tmpy)
-        if verbose: print(cvsearch.best_params_)
-        self._cvsearch = cvsearch
-        self.best_model = cvsearch.best_estimator_
+        if by_target:
+            for t in self.targets:
+                ## TODO: Munge the tmpX to fit the features selected for each target
+                tmpX_filt = tmpX[self.model_by_target[t]["features"]]
+                if verbose: print("\t{} - Finding best params using features: {}".format(t, list(tmpX_filt.columns)))
+                cvsearch.fit(tmpX, tmpy[t])
+                if verbose: print("Best params for {}: {}".format(t, cvsearch.best_params_))
+                self.model_by_target[t]["cvsearch"] = cvsearch
+                self.model_by_target[t]["model"] = cvsearch.best_estimator_
+        else:
+            cvsearch.fit(tmpX, tmpy)
+            if verbose: print(cvsearch.best_params_)
+            self._cvsearch = cvsearch
+            self.best_model = cvsearch.best_estimator_
+
+
+    ## Add upper and lower prediction interval for algorithms that support
+    ## quantile regression (rfq, gq)
+    def prediction_interval(self, interval=0.95):
+        upper = 1.0 - ((1.0 - interval)/2.)
+        lower = 1.0 - upper
+        if self.algorithm == "rfq":
+            y_lower = [self.model_by_target[t]["model"].predict(self.empirical_sumstats, lower*100) for t in self.targets]
+            y_upper = [self.model_by_target[t]["model"].predict(self.empirical_sumstats, upper*100) for t in self.targets]
+        elif self.algorithm == "gb":
+            y_lower = []
+            y_upper = []
+            for t in self.targets:
+                tmp_gb = self.model_by_target[t]["model"].set_params(loss="quantile").set_params(alpha=lower)
+                tmp_gb.fit(self.X, self.y[t])
+                y_lower.append(tmp_gb.predict(self.empirical_sumstats))
+                tmp_gb = self.model_by_target[t]["model"].set_params(loss="quantile").set_params(alpha=upper)
+                tmp_gb.fit(self.X, self.y[t])
+                y_upper.append(tmp_gb.predict(self.empirical_sumstats))
+        else:
+            print("Unsupported algorithm for prediction intervals - {}".format(self.algorithm))
+            return self.empirical_pred
+
+        ## Concatenate lower and upper quartiles onto the prediction df and name the rows nicely
+        self.y_lower = pd.DataFrame(y_lower, columns=["lower {}".format(lower)], index=self.targets).T
+        self.y_upper = pd.DataFrame(y_upper, columns=["upper {}".format(upper)], index=self.targets).T
+        self.empirical_pred = pd.concat([self.empirical_pred, self.y_lower, self.y_upper])
+
+        return self.empirical_pred
 
 
     ## The magic method to just do-it-all
-    def predict(self, select_features=True, param_search=True, quick=False, verbose=False):
+    def predict(self, select_features=True, param_search=True, by_target=False, quick=False, verbose=False):
 
         ## Select relevant features
         if select_features:
             self.feature_selection(quick=quick, verbose=verbose)
        
-        if param_search:
-            self.param_search_cv(quick=quick, verbose=verbose)
-        else:
-            ## If you don't want to do the param search, then just take the default params
-            self.best_model = model(n_jobs=-1) 
+        ## If using either the RFQuantileRegressor or GradientBoosting, then
+        ## we force by_targets to be true, since they'll only do one target at at time
+        ## RandomForest can handle multi-target regression, but not rfq or gb, so we
+        ## allow plain rf to optionally do by_target
+        if self.algorithm in ["rfq", "gb"]:
+            by_target = True
 
-        self.empirical_pred = pd.DataFrame(self.best_model.predict(self.empirical_sumstats), columns=self.targets)
-        print(self.empirical_pred)
+        if param_search:
+            self.param_search_cv(by_target=by_target, quick=quick, verbose=verbose)
+        else:
+            ## If you don't want to do the param search, then just take the default param
+            ## Also, assuming if you don't care about setting model parameters, then you
+            ## won't care about feature selection, so just use all features for the
+            ## the by_target code
+            if by_target:
+                for t in self.targets:
+                    self.model_by_target[t]["model"] = self._base_model()
+                    self.model_by_target[t]["model"].fit(self.X, self.y[t])
+            else:
+                self.best_model = self._base_model(n_jobs=-1) 
+                self.best_model.fit(self.X, self.y)
+
+        if by_target:
+            ## Predict each target independently using it's own trained RF
+            preds = [self.model_by_target[t]["model"].predict(self.empirical_sumstats) for t in self.targets]
+            self.empirical_pred = pd.DataFrame(np.array(preds).T, columns=self.targets, index=["estimate"])
+
+            ## If using one of the algorithms that supports quantile regression then
+            ## return the prediction intervals as well
+            if self.algorithm in ["rfq", "gb"]:
+                self.empirical_pred = self.prediction_interval(interval=0.95)
+        else:
+            ## Do all targets at once. Also, you don't get prediction intervls
+            ## if you don't do by_target
+            self.empirical_pred = pd.DataFrame(self.best_model.predict(self.empirical_sumstats),\
+                                                columns=self.targets, index=["estimate"])
+
+        return self.empirical_pred
 
 
 ####################################################################
 ## Convenience functions for wrapping ML parameter grid construction
 ####################################################################
 def _get_param_grid(algorithm):
-    if algorithm == "rf":
+    if algorithm in ["rfq", "rf"]:
         return _rf_param_grid()
     elif algorithm == "gb":
         return _gb_param_grid()
