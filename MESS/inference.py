@@ -50,6 +50,17 @@ class Ensemble(object):
         ## the features necessary, leaves self._X intact.
         self.set_features(self.empirical_sumstats.columns)
 
+        ## If you want to estimate parameters independently then
+        ## we keep track of which features are most relevant per target.
+        ## By default we'll just assume you want to use all features,
+        ## if you mod this variable or call the feature_selection method
+        ## then this will get over-written.
+        self.model_by_target = {x:{"features":list(self.X.columns)} for x in self.y.columns}
+
+
+    def __repr__(self):
+        return "{}: nsims - {}\n\tFeatures - {}\n\tTargets - {}".format(type(self), len(self._X), list(self.features), self.targets)
+
 
     def set_features(self, feature_list=''):
         if not len(feature_list):
@@ -77,6 +88,58 @@ class Ensemble(object):
             raise
 
 
+    ## The feature selection method only takes one target vector
+    ## at a time, so we'll do each target seperately and then
+    ## take the union of the results.
+    ## Uses BorutaPy, an all-relevant feature selection method
+    ## https://github.com/scikit-learn-contrib/boruta_py
+    ## http://danielhomola.com/2015/05/08/borutapy-an-all-relevant-feature-selection-method/
+    def feature_selection(self, quick=False, verbose=False):
+        mask = np.zeros(len(self.X.columns), dtype=bool)
+        if verbose: print("Selecting features:")
+        for t in self.y:
+            if verbose: print("  {}\t".format(t), end='')
+            model = self._base_model(n_estimators=600, max_depth=5)
+
+            if quick:
+                ## Random subset the data and run fewer iterations. If you don't have
+                ## at least 1000 samples then don't bother
+                nsamps = min(len(self.y), 1000)
+                idxs = np.random.choice(len(self.y), nsamps, replace=False)
+                tmpX = self.X.iloc[idxs].values
+                tmpy = self.y[t].iloc[idxs].values
+                max_iter=10
+            else:
+                tmpX = self.X.values
+                tmpy = self.y[t].values 
+                max_iter=100
+
+            # define Boruta feature selection method
+            feat_selector = BorutaPy(model, max_iter=max_iter, n_estimators='auto', verbose=0, random_state=1)
+            ## Turn off np warnings
+            np.warnings.filterwarnings('ignore')
+            feat_selector.fit(tmpX, tmpy)
+
+            # check ranking of features
+            if verbose: print("{}".format(list(self.features[feat_selector.support_])))
+
+            ## Remember the relevant features for this target, for later prediction
+            ## Use feat_selector.support_weak_ to include more variables
+            self.model_by_target[t]["features"] = list(self.features[feat_selector.support_])
+
+            mask += feat_selector.support_
+            #X_filtered = pd.DataFrame(X_filtered, columns = X.columns[feat_selector.support_])
+
+        selected_features = self.features[mask]
+        if verbose: print("All selected features: {}".format(" ".join(selected_features)))
+        ## Filter on the selected features
+        self.X = self.X[selected_features]   
+        ## Also filter the empirical sumstats
+        self.empirical_sumstats = self.empirical_sumstats[selected_features]
+
+        self.features = selected_features
+
+
 class Classifier(Ensemble):
     _default_targets = ["community_assembly_model"]
 
@@ -96,14 +159,6 @@ class Regressor(Ensemble):
     def __init__(self, empirical_df, simfile, algorithm="rfq", verbose=False):
         super(Regressor, self).__init__(empirical_df, simfile, algorithm="rf", verbose=False)
 
-        ## If you want to estimate parameters independently then
-        ## we keep track of which features are most relevant per target.
-        ## By default we'll just assume you want to use all features,
-        ## if you mod this variable or call the feature_selection method
-        ## then this will get over-written.
-        #self.relevant_features_per_target = {x:list(self.X.columns) for x in self.y.columns}
-        self.model_by_target = {x:{"features":list(self.X.columns)} for x in self.y.columns}
-
         if algorithm == "rf":
             self.algorithm = "rf"
             self._base_model = RandomForestRegressor
@@ -116,56 +171,6 @@ class Regressor(Ensemble):
         else:
             raise Exception(" Unsupported regression algorithm: {}".format(algorithm))
         self._param_grid = _get_param_grid(algorithm)
-
-
-    ## The feature selection method only takes one target vector
-    ## at a time, so we'll do each target seperately and then
-    ## take the union of the results.
-    ## Uses BorutaPy, an all-relevant feature selection method
-    ## https://github.com/scikit-learn-contrib/boruta_py
-    ## http://danielhomola.com/2015/05/08/borutapy-an-all-relevant-feature-selection-method/
-    def feature_selection(self, quick=False, verbose=False):
-        mask = np.zeros(len(self.X.columns), dtype=bool)
-        if verbose: print("Selecting features:")
-        for t in self.y:
-            if verbose: print("  {}\t".format(t), end='')
-            tmpX = self.X.values
-            tmpy = self.y[t].values
-            model = self._base_model(n_jobs=-1, n_estimators=600, max_depth=5)
-
-            if quick:
-                ## Subset the data and run fewer iterations
-                tmpX = tmpX[:1000]
-                tmpy = tmpy[:1000]
-                max_iter=10
-            else:
-                max_iter=100
-
-            # define Boruta feature selection method
-            feat_selector = BorutaPy(model, max_iter=max_iter, n_estimators='auto', verbose=0, random_state=1)
-            ## Turn off np warnings
-            np.warnings.filterwarnings('ignore')
-            feat_selector.fit(tmpX, tmpy)
-
-            # check ranking of features
-            if verbose: print("{}".format(list(self.features[feat_selector.support_])))
-
-            ## Remember the relevant features for this target, for later prediction
-            ## Use feat_selector.support_weak_ to include more variables
-            #self.relevant_features_per_target[t] = list(self.features[feat_selector.support_])
-            self.model_by_target[t]["features"] = list(self.features[feat_selector.support_])
-
-            mask += feat_selector.support_
-            #X_filtered = pd.DataFrame(X_filtered, columns = X.columns[feat_selector.support_])
-
-        selected_features = self.features[mask]
-        if verbose: print("All selected features: {}".format(" ".join(selected_features)))
-        ## Filter on the selected features
-        self.X = self.X[selected_features]
-        ## Also filter the empirical sumstats
-        self.empirical_sumstats = self.empirical_sumstats[selected_features]
-
-        self.features = selected_features
 
 
     def param_search_cv(self, by_target=False, quick=False, verbose=False):
