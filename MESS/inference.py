@@ -7,7 +7,9 @@ import pandas as pd
 from boruta import BorutaPy
 from skgarden import RandomForestQuantileRegressor
 from sklearn import metrics
-from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier, GradientBoostingClassifier, GradientBoostingRegressor
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier,\
+                            GradientBoostingClassifier, GradientBoostingRegressor,\
+                            AdaBoostRegressor, AdaBoostClassifier
 from sklearn.model_selection import train_test_split, cross_val_score, RandomizedSearchCV
 from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
@@ -160,7 +162,8 @@ class Ensemble(object):
                                        n_iter=n_iter, cv=4, verbose=verbose, n_jobs=-1)
         if by_target:
             for t in self.targets:
-                ## TODO: Munge the tmpX to fit the features selected for each target
+                ## Munge the tmpX to fit the features selected for each target.
+                ## This is annoying housekeeping.
                 tmpX_filt = tmpX[self.model_by_target[t]["features"]]
                 if verbose: print("\t{} - Finding best params using features: {}".format(t, list(tmpX_filt.columns)))
                 cvsearch.fit(tmpX_filt, tmpy[t])
@@ -189,7 +192,7 @@ class Ensemble(object):
         ## RandomForest can handle multi-target regression, but not rfq or gb, so we
         ## allow plain rf to optionally do by_target
         self._by_target = by_target
-        if self.algorithm in ["rfq", "gb"]:
+        if self.algorithm in ["rfq", "gb", "ab"]:
             self._by_target = True
 
         if param_search:
@@ -236,6 +239,11 @@ class Classifier(Ensemble):
             self._base_model = RandomForestClassifier
         elif algorithm == "gb":
             self._base_model = GradientBoostingClassifier
+        elif algorithm == "ab":
+            self._base_model = AdaBoostClassifier
+        else:
+            raise Exception(" Unsupported classification algorithm: {}".format(algorithm))
+        self.algorithm = algorithm
         self._param_grid = _get_param_grid(algorithm)
 
 
@@ -244,9 +252,9 @@ class Classifier(Ensemble):
         super(Classifier, self).predict(select_features=select_features, param_search=param_search,\
                                         by_target=by_target, quick=quick, verbose=verbose)
 
-        ## Force by_target to be true for GBoosting
+        ## Force by_target to be true for GradientBoosting and AdaBoost
         self._by_target = by_target
-        if self.algorithm in ["gb"]:
+        if self.algorithm in ["gb", "ab"]:
             self._by_target = True
 
         if self._by_target:
@@ -275,16 +283,16 @@ class Regressor(Ensemble):
         super(Regressor, self).__init__(empirical_df, simfile, algorithm="rf", verbose=False)
 
         if algorithm == "rf":
-            self.algorithm = "rf"
             self._base_model = RandomForestRegressor
         elif algorithm == "rfq":
-            self.algorithm = "rfq"
             self._base_model = RandomForestQuantileRegressor
         elif algorithm == "gb":
-            self.algorithm = "gb"
             self._base_model = GradientBoostingRegressor
+        elif self.algorithm == "ab":
+            self._base_model = AdaBoostRegressor
         else:
             raise Exception(" Unsupported regression algorithm: {}".format(algorithm))
+        self.algorithm = algorithm
         self._param_grid = _get_param_grid(algorithm)
 
 
@@ -335,7 +343,7 @@ class Regressor(Ensemble):
                                         by_target=by_target, quick=quick, verbose=verbose)
 
         self._by_target = by_target
-        if self.algorithm in ["rfq", "gb"]:
+        if self.algorithm in ["rfq", "gb", "ab"]:
             self._by_target = True
 
         if self._by_target:
@@ -364,11 +372,20 @@ def _get_param_grid(algorithm):
         return _rf_param_grid()
     elif algorithm == "gb":
         return _gb_param_grid()
+    elif algorithm == "ab":
+        return _ab_param_grid()
+
+
+def _ab_param_grid():
+    n_estimators = [int(x) for x in np.linspace(10, 1000, 10)]
+    learning_rate = np.linspace(0.01, 2, 6)
+    random_grid = {'n_estimators':n_estimators,
+                    'learning_rate':learning_rate}
 
 
 def _rf_param_grid():
-    n_estimators = [int(x) for x in np.linspace(start = 200, stop = 2000, num = 10)]
-    max_depth = [int(x) for x in np.linspace(10, 110, num = 11)]
+    n_estimators = [int(x) for x in np.linspace(200, 2000, 10)]
+    max_depth = [int(x) for x in np.linspace(10, 110, 11)]
     max_depth.append(None)
     min_samples_split = [2, 5, 10]
     min_samples_leaf = [1, 2, 4]
