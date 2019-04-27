@@ -129,7 +129,6 @@ class Ensemble(object):
             self.model_by_target[t]["features"] = list(self.features[feat_selector.support_])
 
             mask += feat_selector.support_
-            #X_filtered = pd.DataFrame(X_filtered, columns = X.columns[feat_selector.support_])
 
         selected_features = self.features[mask]
         if verbose: print("All selected features: {}".format(" ".join(selected_features)))
@@ -164,7 +163,7 @@ class Ensemble(object):
                 ## TODO: Munge the tmpX to fit the features selected for each target
                 tmpX_filt = tmpX[self.model_by_target[t]["features"]]
                 if verbose: print("\t{} - Finding best params using features: {}".format(t, list(tmpX_filt.columns)))
-                cvsearch.fit(tmpX, tmpy[t])
+                cvsearch.fit(tmpX_filt, tmpy[t])
                 if verbose: print("Best params for {}: {}".format(t, cvsearch.best_params_))
                 self.model_by_target[t]["cvsearch"] = cvsearch
                 self.model_by_target[t]["model"] = cvsearch.best_estimator_
@@ -194,7 +193,7 @@ class Ensemble(object):
             self._by_target = True
 
         if param_search:
-            self.param_search_cv(by_target=self.by_target, quick=quick, verbose=verbose)
+            self.param_search_cv(by_target=self._by_target, quick=quick, verbose=verbose)
         else:
             ## If you don't want to do the param search, then just take the default param
             ## Also, assuming if you don't care about setting model parameters, then you
@@ -203,8 +202,7 @@ class Ensemble(object):
             if self._by_target:
                 for t in self.targets:
                     self.model_by_target[t]["model"] = self._base_model()
-                    #self.model_by_target[t]["model"].fit(self.X[self.model_by_target[t]["features"]], self.y[t])
-                    self.model_by_target[t]["model"].fit(self.X, self.y[t])
+                    self.model_by_target[t]["model"].fit(self.X[self.model_by_target[t]["features"]], self.y[t])
                     self.model_by_target[t]["feature_importances"] = self.model_by_target[t]["model"].feature_importances_
             else:
                 ## TODO: Make default base_model params smarter
@@ -253,10 +251,10 @@ class Classifier(Ensemble):
 
         if self._by_target:
             ## Predict each target independently using it's own trained RF
-            preds = [self.model_by_target[t]["model"].predict(self.empirical_sumstats) for t in self.targets]
+            preds = [self.model_by_target[t]["model"].predict(self.empirical_sumstats[self.model_by_target[t]["features"]]) for t in self.targets]
             self.empirical_pred = pd.DataFrame(np.array(preds).T, columns=self.targets, index=["estimate"])
 
-            proba = [self.model_by_target[t]["model"].predict_proba(self.empirical_sumstats)[0] for t in self.targets]
+            proba = [self.model_by_target[t]["model"].predict_proba(self.empirical_sumstats[self.model_by_target[t]["features"]])[0] for t in self.targets]
             ## Somewhat annoying, but we grab the classes vector from the model of the first target
             self.empirical_proba = pd.DataFrame(proba, columns=self.model_by_target.values()[0]["model"].classes_, index=self.targets)
         else:
@@ -299,8 +297,8 @@ class Regressor(Ensemble):
         upper = 1.0 - ((1.0 - interval)/2.)
         lower = 1.0 - upper
         if self.algorithm == "rfq":
-            y_lower = [self.model_by_target[t]["model"].predict(self.empirical_sumstats, lower*100) for t in self.targets]
-            y_upper = [self.model_by_target[t]["model"].predict(self.empirical_sumstats, upper*100) for t in self.targets]
+            y_lower = [self.model_by_target[t]["model"].predict(self.empirical_sumstats[self.model_by_target[t]["features"]], lower*100) for t in self.targets]
+            y_upper = [self.model_by_target[t]["model"].predict(self.empirical_sumstats[self.model_by_target[t]["features"]], upper*100) for t in self.targets]
         elif self.algorithm == "gb":
             if quick:
                 nsamps = min(len(self.y), 1000)
@@ -342,7 +340,7 @@ class Regressor(Ensemble):
 
         if self._by_target:
             ## Predict each target independently using it's own trained RF
-            preds = [self.model_by_target[t]["model"].predict(self.empirical_sumstats) for t in self.targets]
+            preds = [self.model_by_target[t]["model"].predict(self.empirical_sumstats[self.model_by_target[t]["features"]]) for t in self.targets]
             self.empirical_pred = pd.DataFrame(np.array(preds).T, columns=self.targets, index=["estimate"])
 
             ## If using one of the algorithms that supports quantile regression then
