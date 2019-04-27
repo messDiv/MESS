@@ -20,6 +20,7 @@ LOGGER = logging.getLogger(__name__)
 ## sumstats to match the stats of the real data.
 class Ensemble(object):
     def __init__(self, empirical_df, simfile, algorithm="rf", verbose=False):
+        self.algorithm = algorithm
         ## Fetch empirical data and calculate the sumstats for the datatypes passed in
         self.empirical_df = empirical_df
         try:
@@ -140,6 +141,93 @@ class Ensemble(object):
         self.features = selected_features
 
 
+    def param_search_cv(self, by_target=False, quick=False, verbose=False):
+
+        if verbose: print("Finding best model parameters.")
+        if quick:
+            n_iter=5
+            nsamps = min(len(self.y), 1000)
+            idxs = np.random.choice(len(self.y), nsamps, replace=False)
+            tmpX = self.X.iloc[idxs]
+            tmpy = self.y.iloc[idxs]
+        else:
+            n_iter=100
+            tmpX = self.X
+            tmpy = self.y
+        ## Randomly search 100 different parameter combinations and take the
+        ## one that reduces CV error
+        cvsearch = RandomizedSearchCV(estimator=self._base_model(),\
+                                       param_distributions=self._param_grid,
+                                       n_iter=n_iter, cv=4, verbose=verbose, n_jobs=-1)
+        if by_target:
+            for t in self.targets:
+                ## TODO: Munge the tmpX to fit the features selected for each target
+                tmpX_filt = tmpX[self.model_by_target[t]["features"]]
+                if verbose: print("\t{} - Finding best params using features: {}".format(t, list(tmpX_filt.columns)))
+                cvsearch.fit(tmpX, tmpy[t])
+                if verbose: print("Best params for {}: {}".format(t, cvsearch.best_params_))
+                self.model_by_target[t]["cvsearch"] = cvsearch
+                self.model_by_target[t]["model"] = cvsearch.best_estimator_
+                self.model_by_target[t]["feature_importances"] = self.model_by_target[t]["model"].feature_importances_
+            if len(self.targets) == 1:
+                ## For convenience. If there's only one target then set self.best_model
+                self.best_model = self.model_by_target[self.targets[0]]["model"]
+        else:
+            cvsearch.fit(tmpX, tmpy)
+            if verbose: print(cvsearch.best_params_)
+            self._cvsearch = cvsearch
+            self.best_model = cvsearch.best_estimator_
+
+
+    ## The magic method to just do-it-all
+    def predict(self, select_features=True, param_search=True, by_target=False, quick=False, verbose=False):
+        ## Select relevant features
+        if select_features:
+            self.feature_selection(quick=quick, verbose=verbose)
+
+        ## If using either the RFQuantileRegressor or GradientBoosting, then
+        ## we force by_targets to be true, since they'll only do one target at at time
+        ## RandomForest can handle multi-target regression, but not rfq or gb, so we
+        ## allow plain rf to optionally do by_target
+        self._by_target = by_target
+        if self.algorithm in ["rfq", "gb"]:
+            self._by_target = True
+
+        if param_search:
+            self.param_search_cv(by_target=self.by_target, quick=quick, verbose=verbose)
+        else:
+            ## If you don't want to do the param search, then just take the default param
+            ## Also, assuming if you don't care about setting model parameters, then you
+            ## won't care about feature selection, so just use all features for the
+            ## the by_target code
+            if self._by_target:
+                for t in self.targets:
+                    self.model_by_target[t]["model"] = self._base_model()
+                    #self.model_by_target[t]["model"].fit(self.X[self.model_by_target[t]["features"]], self.y[t])
+                    self.model_by_target[t]["model"].fit(self.X, self.y[t])
+                    self.model_by_target[t]["feature_importances"] = self.model_by_target[t]["model"].feature_importances_
+            else:
+                ## TODO: Make default base_model params smarter
+                self.best_model = self._base_model(n_jobs=-1)
+                self.best_model.fit(self.X, self.y)
+
+
+    ## Return a summary of feature importances, either summed over all
+    ## parameters, or individually per parameter
+    def feature_importances(self):
+        importances = []
+        if self._by_target:
+            for t in self.targets:
+                importances.append(pd.DataFrame(self.model_by_target[t]["feature_importances"],\
+                                            columns=[t], index=self.model_by_target[t]["features"]).T)
+            importances = pd.concat(importances)
+        else:
+            ## If model_by_target dictionary isn't populated then get all
+            ## feature importances for the joint inference.
+            importances = pd.DataFrame(self.best_model.feature_importances_, columns=["Feature importance"], index=self.features).T
+        return importances
+
+
 class Classifier(Ensemble):
     _default_targets = ["community_assembly_model"]
 
@@ -151,6 +239,35 @@ class Classifier(Ensemble):
         elif algorithm == "gb":
             self._base_model = GradientBoostingClassifier
         self._param_grid = _get_param_grid(algorithm)
+
+
+    def predict(self, select_features=True, param_search=True, by_target=False, quick=False, verbose=False):
+
+        super(Classifier, self).predict(select_features=select_features, param_search=param_search,\
+                                        by_target=by_target, quick=quick, verbose=verbose)
+
+        ## Force by_target to be true for GBoosting
+        self._by_target = by_target
+        if self.algorithm in ["gb"]:
+            self._by_target = True
+
+        if self._by_target:
+            ## Predict each target independently using it's own trained RF
+            preds = [self.model_by_target[t]["model"].predict(self.empirical_sumstats) for t in self.targets]
+            self.empirical_pred = pd.DataFrame(np.array(preds).T, columns=self.targets, index=["estimate"])
+
+            proba = [self.model_by_target[t]["model"].predict_proba(self.empirical_sumstats)[0] for t in self.targets]
+            ## Somewhat annoying, but we grab the classes vector from the model of the first target
+            self.empirical_proba = pd.DataFrame(proba, columns=self.model_by_target.values()[0]["model"].classes_, index=self.targets)
+        else:
+            ## Do all targets at once. Also, you don't get prediction intervls
+            ## if you don't do by_target
+            self.empirical_pred = pd.DataFrame(self.best_model.predict(self.empirical_sumstats),\
+                                                columns=self.targets, index=["estimate"])
+            self.empirical_proba = pd.DataFrame(self.best_model.predict_proba(self.empirical_sumstats),\
+                                                columns=self.best_model.classes_, index=self.targets)
+
+        return self.empirical_pred, self.empirical_proba
 
 
 class Regressor(Ensemble):
@@ -173,55 +290,35 @@ class Regressor(Ensemble):
         self._param_grid = _get_param_grid(algorithm)
 
 
-    def param_search_cv(self, by_target=False, quick=False, verbose=False):
-
-        if verbose: print("Finding best model parameters.")
-        if quick:
-            n_iter=5
-            tmpX = self.X[:1000]
-            tmpy = self.y[:1000]
-        else:
-            n_iter=100
-            tmpX = self.X
-            tmpy = self.y
-        ## Randomly search 100 different parameter combinations and take the
-        ## one that reduces CV error
-        cvsearch = RandomizedSearchCV(estimator=self._base_model(),\
-                                       param_distributions=self._param_grid,
-                                       n_iter=n_iter, cv=4, verbose=verbose, n_jobs=-1)
-        if by_target:
-            for t in self.targets:
-                ## TODO: Munge the tmpX to fit the features selected for each target
-                tmpX_filt = tmpX[self.model_by_target[t]["features"]]
-                if verbose: print("\t{} - Finding best params using features: {}".format(t, list(tmpX_filt.columns)))
-                cvsearch.fit(tmpX, tmpy[t])
-                if verbose: print("Best params for {}: {}".format(t, cvsearch.best_params_))
-                self.model_by_target[t]["cvsearch"] = cvsearch
-                self.model_by_target[t]["model"] = cvsearch.best_estimator_
-        else:
-            cvsearch.fit(tmpX, tmpy)
-            if verbose: print(cvsearch.best_params_)
-            self._cvsearch = cvsearch
-            self.best_model = cvsearch.best_estimator_
-
-
     ## Add upper and lower prediction interval for algorithms that support
     ## quantile regression (rfq, gq)
-    def prediction_interval(self, interval=0.95):
+    ## The quick parameter doesn't do anything for RFQuantileRegressor because
+    ## it's already really fast (you don't have to refit the model).
+    def prediction_interval(self, interval=0.95, quick=False, verbose=False):
+        if verbose: print("Calculating prediction interval(s)")
         upper = 1.0 - ((1.0 - interval)/2.)
         lower = 1.0 - upper
         if self.algorithm == "rfq":
             y_lower = [self.model_by_target[t]["model"].predict(self.empirical_sumstats, lower*100) for t in self.targets]
             y_upper = [self.model_by_target[t]["model"].predict(self.empirical_sumstats, upper*100) for t in self.targets]
         elif self.algorithm == "gb":
+            if quick:
+                nsamps = min(len(self.y), 1000)
+                idxs = np.random.choice(len(self.y), nsamps, replace=False)
+                tmpX = self.X.iloc[idxs]
+                tmpy = self.y.iloc[idxs]
+            else:
+                tmpX = self.X
+                tmpy = self.y
             y_lower = []
             y_upper = []
             for t in self.targets:
+                if verbose: print("\t{}".format(t))
                 tmp_gb = self.model_by_target[t]["model"].set_params(loss="quantile").set_params(alpha=lower)
-                tmp_gb.fit(self.X, self.y[t])
+                tmp_gb.fit(tmpX, tmpy[t])
                 y_lower.append(tmp_gb.predict(self.empirical_sumstats))
                 tmp_gb = self.model_by_target[t]["model"].set_params(loss="quantile").set_params(alpha=upper)
-                tmp_gb.fit(self.X, self.y[t])
+                tmp_gb.fit(tmpX, tmpy[t])
                 y_upper.append(tmp_gb.predict(self.empirical_sumstats))
         else:
             print("Unsupported algorithm for prediction intervals - {}".format(self.algorithm))
@@ -235,36 +332,15 @@ class Regressor(Ensemble):
         return self.empirical_pred
 
 
-    ## The magic method to just do-it-all
     def predict(self, select_features=True, param_search=True, by_target=False, quick=False, verbose=False):
+        super(Regressor, self).predict(select_features=select_features, param_search=param_search,\
+                                        by_target=by_target, quick=quick, verbose=verbose)
 
-        ## Select relevant features
-        if select_features:
-            self.feature_selection(quick=quick, verbose=verbose)
-       
-        ## If using either the RFQuantileRegressor or GradientBoosting, then
-        ## we force by_targets to be true, since they'll only do one target at at time
-        ## RandomForest can handle multi-target regression, but not rfq or gb, so we
-        ## allow plain rf to optionally do by_target
+        self._by_target = by_target
         if self.algorithm in ["rfq", "gb"]:
-            by_target = True
+            self._by_target = True
 
-        if param_search:
-            self.param_search_cv(by_target=by_target, quick=quick, verbose=verbose)
-        else:
-            ## If you don't want to do the param search, then just take the default param
-            ## Also, assuming if you don't care about setting model parameters, then you
-            ## won't care about feature selection, so just use all features for the
-            ## the by_target code
-            if by_target:
-                for t in self.targets:
-                    self.model_by_target[t]["model"] = self._base_model()
-                    self.model_by_target[t]["model"].fit(self.X, self.y[t])
-            else:
-                self.best_model = self._base_model(n_jobs=-1) 
-                self.best_model.fit(self.X, self.y)
-
-        if by_target:
+        if self._by_target:
             ## Predict each target independently using it's own trained RF
             preds = [self.model_by_target[t]["model"].predict(self.empirical_sumstats) for t in self.targets]
             self.empirical_pred = pd.DataFrame(np.array(preds).T, columns=self.targets, index=["estimate"])
@@ -272,7 +348,7 @@ class Regressor(Ensemble):
             ## If using one of the algorithms that supports quantile regression then
             ## return the prediction intervals as well
             if self.algorithm in ["rfq", "gb"]:
-                self.empirical_pred = self.prediction_interval(interval=0.95)
+                self.empirical_pred = self.prediction_interval(interval=0.95, quick=quick, verbose=verbose)
         else:
             ## Do all targets at once. Also, you don't get prediction intervls
             ## if you don't do by_target
