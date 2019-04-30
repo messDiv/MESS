@@ -26,6 +26,8 @@ requirements:
     - mpmath
     - certifi
     - rpy2
+    - boruta_py
+    - scikit-garden
   run:
     - setuptools
     - ipython >=5.0.0
@@ -44,6 +46,8 @@ requirements:
     - dill
     - matplotlib
     - dendropy
+    - boruta_py
+    - scikit-garden
 
   commands:
     - MESS -v

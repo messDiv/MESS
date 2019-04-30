@@ -27,7 +27,6 @@ setup(
     long_description=open('README.md').read(),
     packages=find_packages(),    
     install_requires=requires(),
-    #dependencies=dependency_links(),
     entry_points={
             'console_scripts': [
                 'MESS = MESS.__main__:main',

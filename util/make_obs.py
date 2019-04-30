@@ -7,7 +7,7 @@ import pandas as pd
 import os
 from itertools import combinations
 from collections import Counter
-from MESS.stats import shannon
+from MESS.stats import hill_number
 
 
 def pi(file):
@@ -101,7 +101,7 @@ if __name__ == "__main__":
 
     ## Format header
     if args.abund_file:
-        outfile.write("shannon\t")
+        outfile.write("abund_h1\t")
     if args.fasta_files:
         for row in xrange(10):
                 outfile.write("\tbin_{}".format(row))
@@ -112,7 +112,7 @@ if __name__ == "__main__":
         dat = open(args.abund_file).read().strip().split(",")
         dat = map(int, dat)
         dat = Counter(dat)
-        outfile.write(str(shannon(dat)) + "\t")
+        outfile.write(str(hill_number(dat, 1)) + "\t")
         
     ## Get 1D pi vector
     if args.fasta_files:

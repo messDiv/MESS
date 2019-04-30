@@ -788,7 +788,7 @@ class LocalCommunity(object):
         return clades
 
 
-    def sim_seqs(self):
+    def simulate_seqs(self):
         self.species = []
         try:
             ## Hax. Remove the empty deme from local info. This _might_ break the fancy plots.
@@ -884,51 +884,6 @@ class LocalCommunity(object):
                 samps = tree_sequence.samples(population=idx)
                 sp_obj.get_sumstats(samps, metasamps)
                 self.species.append(sp_obj)
-
-
-    def simulate_seqs(self):
-        self.sim_seqs()
-        ##FIXME Oh boy. This was hacked for the speciation code. Gotta clean this up.
-        return
-        self.species = []
-#        for name, coltime in self._get_singleton_species().loc["colonization_times"].items():
-        for name, coltime in self.local_info.loc["colonization_times"].iteritems():
-            try:
-                ## Get the meta abundance for the original colonizing lineage
-                meta_abund = self.region.get_abundance(name.split(":")[0])
-                local_abund = self.local_community.count(name)
-                tdiv = self.current_time - coltime
-                tdiv = tdiv / float(self.paramsdict["J"])
-                ## Rescale abundances through time so they are "backwards" values
-                abundances_through_time = {self.current_time - x:y for x, y in list(self.local_info[name]["abundances_through_time"].items())}
-                try:
-                    sp = species(name = name,
-                                 species_params = self.region.get_species_params(),
-                                 divergence_time = tdiv,\
-                                 growth = self.region._hackersonly["population_growth"],\
-                                 abundance = local_abund,\
-                                 meta_abundance = meta_abund,
-                                 migration_rate = self.local_info[name]["post_colonization_migrants"]/float(tdiv),\
-                                 abundance_through_time = abundances_through_time)
-                except Exception as inst:
-                    print("Error in creating species {}\n{}".format(name, inst))
-                sp.simulate_seqs()
-                self.species.append(sp)
-                ## For debugging invasives
-                #if s.abundance > 1000:
-                #    print("\n{}".format(s))
-            except Exception as inst:
-                print("tdiv = {}".format(tdiv))
-                print(self.local_info)
-                print(len(set(self.local_community)))
-                print(self.local_info.shape)
-                msg = "Error in simulate_seqs() - {}\nabundance - {} / meta_abundance {}\n{}\n{}".format(name,
-                                                                                                         local_abund,
-                                                                                                         meta_abund,
-                                                                                                         self.local_info[name],
-                                                                                                         inst)
-                raise MESSError(msg)
-
 
 
     def get_stats(self):
