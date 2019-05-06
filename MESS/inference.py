@@ -124,11 +124,15 @@ class Ensemble(object):
             feat_selector.fit(tmpX, tmpy)
 
             # check ranking of features
-            if verbose: print("{}".format(list(self.features[feat_selector.support_])))
-
+            features = list(self.features[feat_selector.support_])
+            if verbose: print("{}".format(features))
+            if not features:
+                print("  NB: No features found relevant for target {}\n      Fall back to using all parameters.".format(t))
+                feat_selector.support_ = feat_selector.support_ | True
+                features = self.features
             ## Remember the relevant features for this target, for later prediction
             ## Use feat_selector.support_weak_ to include more variables
-            self.model_by_target[t]["features"] = list(self.features[feat_selector.support_])
+            self.model_by_target[t]["features"] = features
 
             mask += feat_selector.support_
 
