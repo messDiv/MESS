@@ -1,10 +1,12 @@
 from __future__ import print_function
 
 import MESS.stats
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
 from boruta import BorutaPy
+from MESS.util import progressbar
 from skgarden import RandomForestQuantileRegressor
 from sklearn import metrics
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier,\
@@ -366,6 +368,79 @@ class Regressor(Ensemble):
                                                 columns=self.targets, index=["estimate"])
 
         return self.empirical_pred
+
+
+def posterior_predictive_check(empirical_df,\
+                                parameter_estimates,\
+                                ax='',\
+                                est_only=False,\
+                                nsims=100,\
+                                outfile='',\
+                                verbose=False):
+
+    ## If est_only, drop the lower and upper prediction interval and just use
+    ## the mean estimated parameters for generating posterior predictive simes
+    if est_only:
+        parameter_estimates = pd.DataFrame(parameter_estimates.loc["estimate", :]).T
+
+    ## Pre-fetch nsims worth of  sampled parameters from the prediction interval
+    param_df = pd.DataFrame(data=np.zeros(shape=(nsims,len(parameter_estimates.columns))),\
+                            columns=parameter_estimates.columns)
+    ## You only have the point estimate that's all you can use
+    if len(parameter_estimates) == 1:
+        for param in parameter_estimates:
+            param_df[param] = [parameter_estimates[param].values[0]] * nsims
+    ## If you have prediction intervals sample uniform between them
+    elif len(parameter_estimates) == 3:
+        for param in parameter_estimates:
+            param_df[param] = np.random.uniform(low=parameter_estimates[param]["lower 0.025"],
+                                                high=parameter_estimates[param]["upper 0.975"],
+                                                size=nsims)
+    else:
+        raise Exception("Shape of parameter estimate df not understood: {}".format(parameter_estimates.shape))
+
+    r = MESS.Region("ppc")
+    r.set_param("project_dir", "./ppc")
+
+    if verbose: progressbar(nsims, 0, "Performing simulations")
+    for i in range(nsims):
+        for param in parameter_estimates:
+            if param == "_lambda":
+                #r.set_param("generations", est[param]["estimate"])
+                r.set_param("generations", param_df[param].iloc[i])
+            else:
+                #r.set_param(param, est[param]["estimate"])
+                r.set_param(param, param_df[param].iloc[i])
+        r.run(sims=1, quiet=True)
+
+        if verbose: progressbar(nsims, i, "Performing simulations")
+    if verbose: progressbar(nsims, nsims, "Performing simulations")
+    if verbose: print("\nCalculating PCs and plotting")
+
+    simfile = "./ppc/SIMOUT.txt"
+    sim_df = pd.read_csv(simfile, sep="\t", header=0)
+
+    ## Chop the sims down to only include ss contained in the observed data
+    obs_ss = MESS.util.calculate_sumstats(empirical_df)
+    sim_df = sim_df[obs_ss.columns]
+
+    if not ax:
+        fig, ax = plt.subplots(figsize=(5, 5))
+
+    pca = PCA(n_components=2)
+    pcs = pca.fit_transform(pd.concat([obs_ss, sim_df]))
+
+    ax.scatter(pcs[:, 0], pcs[:, 1])
+    ## Plot the observed ss in red
+    ax.scatter(pcs[:, 0][0], pcs[:, 1][0], c='r')
+
+    if outfile:
+        try:
+            ax.savefig(outfile)
+        except Exception as inst:
+            raise Exception("Failed saving figure: {}".format(inst))
+
+    return ax
 
 
 ####################################################################
