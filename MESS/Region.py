@@ -391,6 +391,9 @@ class Region(object):
         """ Do the heavy lifting here"""
         if not quiet: print("    Generating {} simulation(s).".format(sims))
 
+        if not os.path.exists(self.paramsdict["project_dir"]):
+            os.mkdir(self.paramsdict["project_dir"])
+
         simfile = os.path.join(self.paramsdict["project_dir"], "SIMOUT.txt")
         ## Open output file. If force then overwrite existing, otherwise just append.
         append = 'a'
@@ -616,7 +619,6 @@ class Region(object):
                 print("    Exception in fancy_plots() - {}".format(inst))
 
 
-    @memoize
     def get_trait(self, loc_id):
         try:
             trt = self.metacommunity.community['trait_values'][self.metacommunity.community["ids"] == loc_id][0]
