@@ -63,6 +63,7 @@ class Region(object):
         ## A dictionary for holding prior ranges for values we're interested in
         self._priors = dict([
                         ("alpha", []),
+                        ("community_assembly_model", []),
                         ("generations", []),
         ])
 
@@ -189,6 +190,9 @@ class Region(object):
                     self.paramsdict[param] = tup
 
             elif param == "community_assembly_model":
+                if newvalue == "*":
+                    self._priors[param] = ["neutral", "filtering", "competition"]
+                    newvalue = np.random.choice(self._priors[param])
                 self.paramsdict[param] = newvalue
 
             elif param == "speciation_model":
@@ -305,7 +309,11 @@ class Region(object):
                 ## the sampled value
                 if full:
                     if key in list(self._priors.keys()):
-                        if self._priors[key]:
+                        ## The prior on community assembly model is a little goofy
+                        ## since it's a list, and not a search range
+                        if key == "community_assembly_model" and self._priors[key]:
+                            paramvalue = "*"
+                        elif self._priors[key]:
                             paramvalue = "-".join([str(i) for i in self._priors[key]])
 
                 padding = (" "*(20-len(paramvalue)))
@@ -540,6 +548,10 @@ class Region(object):
         if self._priors["alpha"]:
             self.paramsdict["alpha"] = sample_param_range(self._priors["alpha"])[0]
             LOGGER.debug("alpha - {}".format(self.paramsdict["alpha"]))
+
+        if self._priors["community_assembly_model"]:
+            self.paramsdict["community_assembly_model"] = np.random.choice(self._priors["community_assembly_model"])
+
         ## Flip the metacommunity per simulation so we get new draws of trait values.
         ## This is a little slow for logser, and also performance scales with metacommunity size
         self._reset_metacommunity()
