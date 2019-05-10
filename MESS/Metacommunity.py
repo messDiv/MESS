@@ -78,6 +78,9 @@ class Metacommunity(object):
         ## probabilities and trait values
         self.community = []
 
+        ## A dictionary for fast trait value lookups
+        self.trait_dict = {}
+
         self.set_metacommunity()
         LOGGER.debug("Metacommunity paramsdict - {}".format(self.paramsdict))
 
@@ -382,6 +385,9 @@ class Metacommunity(object):
             self.community["abundances"] = np.array(abundances)
             self.community["ids"] = ids
             self.community['trait_values'] = np.array(trait_values)
+
+            self.trait_dict = {x["ids"]:x["trait_values"] for x in self.community}
+
         except ValueError as inst:
             msg = \
 """
@@ -411,6 +417,7 @@ class Metacommunity(object):
             LOGGER.debug("Adding species/trait_value - {}/{}".format(sname, trait_value))
             self.community = np.hstack((self.community,\
                                         np.array([tuple([sname, 0, 0, trait_value])], dtype=METACOMMUNITY_DTYPE)))
+            self.trait_dict[sname] = trait_value
         except Exception as inst:
             LOGGER.error("Error in Metacommunity.update_species_pool - {}".format(inst))
             LOGGER.error("sname/trait_value - {}/{}".format(sname, trait_value))
@@ -429,6 +436,7 @@ class Metacommunity(object):
 
         #LOGGER.debug("Migrant idx {}\tid {}\t trait_val {}".format(migrant_draw, new_species, trait_value))
         return new_species, trait_value
+
 
     def get_nmigrants(self, nmigrants=1):
         migrants = []

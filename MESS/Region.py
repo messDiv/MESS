@@ -621,7 +621,8 @@ class Region(object):
 
     def get_trait(self, loc_id):
         try:
-            trt = self.metacommunity.community['trait_values'][self.metacommunity.community["ids"] == loc_id][0]
+            trt = self.metacommunity.trait_dict[loc_id]
+            #trt = self.metacommunity.community['trait_values'][self.metacommunity.community["ids"] == loc_id][0]
         except Exception as inst:
             raise MESSError("Species has no trait value: {}".format(loc_id))
         return trt
