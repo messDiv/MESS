@@ -378,6 +378,13 @@ class Region(object):
         max_idx = self.metacommunity.community["abundances"].argmax()
         new_species = self.metacommunity.community["ids"][max_idx]
         trait_value = self.metacommunity.community["trait_values"][max_idx]
+
+        ## Nudge the trait value of the initial colonizer or else
+        ## for filtering models you can get in big trouble (sims run forever)
+        if abs(trait_value - self.metacommunity._hackersonly["filtering_optimum"]) < 1:
+            trait_value += 1
+            self.metacommunity.community["trait_values"][max_idx] = trait_value
+
         return new_species, trait_value
 
 
@@ -727,5 +734,3 @@ if __name__ == "__main__":
     print("Testing lambda function.")
     data.simulate(_lambda=.4)
 
-    #data.run(10)
-    print(data.get_most_abundant())

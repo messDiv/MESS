@@ -45,7 +45,7 @@ class Metacommunity(object):
                         ("speciation_rate", 2),
                         ("death_proportion", 0.7),
                         ("trait_rate_meta", 2),
-                        ("ecological_strength", 5),
+                        ("ecological_strength", 1),
         ])
 
         ## elite hackers only internal dictionary, normally you shouldn't mess with this
