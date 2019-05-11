@@ -213,6 +213,10 @@ class Metacommunity(object):
         return list(self.community["trait_values"])
 
 
+    def _get_species_traits(self):
+        return self.trait_dict
+
+
     def write_params(self, outfile=None, full=False, append=True):
         """
         Write out the parameters for this island to a file.

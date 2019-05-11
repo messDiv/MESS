@@ -218,8 +218,18 @@ class LocalCommunity(object):
             self.death_step = self._competition_death_step
         elif assembly_model == "filtering":
             self.death_step = self._filtering_death_step
+            self._filtering_update_death_probs()
         else:
             raise Exception("unrecognized community assembly model in _set_death_step: {}".format(assembly_model))
+
+
+    ## Update global death probabilities for the filtering model
+    def _filtering_update_death_probs(self):
+        fo = self.region.metacommunity._hackersonly["filtering_optimum"]
+        es = self.region.metacommunity.paramsdict["ecological_strength"]
+        def dprob(trt):
+            return 1 - (np.exp(-((trt - fo) ** 2)/es))
+        self._filt_death_probs = {sp:dprob(trt) for sp, trt in self.region.metacommunity._get_species_traits().items()}
 
 
     ## Getting params header and parameter values drops the local
@@ -476,10 +486,8 @@ class LocalCommunity(object):
         else:
             ## Get local traits for all individuals in the community (remove None first)
             loc_inds = [x for x in self.local_community if x != None]
-            local_traits = map(self.region.get_trait, loc_inds)
-            fo = self.region.metacommunity._hackersonly["filtering_optimum"]
-            es = self.region.metacommunity.paramsdict["ecological_strength"]
-            death_probs = map(lambda x: 1 - (np.exp(-((x - fo) ** 2)/es)), local_traits)
+            ## Fetch pre-calculated death probs for each individual
+            death_probs = [self._filt_death_probs[x] for x in loc_inds]
             ## Scale all fitness values to proportions
             death_probs = np.array(death_probs)/np.sum(death_probs)
             ## Get the victim conditioning on unequal death probability
@@ -490,6 +498,7 @@ class LocalCommunity(object):
 
 
     def _finalize_death(self, victim):
+        ## More old invasiveness code. Should probably just get rid of it eventually.
         ## If no invasive has invaded then just do the normal sampling
         ##if self.invasive == -1:
             ## If no invasive species yet just go on
@@ -669,6 +678,11 @@ class LocalCommunity(object):
         trt = np.random.normal(parent_trait, self._hackersonly["trait_rate_local"], 1)[0]
 
         self.region._record_local_speciation(sname, trt)
+
+        ## If filtering then update the death probabilities to record
+        ## death probability of the new species
+        if self.region.paramsdict["community_assembly_model"] == "filtering":
+            self._filtering_update_death_probs()
 
         if self.region.paramsdict["speciation_model"] == "point_mutation":
 
