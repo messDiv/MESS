@@ -244,7 +244,7 @@ filtering and competition models.
 .. image:: images/ecological_strength_0.001.png
     :width: 25 %
 .. image:: images/ecological_strength_0.01.png
-    :width: 30 %
+    :width: 29 %
 .. image:: images/ecological_strength_0.1.png
     :width: 30 %
 
