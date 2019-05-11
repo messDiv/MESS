@@ -455,10 +455,11 @@ class LocalCommunity(object):
             ## Get local traits for all individuals in the community (remove None first)
             loc_inds = [x for x in self.local_community if x != None]
             local_traits = map(self.region.get_trait, loc_inds)
+            ## Scale ecological strength for competition to be in the same units
+            ## as for filtering
+            es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
             ## Apply the competition equation to get fitness per individual
-            death_probs = map(lambda x: np.exp(-((x - mean_local_trait) ** 2)\
-                                        /self.region.metacommunity.paramsdict["ecological_strength"]),\
-                                        local_traits)
+            death_probs = map(lambda x: np.exp(-((x - mean_local_trait) ** 2)/es), local_traits)
             ## Scale all fitness values to proportions
             death_probs = np.array(death_probs)/np.sum(death_probs)
             ## Get the victim conditioning on unequal death probability
@@ -476,9 +477,9 @@ class LocalCommunity(object):
             ## Get local traits for all individuals in the community (remove None first)
             loc_inds = [x for x in self.local_community if x != None]
             local_traits = map(self.region.get_trait, loc_inds)
-            death_probs = map(lambda x: 1 - (np.exp(-((x - self.region.metacommunity._hackersonly["filtering_optimum"]) ** 2)\
-                                    /self.region.metacommunity.paramsdict["ecological_strength"])),\
-                                    local_traits)
+            fo = self.region.metacommunity._hackersonly["filtering_optimum"]
+            es = self.region.metacommunity.paramsdict["ecological_strength"]
+            death_probs = map(lambda x: 1 - (np.exp(-((x - fo) ** 2)/es)), local_traits)
             ## Scale all fitness values to proportions
             death_probs = np.array(death_probs)/np.sum(death_probs)
             ## Get the victim conditioning on unequal death probability
@@ -584,13 +585,16 @@ class LocalCommunity(object):
                 new_species = self.migrate_step()
                 chx = new_species
 
+                ## The invasion code "works" in that it worked last time I tried it, but it's
+                ## not doing anything right now except slowing down the process. I don't want to dl
+                ## it in case we want to resurrect, so it's just commented out for now. 5/2019 iao.
                 ## Only set the invasive species once at the time of next migration post invasion time
                 ## If invasion time is < 0 this means "Don't do invasive"
-                if not self.invasion_time < 0:
-                    if self.invasive == -1 and self.current_time >= self.invasion_time:
-                        self.invasive = new_species
-                        LOGGER.info("setting invasive species {} at time {}".format(self.invasive, self.current_time))
-                        self.invasion_time = self.current_time
+                #if not self.invasion_time < 0:
+                #    if self.invasive == -1 and self.current_time >= self.invasion_time:
+                #        self.invasive = new_species
+                #        LOGGER.info("setting invasive species {} at time {}".format(self.invasive, self.current_time))
+                #        self.invasion_time = self.current_time
 
                 ## Add the colonizer to the local community, record the colonization time
                 self.local_community.extend([new_species] * self._hackersonly["mig_clust_size"])
