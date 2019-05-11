@@ -242,12 +242,18 @@ This parameter dictates the strength of interactions in the environmental
 filtering and competition models.
 
 .. image:: images/ecological_strength_0.001.png
+    :width: 20 %
+.. image:: images/ecological_strength_0.01.png
+    :width: 20 %
+.. image:: images/ecological_strength_0.1.png
+    :width: 20 %
 
-![ecological_strength_0.01](images/ecological_strength_0.01.png)
-![ecological_strength_0.1](images/ecological_strength_0.1.png)
-![ecological_strength_1](images/ecological_strength_1.png)
-![ecological_strength_10](images/ecological_strength_10.png)
-![ecological_strength_1](images/ecological_strength_1.png)
+.. image:: images/ecological_strength_1.png
+    :width: 20 %
+.. image:: images/ecological_strength_10.png
+    :width: 20 %
+.. image:: images/ecological_strength_100.png
+    :width: 20 %
 
 Sequencing coverage is often highly uneven among due to differences in the
 rate at which fragments are amplified during library preparation, the extent
