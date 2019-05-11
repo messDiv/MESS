@@ -168,108 +168,26 @@ to deteremine the appropriate category for your data type.
 .. _S_m:
 
 8. S_m
------------------------
-The restriction overhang is used during demultiplexing (step1) and also to detect
-and filter out adapters/primers (in step2), if the `filter_adapters` parameter
-is turned on. Identifying the correct sequence to enter for the restriction_overhang
-can be tricky. You do not enter the restriction recognition sequence, but rather
-the portion of this sequence that is left attached to the sequenced read after
-digestion. For example, the enzyme PstI has the following palindromic sequence,
-with `^` indicating the cut position.
+------
+S_m specifies the total number of species to simulate in the metacommunity. Larger
+values will result in more singletons in the local community and reduced rates
+of multiple-colonization.
 
-.. code-block:: python
-
-    5'...C TGCA^G...'3
-    3'...G^ACGT C...'5
-
-Digestion with this enzyme results in DNA fragments with the sequence ``CTGCA``
-adjacent to the cut site, which when sequenced results in the reverse complement
-``TGCAG`` as the restriction overhang at the beginning of each read.
-The easiest way to identify the restriction overhang is simply to look at
-the raw (or demultiplexed) data files yourself. The restriction overhang
-will be the (mostly) invariant sequence that occurs at
-the very beginning of each read if the data are already demultiplexed, or right
-after the barcode in the case of non-demultplexed data. Use the command
-below to peek at the first few lines of your fastQ files to find the invariant
-sequence.
+Example entries to params.txt file:
 
 .. code-block:: bash
 
-    ## gunzip decompresses the file,
-    ## the flag -c means print to screen,
-    ## and `less` tells it to only print the first 100 lines
-    zless 100 my_R1_input_file.fastq.gz
-
-This will print something like the following. You can see that each of the
-lines of sequence data begins with `TGCAG` followed by variable sequence data.
-For data that used two-cutters (ddrad), you will likely not be able to see the second
-cutter overhang for single-end reads, but if your data are paired-end, then
-the `_R2_` files will begin with the second `restriction_overhang`. The second
-restriction_overhang is only used to detect adapters/primers if the
-`filter_adapters`_ parameter is set > 1. The second `restriction_overhang`
-can optionally be left blank.
-
-.. parsed-literal::
-
-    @HWI-ST609:152:D0RDLACXX:2:2202:18249:93964 1:N:0:
-    TGCAGCAGCAAGTGCTATTCGTACAGTCATCGATCAGGGTATGCAACGAGCAGAAGTCATGATAAAGGGTCCCGGTCTAGGAAGAGACGCAGCATTA
-    +
-    BDFFHHHHHJJJHIJJJJJIJIGJJJJJJJJJJJJJJJJDGGIJJJJJHIIIJJJJHIIHIGIGHHHHFFFFEDDDDDACCDCDDDDDDDDDBBDC:
-    @HWI-ST609:152:D0RDLACXX:2:2202:18428:93944 1:N:0:
-    TGCAGGATATATAAAGAATATACCAATCCTAAGGATCCATAGATTTAATTGTGGATCCAACAATAGAAACATCGGCTCAACCCTTTTAGTAAAAGAT
-    +
-    ADEFGHFHGIJJJJJJIJJIIJJJIJJIJGIJJJJJJJJIJJIJJJJIIIGGHIEGHJJJJJJG@@CG@@DDHHEFF>?A@;>CCCDC?CDDCCDDC
-    @HWI-ST609:152:D0RDLACXX:2:2202:18489:93970 1:N:0:
-    TGCAGCCATTATGTGGCATAGGGGTTACATCCCGTACAAAAGTTAATAGTATACCACTCCTACGAATAGCTCGTAATGCTGCGTCTCTTCCTAGACC
-    +
-    BDFFHHHHHJJJJIJJIJJJJJJJHIJJJJJJJJHIIJJJJIFHIJJJJFGIIJFHIJJIJJIFBHHFFDFEBACEDCDDDDBBBDCCCDDDCDDC:
-    @HWI-ST609:152:D0RDLACXX:2:2202:18714:93960 1:N:0:
-    TGCAGCATCTGGAAATTATGGGGTTATTTCACAGAAGCTGGAATCTCTTGGGCAATTTCACAGAATCTGGGAATATCTGGGGTAAATCTGCAAGATC
-    +
-    BDEFHHHHHJJJIJJJJJJJJJJCGIIJJGHJJJJJJJJJJIJJIJJJIHIJJJJJJJHHIIJJJJJJJHGHHHFEFFFDEDABDDFDDEDDDDDDA
-    @HWI-ST609:152:D0RDLACXX:2:2202:20484:93905 1:N:0:
-    TGCAGAGGGGGATTTTCTGGAGTTCTGAGCATGGACTCGTCCCGTTTGTGCTGCTCGAACACTGACGTTACTTCGTTGATCCCTATGGACTTGGTCA
-    +
-    ADEEHHHHGJJHIIJJJJJJIJFHJIIIJJJJIIIJJJJEHHIIGHIGGHGHHHHFFEEEDDDD;CBBDDDACC@DC?<CDDCCCCCCA@CCD>>@:
-    @HWI-ST609:152:D0RDLACXX:2:2202:20938:93852 1:N:0:
-    TGCAGAAGCTGGAGATTCTGGGGCAGCTTTGCAGCAAGCTGAAAATTCTGGGGGTCGATCTGCAAGATCGGAAGAGCGGTTCAGCAGGAATGCCGAG
-
-In some cases restriction enzymes can bind to more than one specific sequence,
-for example ApoI will bind to AATTY (i.e. AATTC and AATTT). If you used an 
-enzyme with reduced specificity you can include ambiguity codes in the 
-restriction overhang sequence.
-
-Affected steps = 1,2. Example entries to params.txt file:
-
-.. code-block:: bash
-
-    TGCAG                     ## [8] single cutter (e.g., rad, gbs)
-    TGCAG, AATT               ## [8] double digest (e.g., ddrad, pairddrad)
-    CWGC                      ## [8] single cutter w/ degenerate base
-
-
-NB: 3RAD and SeqCap data can use up to 4 restriction enzymes. If you have this
-kind of data, simply list all the restriction overhangs for all your cutters.
-
-.. code-block:: bash
-
-    CTAGA, CTAGC, AATTC               ## [8] 3rad data (multiple cutters)
+    500                     ## [0] [S_m]: Number of species in the regional pool
+    100-1000                ## [0] [S_m]: Number of species in the regional pool
 
 
 .. _J_m:
 
 9. J_m
----------------------
-During step 2 bases are trimmed from the 3' end of reads when the quality score
-is consistently below 20 (which can be modified by modifying phred_Qscore_offset_). 
-However, your reads may still contain some number of ambiguous (N) sites that 
-were not trimmed based on quality scores, and these will affect the efficiency
-and accuracy of clustering downstream. This parameter sets the upper limit on the 
-number of Ns allowed in reads. The default value for
-`max_low_qual_bases` is 5. I would generally recommend against increasing 
-this value greatly. 
+------
+The total number of individuals in the metacommunity.
 
-Affected steps = 2. Example entries to params.txt:
+Example entries to params.txt:
 
 .. code-block:: bash
 
@@ -281,61 +199,40 @@ Affected steps = 2. Example entries to params.txt:
 
 10. speciation_rate
 ------------------------
-Bases are trimmed from the 3' end of reads if their quality scores is below
-this 20. The default offset for quality scores is 33. Some 
-older data use a qscore offset of 64, but this is increasingly rare. You
-can toggle the offset number to change the threshold for trimming. 
-For example, reducing the offset from 33 to 23 is equivalent to changing the 
-minimum quality score from 20 to 10, which is approximately 
-95% probability of a correct base call.
 
-Affected steps = 2. Example entries to params.txt:
+Example entries to params.txt:
 
 .. parsed-literal::
 
     33                 ## [10] default offset of 33, converts to min score=20
-    43                 ## [10] offset increased by 10, converts to min score=30
-    64                 ## [10] offset used by older data, converts to min score=20.
 
 
 .. _death_proportion:
 
 11. death_proportion
--------------------------
+--------------------
 This is the minimum depth at which statistical base calls will be made during
 step 5 consensus base calling. By default this is set to 6, which for most
 reasonable error rates estimates is approximately the minimum depth at which a
 heterozygous base call can be distinguished from a sequencing error.
 
-Affected steps = 4, 5. Example entries to params.txt
+Example entries to params.txt
 
 .. parsed-literal::
 
     6                 ## [11] set mindepth statistical to 6
-    10                ## [11] set to 10
 
 
 .. _trait_rate_meta:
 
 12. trait_rate_meta
 ---------------------
-This is the minimum depth at which majority rule base calls are made during
-step 5 consensus base calling. By default this is set to the same value as
-mindepth_statistical, such that only statistical base calls are made. This
-value must be <= mindepth_statistical. If lower, then sites with coverage
->= mindepth_majrule and < mindepth_statistical will make majority rule calls.
-If your data set is very low coverage such that many clusters are excluded due
-to low sequencing depth then lowering mindepth_majrule can be an effective way
-to increase the amount of usable information in your data set. However, you
-should be aware the majority rule consensus base calls will underestimate
-heterozygosity.
 
-Affected steps = 4, 5. Example entries to params.txt:
+Example entries to params.txt:
 
 .. parsed-literal::
 
     6                 ## [12] set to relatively high value similar to mindepth_stat
-    2                 ## [12] set below the statistical limit for base calls.
 
 
 .. _ecological_strength:
@@ -344,7 +241,8 @@ Affected steps = 4, 5. Example entries to params.txt:
 This parameter dictates the strength of interactions in the environmental
 filtering and competition models.
 
-.. image:: images/ecological_strength_0.001.png)
+.. image:: images/ecological_strength_0.001.png
+
 ![ecological_strength_0.01](images/ecological_strength_0.01.png)
 ![ecological_strength_0.1](images/ecological_strength_0.1.png)
 ![ecological_strength_1](images/ecological_strength_1.png)
