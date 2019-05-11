@@ -242,7 +242,7 @@ This parameter dictates the strength of interactions in the environmental
 filtering and competition models.
 
 .. image:: images/ecological_strength_0.001.png
-    :width: 30 %
+    :width: 25 %
 .. image:: images/ecological_strength_0.01.png
     :width: 30 %
 .. image:: images/ecological_strength_0.1.png
