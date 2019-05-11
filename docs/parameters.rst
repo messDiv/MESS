@@ -248,6 +248,7 @@ filtering and competition models.
 .. image:: images/ecological_strength_0.1.png
     :width: 20 %
 
+Strength of 1, 10, and 100.
 .. image:: images/ecological_strength_1.png
     :width: 20 %
 .. image:: images/ecological_strength_10.png
