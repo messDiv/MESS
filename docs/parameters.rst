@@ -17,7 +17,7 @@ that it effects, and example entries for the parameter into a params.txt file.
 
 .. _simulation_name:
 
-0. Simulation name
+0. simulation_name
 -----------------
 The Assembly name is used as the prefix for all output files. It should be a
 unique identifier for the assembly, meaning the set of parameters you are using
@@ -34,12 +34,11 @@ Example: new Assemblies are created with the -n or -b options to MESS:
 .. code-block:: bash
 
     >>> MESS -n data1                       ## create a new assembly named data1
-    >>> MESS -p params-data1.txt -b data2   ## create a branch assembly named data2
 
 
 .. _project_dir:
 
-1. Project dir
+1. project_dir
 --------------
 A project directory can be used to group together multiple related Assemblies.
 A new directory will be created at the given path if it does not already exist.
@@ -52,13 +51,13 @@ Example entries into params.txt:
 
 .. code-block:: bash
 
-    /home/deren/MESS/tests/finches   ## [1] create/use project dir called finches
-    finches                            ## [1] create/use project dir called finches
+    /home/watdo/MESS/galapagos         ## [1] create/use project dir called galapagos
+    galapagos                          ## [1] create/use project dir called galapagos
 
 
-.. _raw_fastq_path:
+.. _generations:
 
-2. Raw fastq path
+2. generations
 -----------------
 This is a path to the location of raw (non-demultiplexed) fastq data files. If
 your data are already demultiplexed then this should be left blank. The input
@@ -77,9 +76,9 @@ Example entries into params.txt:
     ./ipsimdata/rad_example*.fastq.gz            ## [2] select files w/ `rad_example` in name
 
 
-.. _barcodes_path:
+.. _community_assembly_model:
 
-3. Barcodes path
+3. community_assembly_model
 ----------------
 This is a path to the location of a barcodes_file_. This is used in step1
 for demuliplexing, and can also be used in step2 to improve the detection of
@@ -95,9 +94,9 @@ Example entries into params.txt:
     ./ipsimdata/rad_example_barcodes.txt              ## [3] select barcode file
 
 
-.. _sorted_fastq_path:
+.. _speciation_model:
 
-4. Sorted fastq path
+4. speciation_model
 --------------------
 This is a path to the location of sorted fastq data. If your data are already
 demultiplexed then this is the location from which data will be loaded when
@@ -114,9 +113,9 @@ Example entries into params.txt:
     ./ipsimdata/rad_example*.fastq.gz                ## [4] select files w/ `rad_example` in name
 
 
-.. _assembly_method:
+.. _mutation_rate:
 
-5. Assembly method
+5. mutation_rate
 --------------------
 There are four :ref:`Assembly_methods<Assembly_methods>` options in MESS:
 denovo, reference, denovo+reference, and denovo-reference.
@@ -134,9 +133,9 @@ Example entries into params.txt:
     denovo-reference                  ## [5] reference subtraction assembly
 
 
-.. _reference_sequence:
+.. _alpha:
 
-6. Reference sequence
+6. alpha
 ---------------------
 The reference sequence file should be in fasta format. It does
 not need to be a complete nuclear genome, but could also be any
@@ -149,9 +148,9 @@ plastome or transcriptome data.
     ./data/finch_full_genome.fasta                   ## [6] select fasta file
 
 
-.. _datatype:
+.. _sequence_length:
 
-7. Datatype
+7. sequence_length
 ------------
 There are now many forms of restriction-site associated DNA library preparation
 methods and thus many differently named data types. Currently, we categorize
@@ -166,10 +165,9 @@ to deteremine the appropriate category for your data type.
     pairgbs                   ## [7] paired gbs type (1 cutter cuts both ends)
 
 
+.. _S_m:
 
-.. _restriction_overhang:
-
-8. Restriction_overhang
+8. S_m
 -----------------------
 The restriction overhang is used during demultiplexing (step1) and also to detect
 and filter out adapters/primers (in step2), if the `filter_adapters` parameter
@@ -258,9 +256,9 @@ kind of data, simply list all the restriction overhangs for all your cutters.
     CTAGA, CTAGC, AATTC               ## [8] 3rad data (multiple cutters)
 
 
-.. _max_low_qual_bases:
+.. _J_m:
 
-9. max_low_qual_bases
+9. J_m
 ---------------------
 During step 2 bases are trimmed from the 3' end of reads when the quality score
 is consistently below 20 (which can be modified by modifying phred_Qscore_offset_). 
@@ -279,9 +277,9 @@ Affected steps = 2. Example entries to params.txt:
     5                      ## [9] allow up to five low quality bases in a read
 
 
-.. _phred_Qscore_offset:
+.. _speciation_rate:
 
-10. Phred_Qscore_offset
+10. speciation_rate
 ------------------------
 Bases are trimmed from the 3' end of reads if their quality scores is below
 this 20. The default offset for quality scores is 33. Some 
@@ -300,9 +298,9 @@ Affected steps = 2. Example entries to params.txt:
     64                 ## [10] offset used by older data, converts to min score=20.
 
 
-.. _mindepth_statistical:
+.. _death_proportion:
 
-11. mindepth_statistical
+11. death_proportion
 -------------------------
 This is the minimum depth at which statistical base calls will be made during
 step 5 consensus base calling. By default this is set to 6, which for most
@@ -317,9 +315,9 @@ Affected steps = 4, 5. Example entries to params.txt
     10                ## [11] set to 10
 
 
-.. _mindepth_majrule:
+.. _trait_rate_meta:
 
-12. mindepth_majrule
+12. trait_rate_meta
 ---------------------
 This is the minimum depth at which majority rule base calls are made during
 step 5 consensus base calling. By default this is set to the same value as
@@ -340,9 +338,14 @@ Affected steps = 4, 5. Example entries to params.txt:
     2                 ## [12] set below the statistical limit for base calls.
 
 
-.. _maxdepth:
-13. maxdepth
--------------
+.. _ecological_strength:
+13. ecological_strength
+-----------------------
+This parameter dictates the strength of interactions in the environmental
+filtering and competition models.
+
+![ecological_strength_0.001](images/ecological_strength_0.001.png)
+
 Sequencing coverage is often highly uneven among due to differences in the
 rate at which fragments are amplified during library preparation, the extent
 to which varies across different library prep methods. Moreover, repetitive
@@ -352,17 +355,16 @@ expense of potentially removing good clusters that simply were sequenced
 to high depth. The default maxdepth is set quite high (10,000), but you may
 change it as you see fit.
 
-Affected steps = 4, 5. Example entries to params.txt:
+Example entries to params.txt:
 
 .. parsed-literal::
 
-    10000             ## [13] maxdepth above which clusters are excluded.
+    1       ## [5] [ecological_strength]: Strength of community assembly process on phenotypic change
 
 
+.. _name:
 
-.. _clust_threshold:
-
-14. clust_threshold
+14. name
 --------------------
 This the level of sequence similarity at which two sequences are identified
 as being homologous, and thus cluster together. The value should be entered
@@ -378,9 +380,9 @@ Affected steps = 3, 6. Example entries to params.txt:
     0.85              ## [14] clust threshold set to 85%
 
 
-.. _max_barcodes_mismatch:
+.. _J:
 
-15. max_barcodes_mismatch
+15. J
 ---------------
 The maximum number of allowed mismatches between the barcodes in the barcodes
 file and those found in the sequenced reads. Default is 0. Barcodes usually differ
@@ -394,9 +396,9 @@ Affected steps = 1. Example entries to params.txt:
     1              ## [15] allow 1 mismatched base
 
 
-.. _filter_adapters:
+.. _m:
 
-16. filter_adapters
+16. m
 --------------------
 It is important to remove Illumina adapters from your data if present. 
 Depending on the fidelity of the size selection procedure implemented during
@@ -424,9 +426,9 @@ Affected steps = 2. Example entries to params.txt:
     2                ## [16] strict filter for adapters
 
 
-.. _filter_min_trim_len:
+.. _speciation_prob:
 
-17. filter_min_trim_len
+17. speciation_prob
 ------------------------
 During step 2 if `filter_adapters` is > 0 reads may be trimmed to a shorter length
 if they are either low quality or contain Illumina adapter sequences. 
@@ -439,251 +441,3 @@ Affected steps = 2. Example entries to params.txt
 
     50                ## [17] minimum trimmed seqlen of 50
     75                ## [17] minimum trimmed seqlen of 75
-
-
-.. _max_alleles_consens:
-
-18. max_alleles_consens:
--------------------------
-This is the maximum number of unique alleles allowed in (**individual**) consens
-reads after accounting for sequencing errors. Default=2, which is fitting for
-diploids.
-At this setting any locus which has a sample with more than 2 alleles detected
-will be  excluded/filtered out. If set to max_alleles_consens = 1 (haploid)
-then error-rate and heterozygosity are estimated with H fixed to 0.0 in step 4,
-and base calls are made with the estimated error rate, and any consensus reads
-with more than 1 allele present are excluded.
-If max_alleles_consens is set > 2 then more alleles are allowed, however,
-heterozygous base calls are still made under the assumption of diploidy
-i.e., hetero allele frequency=50%.
-
-Affected steps = 4, 7. Example entries to params.txt
-
-.. parsed-literal::
-
-    2                ## [18] diploid base calls, exclude if >2 alleles
-    1                ## [18] haploid base calls, exclude if >1 allele
-    4                ## [18] diploid-base calls, exclude if >4 alleles
-
-.. _max_Ns_consens:
-
-
-19. max_Ns_consens:
---------------------
-The maximum number of uncalled bases allowed in consens seqs (R1, R2). If a
-base call cannot be made confidently (statistically) then it is called
-as ambiguous (N). You do not want to allow too many Ns in consensus reads
-or it will affect their ability to cluster with consensus reads from other
-Samples, and it may represent a poor alignment. Default is 5, 5.
-For single end data only the first value is used, for paired data the first
-value affects R1s and the second value affects R2s.
-
-Affected steps = 5. Example entries to params.txt
-
-.. parsed-literal::
-
-    2                ## [19] allow max of 2 Ns in a consensus seq
-    5, 5             ## [19] allow max of 5 Ns in a consensus seq (R1, R2)
-
-
-.. _max_Hs_consens:
-
-20. max_Hs_consens:
---------------------
-The maximum number of heterozygous bases allowed in consens seqs (R1, R2).
-This filter helps to remove poor alignments which will tend to have an
-excess of Hs. Default is 8, 8.
-For single end data only the first value is used, for paired data the first
-value affects R1s and the second value affects R2s.
-
-Affected steps = 5. Example entries to params.txt
-
-.. parsed-literal::
-
-    2                ## [20] allow max of 2 Hs in a consensus seq
-    8, 8             ## [20] allow max of 8 Hs in a consensus seq (R1, R2)
-
-
-.. _min_samples_locus:
-
-21. min_samples_locus
-----------------------
-The minimum number of Samples that must have data at a given locus for it to
-be retained in the final data set. If you enter a number equal to the full
-number of samples in your data set then it will return only loci that have
-data shared across all samples. Whereas if you enter a lower value, like 4, 
-it will return a more sparse matrix, including any loci for which at least 
-four samples contain data. This parameter is overridden if a min_samples values 
-are entered in the :ref:`popfile<pop_assign_file>`. Default value is 4.
-
-Affected steps = 7. Example entries to params.txt
-
-.. parsed-literal::
-
-    4                ## [21] create a min4 assembly
-    12               ## [21] create a min12 assembly
-
-
-.. _max_SNPs_locus:
-
-22. max_SNPs_locus
--------------------
-Maximum number of SNPs allowed in a final locus.
-This can remove potential effects of poor alignments in repetitive regions
-in a final data set by excluding loci with more than N snps.
-The default is 20, 20. Setting lower values is likely only helpful
-for extra filtering of very messy data sets. For single end data only the first
-value is used, for paired data the first value affects R1s and the second
-value affects R2s.
-
-
-Affected steps = 7. Example entries to params.txt
-
-.. parsed-literal::
-
-    20                  ## [22] allow max of 20 SNPs at a single-end locus.
-    20, 30              ## [22] allow max of 20 and 30 SNPs in paired locus.
-
-
-.. _max_Indels_locus:
-
-23. max_Indels_locus
----------------------
-The maximum number of Indels allowed in a final locus. This helps to filter
-out poor final alignments, particularly for paired-end data.
-The default is 8,8.
-For single end data only the first value is used,
-for paired data the first value affects R1s and the second value affects R2s.
-
-Affected steps = 7. Example entries to params.txt
-
-.. parsed-literal::
-
-    5                ## [23] allow max of 5 indels at a single-end locus.
-    5, 10            ## [23] allow max of 5 and 10 indels in paired locus.
-
-
-.. _max_shared_Hs_locus:
-
-24. max_shared_Hs_locus
-------------------------
-Maximum number (or proportion) of shared polymorphic sites in a locus.
-This option is used to detect potential paralogs, as a shared heterozygous
-site across many samples likely represents clustering of paralogs with a
-fixed difference rather than a true heterozygous site. Default is 0.5.
-For single end data only the first value is used, for paired data the first
-value affects R1s and the second value affects R2s.
-
-Affected steps = 7. Example entries to params.txt
-
-.. parsed-literal::
-
-    0.25             ## [24] allow hetero site to occur across max of 25% of Samples
-    10               ## [24] allow hetero site to occur across max of 10 Samples
-
-
-.. _trim_reads:
-
-25. trim_reads
---------------
-Sometimes you can look at your fastq data files and see that there was a problem
-with the sequencing such that the cut site which should occur at the beginning of
-your reads is either offset by one or more bases, or contains many errors. You 
-can trim off N bases from the beginning or end of R1 and R2 reads during step 2 
-by setting the number of bases here. This could similarly be used to trim all 
-reads to a uniform length (though uniform read lengths are not required in MESS).
-
-Affected steps = 2. Example entries to params.txt
-
-.. parsed-literal::
-
-    0, 0, 0, 0       ## [25] does nothing
-    5, 0, 0, 0       ## [25] trims first 5 bases from R1s
-    5, -5, 0, 0      ## [25] trims first 5 bases and last five based from R1s
-    5, 80, 0, 0      ## [25] trims first 5 bases from R1s and trims maxlen to 80
-    5, 75, 5, 75     ## [25] trims first 5 from R1 and R1, and maxlen to 75.
-
-
-.. _trim_loci:
-
-26. trim_loci
-------------------
-Trim N bases from the edges of final aligned loci. This can be useful in denovo
-data sets in particular, where the 3' edge of reads is less well aligned than the
-5' edge, and thus error rates are sometimes higher at the ends of reads. 
-
-Affected steps = 7. Example entries to params.txt
-
-.. parsed-literal::
-
-    0, 0, 0, 0     ## [26] no locus edge trimming
-    0, 5, 0, 0     ## [26] trims first 5 bases from R1s in aligned locus
-    0, 5, 5, 0     ## [26] trims last 5 bases from R1s and first 5 from R2s
-
-
-.. _output_formats:
-
-27. output_formats
--------------------
-Disk space is cheap, and these are quick to make, so by default we make all
-formats. More are coming (alleles, treemix, migrate-n, finestructure). 
-The short list of available options is below but see 
-:ref:`output formats<full_output_formats>` section for full descriptions of 
-the available formats. 
-
-.. code-block:: python
-
-    p: PHYLIP (Full dataset)
-    s: PHYLIP (SNPs only)
-    u: PHYLIP (One SNP per locus)
-    n: NEXUS
-    k: STRUCTURE 
-    g: EIGENSTRAT .geno
-    G: G-PhoCS
-    v: VCF (SNPs only)
-
-Affected steps = 7. Example entries to params.txt
-
-.. parsed-literal::
-
-    *                     ## [27] Make all output datatypes
-    n, v, g               ## [27] Only write out nexus, vcf and geno formats
-    u,k                   ## [27] Only write out unlinked snps in phylip, and structure
-
-
-
-.. _pop_assign_file:
-
-28. pop_assign_file
---------------------
-Population assignment file for creating population output files, or 
-assigning min_samples_locus value to each population. Enter a path to 
-the file. (see below for details of the file).
-
-Affected step: 7. Example entries to params.txt
-
-.. parsed-literal::
-
-    /home/user/MESS/popfile.txt        ## [28] example...
-
-The population assignment file should be formatted as a plain-txt, whitespace
-delimited list of individuals and population assignments. Care should be taken
-with spelling and capitalization. Each line should contain a sample name followed
-by a population name to which that sample is assigned. One or more additional 
-lines should be included that start with one or more "#" characters. These 
-special lines tell MESS how many samples must have data within each population
-for the locus to be retained in the final assembly, and thus assign different 
-min_samples_locus values to each population. This will override the global
-min_samples_locus value. 
-
-See the example below.
-
-.. parsed-literal::
-
-    Sample1 pop1
-    Sample2 pop1
-    Sample3 pop1
-    Sample4 pop2
-    Sample5 pop2
-
-    # pop1:2 pop2:2
