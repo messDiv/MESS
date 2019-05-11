@@ -239,7 +239,18 @@ Example entries to params.txt:
 13. ecological_strength
 -----------------------
 This parameter dictates the strength of interactions in the environmental
-filtering and competition models.
+filtering and competition models. As the value of this parameter approaches
+zero, ecological strength is reduced and the assembly process increasingly
+resembles neutrality (ecological equivalence). Larger values increasingly
+bias probability of death against individuals with traits farther from 
+the environmental optimum (in the filtering model).
+
+In the following examples the environmental optimum is `3.850979`, and the 
+ecological strength is varied from 0.001 to 100. Column 0 is species ID,
+column 1 is trait value, column 2 is unscaled probability of death, and
+column 3 is proportional probability of death. Models with strength of
+0.001 and 0.01 are essentially neutral. Strength of 0.1 a slight advantage
+to individuals very close to the local optimum (e.g. species 't97').
 
 .. image:: images/ecological_strength_0.001.png
     :width: 25 %
@@ -248,7 +259,14 @@ filtering and competition models.
 .. image:: images/ecological_strength_0.1.png
     :width: 30 %
 
-Strength of 1, 10, and 100.
+Ecological strength of 1 (left panel) is noticeably non-neutral (e.g. 't97' 
+survival probability is 10x greater than average). A value of 10 for this 
+parameter generates a _strong_ non-neutral process ('t97' is 100x less 
+likely to die than average, and the distribution of death probabilities is
+more varied). Ecological strength values >> 10 are _extreme_ and will probably
+result in degenerate behavior (e.g. strength of 100 (right panel) in which
+several of the species will be effectively immortal, with survival probability
+thousands of times better than average).
 
 .. image:: images/ecological_strength_1.png
     :width: 30 %
@@ -257,20 +275,12 @@ Strength of 1, 10, and 100.
 .. image:: images/ecological_strength_100.png
     :width: 30 %
 
-Sequencing coverage is often highly uneven among due to differences in the
-rate at which fragments are amplified during library preparation, the extent
-to which varies across different library prep methods. Moreover, repetitive
-regions of the genome may appear highly similar and thus cluster as high depth
-clusters. Setting a maxdepth helps to remove the latter problem, but at the
-expense of potentially removing good clusters that simply were sequenced
-to high depth. The default maxdepth is set quite high (10,000), but you may
-change it as you see fit.
-
 Example entries to params.txt:
 
 .. parsed-literal::
 
-    1       ## [5] [ecological_strength]: Strength of community assembly process on phenotypic change
+    1             ## [5] [ecological_strength]: Strength of community assembly process on phenotypic change
+    0.001-1       ## [5] [ecological_strength]: Strength of community assembly process on phenotypic change
 
 
 .. _name:
