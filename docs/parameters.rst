@@ -344,7 +344,12 @@ Affected steps = 4, 5. Example entries to params.txt:
 This parameter dictates the strength of interactions in the environmental
 filtering and competition models.
 
-![ecological_strength_0.001](images/ecological_strength_0.001.png)
+.. image:: images/ecological_strength_0.001.png)
+![ecological_strength_0.01](images/ecological_strength_0.01.png)
+![ecological_strength_0.1](images/ecological_strength_0.1.png)
+![ecological_strength_1](images/ecological_strength_1.png)
+![ecological_strength_10](images/ecological_strength_10.png)
+![ecological_strength_1](images/ecological_strength_1.png)
 
 Sequencing coverage is often highly uneven among due to differences in the
 rate at which fragments are amplified during library preparation, the extent
