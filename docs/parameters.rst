@@ -249,8 +249,8 @@ In the following examples the environmental optimum is `3.850979`, and the
 ecological strength is varied from 0.001 to 100. Column 0 is species ID,
 column 1 is trait value, column 2 is unscaled probability of death, and
 column 3 is proportional probability of death. Models with strength of
-0.001 and 0.01 are essentially neutral. Strength of 0.1 a slight advantage
-to individuals very close to the local optimum (e.g. species 't97').
+0.001 and 0.01 are essentially neutral. Strength of 0.1 confers a slight 
+advantage to individuals very close to the local optimum (e.g. species 't97').
 
 .. image:: images/ecological_strength_0.001.png
     :width: 25 %
@@ -259,12 +259,12 @@ to individuals very close to the local optimum (e.g. species 't97').
 .. image:: images/ecological_strength_0.1.png
     :width: 30 %
 
-Ecological strength of 1 (left panel) is noticeably non-neutral (e.g. 't97' 
+Ecological strength of 1 (below, left panel) is noticeably non-neutral (e.g. 't97' 
 survival probability is 10x greater than average). A value of 10 for this 
-parameter generates a _strong_ non-neutral process ('t97' is 100x less 
+parameter generates a _strong_ non-neutral process (below, center panel: 't97' is 100x less 
 likely to die than average, and the distribution of death probabilities is
 more varied). Ecological strength values >> 10 are _extreme_ and will probably
-result in degenerate behavior (e.g. strength of 100 (right panel) in which
+result in degenerate behavior (e.g. strength of 100 (below, right panel) in which
 several of the species will be effectively immortal, with survival probability
 thousands of times better than average).
 
