@@ -122,7 +122,7 @@ Example entries into params.txt:
 5. mutation_rate
 ----------------
 Specify the mutation rate for backward-time coalescent simulation of
-genetic variation. This rate is the per base, per genration probability
+genetic variation. This rate is the per base, per generation probability
 of a mutation under an infinite sites model.
 
 Example entries into params.txt:
@@ -134,31 +134,30 @@ Example entries into params.txt:
 .. _alpha:
 
 6. alpha
----------------------
-
+--------
+Scaling factor for transforming number of demes to number of individuals.
+``alpha`` can be specified as either a single integer value or as a range
+of values.
 
 .. code-block:: bash
 
     2000                 ## [6] [alpha]: Abundance/Ne scaling factor
-
+    1000-10000           ## [6] [alpha]: Abundance/Ne scaling factor
 
 
 .. _sequence_length:
 
 7. sequence_length
 ------------
-There are now many forms of restriction-site associated DNA library preparation
-methods and thus many differently named data types. Currently, we categorize
-these into :ref:`six data types <data_types>`. Follow the link
-to deteremine the appropriate category for your data type.
+Length of the sequence to simulate in the backward-time process under
+an infinite sites model. This value should be specified based on the
+length of the region sequenced for the observed community data in bp.
 
+Example entries to params.txt file:
 
-.. code-block:: python
+.. code-block:: bash
 
-    rad                       ## [7] rad data type (1 cutter, sonication)
-    pairddrad                 ## [7] paired ddrad type (2 different cutters)
-    pairgbs                   ## [7] paired gbs type (1 cutter cuts both ends)
-
+    570                  ## [7] [sequence_length]: Length in bases of the sequence to simulate
 
 .. _S_m:
 
@@ -172,8 +171,8 @@ Example entries to params.txt file:
 
 .. code-block:: bash
 
-    500                     ## [0] [S_m]: Number of species in the regional pool
-    100-1000                ## [0] [S_m]: Number of species in the regional pool
+    500                  ## [0] [S_m]: Number of species in the regional pool
+    100-1000             ## [0] [S_m]: Number of species in the regional pool
 
 
 .. _J_m:
@@ -199,36 +198,31 @@ Example entries to params.txt:
 
 .. parsed-literal::
 
-    33                 ## [10] default offset of 33, converts to min score=20
+    2                    ## [2] [speciation_rate]: Speciation rate of metacommunity
 
 
 .. _death_proportion:
 
 11. death_proportion
 --------------------
-This is the minimum depth at which statistical base calls will be made during
-step 5 consensus base calling. By default this is set to 6, which for most
-reasonable error rates estimates is approximately the minimum depth at which a
-heterozygous base call can be distinguished from a sequencing error.
 
 Example entries to params.txt
 
 .. parsed-literal::
 
-    6                 ## [11] set mindepth statistical to 6
+    0.7                  ## [3] [death_proportion]: Proportion of speciation rate to be extinction rate
 
 
 .. _trait_rate_meta:
 
 12. trait_rate_meta
----------------------
+-------------------
 
 Example entries to params.txt:
 
 .. parsed-literal::
 
-    6                 ## [12] set to relatively high value similar to mindepth_stat
-
+    2                    ## [4] [trait_rate_meta]: Trait evolution rate parameter for metacommunity
 
 .. _ecological_strength:
 13. ecological_strength
@@ -282,78 +276,45 @@ Example entries to params.txt:
 
 14. name
 --------------------
-This the level of sequence similarity at which two sequences are identified
-as being homologous, and thus cluster together. The value should be entered
-as a decimal (e.g., 0.90). We do not recommend using values higher than 0.95,
-as homologous sequences may not cluster together at such high threshold due
-to the presence of Ns, indels, sequencing errors, or polymorphisms.
 
-Affected steps = 3, 6. Example entries to params.txt:
+Example entries to params.txt:
 
 .. parsed-literal::
 
-    0.90              ## [14] clust threshold set to 90%
-    0.85              ## [14] clust threshold set to 85%
+    island1              ## [0] [name]: Local community name
 
 
 .. _J:
 
 15. J
 ---------------
-The maximum number of allowed mismatches between the barcodes in the barcodes
-file and those found in the sequenced reads. Default is 0. Barcodes usually differ
-by a minimum of 2 bases, so I would not generally recommend using a value >2.
 
-Affected steps = 1. Example entries to params.txt:
+Example entries to params.txt:
 
 .. parsed-literal::
 
-    0              ## [15] allow no mismatches
-    1              ## [15] allow 1 mismatched base
+    1000-2000                 ## [1] [J]: Number of individuals in the local community
 
 
 .. _m:
 
 16. m
 --------------------
-It is important to remove Illumina adapters from your data if present. 
-Depending on the fidelity of the size selection procedure implemented during
-library preparation there is often at least some small proportion of sequences
-in which the read length is longer than the actual DNA fragment, such that the
-primer/adapter sequence ends up in the read. This occurs more commonly in 
-double-digest (GBS, ddRAD) data sets that use a common cutter, and can be 
-especially problematic for GBS data sets, in which short fragments are sequenced 
-from either end. The `filter_adapters` parameter has three settings (0, 1, or 2). 
-**If 0**, then reads are only removed if they contain more Ns than allowed by the
-`max_low_qual_bases` parameter. **If 1**, then reads are trimmed to the first base
-which has a Qscore < 20 (on either read for paired data), and also removed if there
-are too many Ns. **If 2**, then reads are searched for the common Illumina adapter, 
-plus the reverse complement of the second cut site (if present), plus the barcode
-(if present), and this part of the read is trimmed. This filter is applied using 
-code from the software `cutadapt`, which allows for errors within the adapter 
-sequence. 
 
-Affected steps = 2. Example entries to params.txt:
+Example entries to params.txt:
 
 .. parsed-literal::
 
-    0                ## [16] No adapter filtering
-    1                ## [16] filter based on quality scores
-    2                ## [16] strict filter for adapters
+    0.01                 ## [2] [m]: Migration rate into local community
 
 
 .. _speciation_prob:
 
 17. speciation_prob
 ------------------------
-During step 2 if `filter_adapters` is > 0 reads may be trimmed to a shorter length
-if they are either low quality or contain Illumina adapter sequences. 
-By default MESS will keep trimmed reads down to a minimum length of 35bp. 
-If you want to set a higher limit you can do so here.
 
-Affected steps = 2. Example entries to params.txt
+Example entries to params.txt
 
 .. parsed-literal::
 
-    50                ## [17] minimum trimmed seqlen of 50
-    75                ## [17] minimum trimmed seqlen of 75
+    0.0001-0.001                    ## [3] [speciation_prob]: Probability of speciation per timestep in local community
