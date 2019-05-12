@@ -62,7 +62,7 @@ which will run the forward-time process for WF * J / 2 time-steps (where a time-
 is one birth/death/colonization/speciation event). For Lambda you may select
 either an exact Lambda value (a real value between 0 and 1 exclusive), or you
 can set `generations` equal to 0, which will draw random Lambda values between
-0 and 1 for each simulatoin.
+0 and 1 for each simulation.
 
 Example entries into params.txt:
 
