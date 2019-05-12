@@ -6,146 +6,141 @@ Community Assembly Parameters
 ====================
 The parameters contained in a params file affect the behavior of various parts
 of the forward-time and backward-time assembly process. The defaults that we 
-chose are fairly reasonable values as as startin point, however, you will 
+chose are fairly reasonable values as as starting point, however, you will 
 always need to modify at least a few of them (for example, to indicate the 
 location of your data), and often times you will want to modify many of the 
 parameters.
 
 Below is an explanation of each parameter setting, the eco-evolutionary process
-that it effects, and example entries for the parameter into a params.txt file.
+that it affects, and example entries for the parameter into a params.txt file.
 
 
 .. _simulation_name:
 
 0. simulation_name
 -----------------
-The Assembly name is used as the prefix for all output files. It should be a
-unique identifier for the assembly, meaning the set of parameters you are using
-for the current data set. When I assemble multiple data with different parameter
-combinations I usually either name them consecutively (e.g., data1, data2), or
-with names indicating their parameter combinations (e.g., data_clust90,
-data_clust85). The Assembly name cannot be changed after an Assembly is created
-with the ``-n`` flag, but a new Assembly with a different name can be created
-by branching the Assembly (see :ref:`branching workflow<branching_workflow>`).
+The simulation name is used as the prefix for all output files. It should be a
+unique identifier for this particular set of simulations, meaning the set of 
+parameters you are using for the current data set. When I run multiple related
+simulations I usually use names indicating the specific parameter combinations 
+(e.g., filtering_nospeciation, J5000_neutral). 
 
-Affected steps: 1-7
-Example: new Assemblies are created with the -n or -b options to MESS:
+Example: New community simulations are created with the -n options to MESS:
 
 .. code-block:: bash
 
-    >>> MESS -n data1                       ## create a new assembly named data1
+    >>> MESS -n J1000_neutral          ## create a new assembly named J1000_neutral
 
 
 .. _project_dir:
 
 1. project_dir
 --------------
-A project directory can be used to group together multiple related Assemblies.
+A project directory can be used to group together multiple related simulations.
 A new directory will be created at the given path if it does not already exist.
-A good name for Project_dir will generally be the name of the organism being studied.
-The project dir path should generally not be changed after an analysis is initiated,
-unless the entire directory is moved to a different location/machine.
+A good name for project_dir will generally be the name of the community/system being 
+studied. The project dir path should generally not be changed after simulations/analysis
+are initiated, unless the entire directory is moved to a different location/machine.
 
-Affected steps: 1-7
 Example entries into params.txt:
 
 .. code-block:: bash
 
     /home/watdo/MESS/galapagos         ## [1] create/use project dir called galapagos
-    galapagos                          ## [1] create/use project dir called galapagos
+    galapagos                          ## [1] create/use project dir called galapagos in cwd (./)
 
 
 .. _generations:
 
 2. generations
------------------
-This is a path to the location of raw (non-demultiplexed) fastq data files. If
-your data are already demultiplexed then this should be left blank. The input
-files can be gzip compressed (i.e., have name-endings with .gz). If you enter
-a path for raw data files then you should also enter a path to a
-:ref:`barcodes file<barcodes file>`.
-To select multiple files, or all files in a directory, use a wildcard character (*).
+--------------
+This parameter specifies the amount of time to run forward-time simulations. 
+It can be specified in a number of different ways, but overall time can be 
+considered either in terms of Wright-Fisher (WF) generations or in terms of Lambda.
+For WF generations you should specify an integer value (or a range of integer values)
+which will run the forward-time process for WF * J / 2 time-steps (where a time-step
+is one birth/death/colonization/speciation event). For Lambda you may select
+either an exact Lambda value (a real value between 0 and 1 exclusive), or you
+can set `generations` equal to 0, which will draw random Lambda values between
+0 and 1 for each simulatoin.
 
-Affected steps = 1
 Example entries into params.txt:
 
 .. code-block:: bash
 
-    /home/deren/MESS/tests/data/*.fastq.gz     ## [2] select all gzip data files
-    ~/MESS/tests/data/*.fastq.gz               ## [2] select all gzip data files
-    ./ipsimdata/rad_example*.fastq.gz            ## [2] select files w/ `rad_example` in name
+    0                  ## [2] [generations]: Sample random Lambda values for each simulation 
+    100                ## [2] [generations]: Run each simulation for 100 WF generations
+    50-100             ## [2] [generations]: Sample uniform between 50-100 WF generations for each simulation
 
 
 .. _community_assembly_model:
 
 3. community_assembly_model
 ----------------
-This is a path to the location of a barcodes_file_. This is used in step1
-for demuliplexing, and can also be used in step2 to improve the detection of
-adapter/primer sequences that should be filtered out. If your data are already
-demultiplexed the barcodes path can be left blank.
+With this parameter you may specify a neutral or non-neutral scenario for
+the forward time process. There are currently three different options for
+this parameter: `neutral`, `filtering`, or `competition`. The `neutral`
+case indicates full ecological equivalence of all species, so all
+individuals have an equal probability of death at each time-step. In the
+`filtering` and `competition` models survival probability is contingent
+on proximity of species trait values to the environmental optimum, or distance
+from the local trait mean, respectively.
 
-Affected steps = 1-2.
 Example entries into params.txt:
 
-.. code-block:: python
+.. code-block:: bash
 
-    /home/deren/ipsimdata/rad_example_barcodes.txt    ## [3] select barcode file
-    ./ipsimdata/rad_example_barcodes.txt              ## [3] select barcode file
+    neutral             ## [3] [community_assembly_model]: Select the neutral process forward-time
+    filtering           ## [3] [community_assembly_model]: Select the environmental filtering process
+    *                   ## [3] [community_assembly_model]: Randomly choose one of the community assembly models
 
 
 .. _speciation_model:
 
 4. speciation_model
 --------------------
-This is a path to the location of sorted fastq data. If your data are already
-demultiplexed then this is the location from which data will be loaded when
-you run step 1. A wildcard character can be used to select multiple
-files in directory.
 
-Affected steps = 1
+Specify a speciation process in the local community. If `none` then no
+speciation happens locally. If `point_mutation` then one individual
+will instantaneously speciate at rate `speciation_prob` for each forward-time
+step. If `random_fission` then one lineage will randomly split into
+two lineages at rate `speciation_prob` with the new lineage receiving
+`n = U~(1, local species abundance)` individuals, and the parent lineage 
+receiving `1 - n` individuals. `protracted` will specify a model of
+protracted speciation, but this is as yet unimplemented.
+
 Example entries into params.txt:
 
-.. code-block:: python
+.. code-block:: bash
 
-    /home/deren/MESS/tests/ipsimdata/*.fastq.gz    ## [4] select all gzip data files
-    ~/MESS/tests/ipsimdata/*.fastq                 ## [4] select all fastq data files
-    ./ipsimdata/rad_example*.fastq.gz                ## [4] select files w/ `rad_example` in name
+    none                ## [4] [speciation_model]: No speciation in the local community
+    point_mutation      ## [4] [speciation_model]: Point mutation specation process
 
 
 .. _mutation_rate:
 
 5. mutation_rate
---------------------
-There are four :ref:`Assembly_methods<Assembly_methods>` options in MESS:
-denovo, reference, denovo+reference, and denovo-reference.
-The latter three all require a reference sequence file (param #6) in fasta
-format. See the :ref:`tutorials` for an example.
+----------------
+Specify the mutation rate for backward-time coalescent simulation of
+genetic variation. This rate is the per base, per genration probability
+of a mutation under an infinite sites model.
 
-Affected steps = 3, 6
 Example entries into params.txt:
 
-.. code-block:: python
+.. code-block:: bash
 
-    denovo                            ## [5] denovo assembly
-    reference                         ## [5] reference assembly
-    denovo+reference                  ## [5] reference addition assembly
-    denovo-reference                  ## [5] reference subtraction assembly
-
+    2.2e-08             ## [5] [mutation_rate]: Mutation rate scaled per base per generation
 
 .. _alpha:
 
 6. alpha
 ---------------------
-The reference sequence file should be in fasta format. It does
-not need to be a complete nuclear genome, but could also be any
-other type of data that you wish to map RAD data to; for example
-plastome or transcriptome data.
 
-.. code-block:: python
 
-    ~/MESS/tests/ipsimdata/rad_example_genome.fa   ## [6] select fasta file
-    ./data/finch_full_genome.fasta                   ## [6] select fasta file
+.. code-block:: bash
+
+    2000                 ## [6] [alpha]: Abundance/Ne scaling factor
+
 
 
 .. _sequence_length:
