@@ -63,6 +63,7 @@ class Region(object):
         ## A dictionary for holding prior ranges for values we're interested in
         self._priors = dict([
                         ("alpha", []),
+                        ("community_assembly_model", []),
                         ("generations", []),
         ])
 
@@ -189,6 +190,9 @@ class Region(object):
                     self.paramsdict[param] = tup
 
             elif param == "community_assembly_model":
+                if newvalue == "*":
+                    self._priors[param] = ["neutral", "filtering", "competition"]
+                    newvalue = np.random.choice(self._priors[param])
                 self.paramsdict[param] = newvalue
 
             elif param == "speciation_model":
@@ -305,7 +309,11 @@ class Region(object):
                 ## the sampled value
                 if full:
                     if key in list(self._priors.keys()):
-                        if self._priors[key]:
+                        ## The prior on community assembly model is a little goofy
+                        ## since it's a list, and not a search range
+                        if key == "community_assembly_model" and self._priors[key]:
+                            paramvalue = "*"
+                        elif self._priors[key]:
                             paramvalue = "-".join([str(i) for i in self._priors[key]])
 
                 padding = (" "*(20-len(paramvalue)))
@@ -370,6 +378,13 @@ class Region(object):
         max_idx = self.metacommunity.community["abundances"].argmax()
         new_species = self.metacommunity.community["ids"][max_idx]
         trait_value = self.metacommunity.community["trait_values"][max_idx]
+
+        ## Nudge the trait value of the initial colonizer or else
+        ## for filtering models you can get in big trouble (sims run forever)
+        if abs(trait_value - self.metacommunity._hackersonly["filtering_optimum"]) < 1:
+            trait_value += 1
+            self.metacommunity.community["trait_values"][max_idx] = trait_value
+
         return new_species, trait_value
 
 
@@ -390,6 +405,9 @@ class Region(object):
     def run(self, sims, force=False, ipyclient=None, quiet=False):
         """ Do the heavy lifting here"""
         if not quiet: print("    Generating {} simulation(s).".format(sims))
+
+        if not os.path.exists(self.paramsdict["project_dir"]):
+            os.mkdir(self.paramsdict["project_dir"])
 
         simfile = os.path.join(self.paramsdict["project_dir"], "SIMOUT.txt")
         ## Open output file. If force then overwrite existing, otherwise just append.
@@ -537,6 +555,10 @@ class Region(object):
         if self._priors["alpha"]:
             self.paramsdict["alpha"] = sample_param_range(self._priors["alpha"])[0]
             LOGGER.debug("alpha - {}".format(self.paramsdict["alpha"]))
+
+        if self._priors["community_assembly_model"]:
+            self.paramsdict["community_assembly_model"] = np.random.choice(self._priors["community_assembly_model"])
+
         ## Flip the metacommunity per simulation so we get new draws of trait values.
         ## This is a little slow for logser, and also performance scales with metacommunity size
         self._reset_metacommunity()
@@ -616,10 +638,10 @@ class Region(object):
                 print("    Exception in fancy_plots() - {}".format(inst))
 
 
-    @memoize
     def get_trait(self, loc_id):
         try:
-            trt = self.metacommunity.community['trait_values'][self.metacommunity.community["ids"] == loc_id][0]
+            trt = self.metacommunity.trait_dict[loc_id]
+            #trt = self.metacommunity.community['trait_values'][self.metacommunity.community["ids"] == loc_id][0]
         except Exception as inst:
             raise MESSError("Species has no trait value: {}".format(loc_id))
         return trt
@@ -712,5 +734,3 @@ if __name__ == "__main__":
     print("Testing lambda function.")
     data.simulate(_lambda=.4)
 
-    #data.run(10)
-    print(data.get_most_abundant())

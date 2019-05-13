@@ -1,5 +1,4 @@
-#!/usr/bin/env python2.7
-
+#!/usr/bin/env python2.7 
 from __future__ import print_function
 
 from scipy.stats import logser
@@ -43,7 +42,6 @@ class LocalCommunity(object):
                         ("J", J),
                         ("m", m),
                         ("speciation_prob", 0),
-                        ("background_death", 0.25)
         ])
 
         ## A dictionary for holding prior ranges for values we're interested in
@@ -103,8 +101,12 @@ class LocalCommunity(object):
         self.local_info = pd.DataFrame([])
 
         ## The regional pool that this local community belongs to
-        ## this is updated by Region._link_local(), so don't set it by hand
+        ## This is updated by Region._link_local(), so don't set it by hand
         self.region = ""
+        ## death_step will be a reference to the function to select the
+        ## individual for removal. It is set dependent on which type of
+        ## assembly model the region specifies, and is also set by _link_local()
+        self.death_step = ""
 
         self.files = dict({
                 "full_output": [],
@@ -131,9 +133,6 @@ class LocalCommunity(object):
         self.lambda_through_time = OrderedDict({})
         self.species_through_time = OrderedDict({})
 
-        ## Track number of rejections per death step
-        self.rejections = []
-
         ## Invasiveness is unimplemented and may not make it into MESS proper.
         ## The invasive species identity
         self.invasive = -1
@@ -148,7 +147,7 @@ class LocalCommunity(object):
         LOGGER.debug("Copying LocalCommunity - {}".format(self.name))
         new = LocalCommunity(self.name)
 
-        new.region = self.region
+        new._set_region(self.region)
         new._priors = self._priors
 
         new.paramsdict = self.paramsdict
@@ -156,7 +155,10 @@ class LocalCommunity(object):
         for param in ["J", "m", "speciation_prob"]:
             ## if _priors is empty then this param is fixed
             if np.any(self._priors[param]):
-                self.paramsdict[param] = sample_param_range(new._priors[param])[0]
+                loguniform = False
+                if param in ["m", "speciation_prob"]:
+                    loguniform = True
+                self.paramsdict[param] = sample_param_range(new._priors[param], loguniform=loguniform)[0]
 
         new._hackersonly = self._hackersonly
         LOGGER.debug("Copied LocalCommunity - {}".format(self.paramsdict))
@@ -207,7 +209,30 @@ class LocalCommunity(object):
     def _set_region(self, region):
         self.region = region
         self.SGD = SGD([], ndims=region._hackersonly["sgd_dimensions"], nbins=region._hackersonly["sgd_bins"])
-        self._hackersonly["trait_rate_local"] = _get_trait_rate_local(self.region)
+        self._hackersonly["trait_rate_local"] = self._get_trait_rate_local()
+        self._set_death_step()
+
+
+    def _set_death_step(self):
+        assembly_model = self.region.paramsdict["community_assembly_model"]
+        if assembly_model == "neutral":
+            self.death_step = self._neutral_death_step
+        elif assembly_model == "competition":
+            self.death_step = self._competition_death_step
+        elif assembly_model == "filtering":
+            self.death_step = self._filtering_death_step
+            self._filtering_update_death_probs()
+        else:
+            raise Exception("unrecognized community assembly model in _set_death_step: {}".format(assembly_model))
+
+
+    ## Update global death probabilities for the filtering model
+    def _filtering_update_death_probs(self):
+        fo = self.region.metacommunity._hackersonly["filtering_optimum"]
+        es = self.region.metacommunity.paramsdict["ecological_strength"]
+        def dprob(trt):
+            return 1 - (np.exp(-((trt - fo) ** 2)/es))
+        self._filt_death_probs = {sp:dprob(trt) for sp, trt in self.region.metacommunity._get_species_traits().items()}
 
 
     ## Getting params header and parameter values drops the local
@@ -252,7 +277,7 @@ class LocalCommunity(object):
                 tup = tuplecheck(newvalue, dtype=float)
                 if isinstance(tup, tuple):
                     self._priors[param] = tup
-                    self.paramsdict[param] = sample_param_range(tup)[0]
+                    self.paramsdict[param] = sample_param_range(tup, loguniform=True)[0]
                 else:
                     self.paramsdict[param] = tup
 
@@ -264,12 +289,9 @@ class LocalCommunity(object):
                 tup = tuplecheck(newvalue, dtype=float)
                 if isinstance(tup, tuple):
                     self._priors[param] = tup
-                    self.paramsdict[param] = sample_param_range(tup)[0]
+                    self.paramsdict[param] = sample_param_range(tup, loguniform=True)[0]
                 else:
                     self.paramsdict[param] = tup
-
-            elif param == "background_death":
-                self.paramsdict[param] = float(newvalue)
 
             else:
                 self.paramsdict[param] = newvalue
@@ -277,6 +299,15 @@ class LocalCommunity(object):
             LOGGER.debug("Bad parameter - {} {}".format(param, newvalue))
             ## Do something intelligent here?
             raise
+
+
+    def _get_trait_rate_local(self):
+        try:
+            ext = self.region.metacommunity.paramsdict["speciation_rate"] * self.region.metacommunity.paramsdict["death_proportion"]
+            val = self.region.metacommunity.paramsdict["trait_rate_meta"]/ (self.region.metacommunity.paramsdict["speciation_rate"] + ext)
+        except Exception as inst:
+            raise MESSError("Error in geting trait rate for local community: {}".format(inst))
+        return val
 
 
     def write_params(self, outfile=None, full=False, append=True):
@@ -423,73 +454,64 @@ class LocalCommunity(object):
         LOGGER.debug("Done prepopulating - {}".format(self))
 
 
-    def death_step(self):
-
-        ## Select the individual to die
+    def _neutral_death_step(self):
         victim = random.choice(self.local_community)
-        done = False
+        self._finalize_death(victim)
 
-        ## Emtpy niche always dies and neutral model always accepts selection regardless
-        if victim == None or self.region.paramsdict["community_assembly_model"] == "neutral":
-            done = True
 
-        reject = 0
-        survival_scalar = self.paramsdict["background_death"]
-        while not done:
-            ## If you made it this far then you're doing a trait model.
-
-            ## If reject is > 0, then this is a trait model that has chosen an individual
-            ## at time 0, so we will keep looping here and sampling only real individuals
-            ## Saves a bunch of time looping and grabbing None over and over, esp in early days
-            if reject > 0:
-                victim = random.choice([x for x in self.local_community if x != None])
-
-            ## This is the "get on with it" switch. Only for trait models, especially
-            ## for when the competition model goes off the rails. Here ratchet up the
-            ## allowance for death so it doesn't just sit there spinning forever
-            if reject % 5 == 0 and reject > 0:
-                survival_scalar += .05
-                LOGGER.debug("Survival scalar bump - {}".format(survival_scalar))
-
-            death_thresh = np.random.uniform(0,1)
-            victim_trait = self.region.get_trait(victim)
-
-            ## TODO: There's a bunch of nonsense here that could be optimized.
-            ## The trait based stuff is so much slower than the neutral, and
-            ## the competition model is especially bad, so optimization could
-            ## be useful.
-            if self.region.paramsdict["community_assembly_model"] == "filtering":
-
-                ## Call to _get_filter is memoized so results are cached
-                death_probability = _get_filtering_death_prob(self.region, victim_trait)
-                death_probability = (1 - death_probability) * survival_scalar + death_probability
-                target_trait_val = self.region.metacommunity._hackersonly["filtering_optimum"]
-
-            elif self.region.paramsdict["community_assembly_model"] == "competition":
-                mean_local_trait = self.region.get_trait_mean(self.local_community)
-                death_probability = _get_competition_death_prob(self.region, victim_trait, mean_local_trait)
-                death_probability = (1 - death_probability) * survival_scalar + death_probability
-                target_trait_val = mean_local_trait
-
-            LOGGER.debug("rj {} trait {} dprob {} dthr {} target {}".format(reject, victim_trait, death_probability, death_thresh, target_trait_val))
-            if death_probability > death_thresh:
-                done = True
-            else:
-                reject = reject + 1
-
-        self.rejections.append(reject)
-
-        ## If no invasive has invaded then just do the normal sampling
-        if self.invasive == -1:
-            ## If no invasive species yet just go on
+    def _competition_death_step(self):
+        victim = random.choice(self.local_community)
+        if victim == None:
             pass
         else:
+            mean_local_trait = self.region.get_trait_mean(self.local_community)
+            ## Get local traits for all individuals in the community (remove None first)
+            loc_inds = [x for x in self.local_community if x != None]
+            local_traits = map(self.region.get_trait, loc_inds)
+            ## Scale ecological strength for competition to be in the same units
+            ## as for filtering
+            es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
+            ## Apply the competition equation to get fitness per individual
+            death_probs = map(lambda x: np.exp(-((x - mean_local_trait) ** 2)/es), local_traits)
+            ## Scale all fitness values to proportions
+            death_probs = np.array(death_probs)/np.sum(death_probs)
+            ## Get the victim conditioning on unequal death probability
+            vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
+            victim = loc_inds[vic_idx]
+
+        self._finalize_death(victim)
+
+
+    def _filtering_death_step(self):
+        victim = random.choice(self.local_community)
+        if victim == None:
+            pass
+        else:
+            ## Get local traits for all individuals in the community (remove None first)
+            loc_inds = [x for x in self.local_community if x != None]
+            ## Fetch pre-calculated death probs for each individual
+            death_probs = [self._filt_death_probs[x] for x in loc_inds]
+            ## Scale all fitness values to proportions
+            death_probs = np.array(death_probs)/np.sum(death_probs)
+            ## Get the victim conditioning on unequal death probability
+            vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
+            victim = loc_inds[vic_idx]
+
+        self._finalize_death(victim)
+
+
+    def _finalize_death(self, victim):
+        ## More old invasiveness code. Should probably just get rid of it eventually.
+        ## If no invasive has invaded then just do the normal sampling
+        ##if self.invasive == -1:
+            ## If no invasive species yet just go on
+        ##    pass
+        ##else:
             ## If invasiveness is less than the random value remove the invasive individual
             ## else choose a new individual
-            if victim == self.invasive and np.random.rand() < self.invasiveness:
-                self.survived_invasives += 1
-                victim = random.choice(self.local_community)
-
+        ##    if victim == self.invasive and np.random.rand() < self.invasiveness:
+        ##        self.survived_invasives += 1
+        ##        victim = random.choice(self.local_community)
         try:
             ## Clean up local community list and founder flag list
             idx = self.local_community.index(victim)
@@ -499,7 +521,7 @@ class LocalCommunity(object):
             ## If the species of the victim went locally extinct then clean up local_info
             self._test_local_extinction(victim)
         except Exception as inst:
-            raise inst
+            raise MESSError("Error in _finalize_death(): {}".format(inst))
 
 
     def _test_local_extinction(self, victim):
@@ -575,13 +597,16 @@ class LocalCommunity(object):
                 new_species = self.migrate_step()
                 chx = new_species
 
+                ## The invasion code "works" in that it worked last time I tried it, but it's
+                ## not doing anything right now except slowing down the process. I don't want to dl
+                ## it in case we want to resurrect, so it's just commented out for now. 5/2019 iao.
                 ## Only set the invasive species once at the time of next migration post invasion time
                 ## If invasion time is < 0 this means "Don't do invasive"
-                if not self.invasion_time < 0:
-                    if self.invasive == -1 and self.current_time >= self.invasion_time:
-                        self.invasive = new_species
-                        LOGGER.info("setting invasive species {} at time {}".format(self.invasive, self.current_time))
-                        self.invasion_time = self.current_time
+                #if not self.invasion_time < 0:
+                #    if self.invasive == -1 and self.current_time >= self.invasion_time:
+                #        self.invasive = new_species
+                #        LOGGER.info("setting invasive species {} at time {}".format(self.invasive, self.current_time))
+                #        self.invasion_time = self.current_time
 
                 ## Add the colonizer to the local community, record the colonization time
                 self.local_community.extend([new_species] * self._hackersonly["mig_clust_size"])
@@ -635,10 +660,6 @@ class LocalCommunity(object):
         """
         LOGGER.debug("Initiate speciation process - {}".format(chx))
 
-        ## Sample the individual to undergo speciation. Remove all
-        ## empty deme space prior to this, if it exists, since we don't
-        ## want empty deme space speciating.
-#        chx = random.choice([sp for sp in self.local_community if sp != None])
         idx = self.local_community.index(chx)
 
         ## Construct the new species name.
@@ -657,9 +678,14 @@ class LocalCommunity(object):
         ## Trait evolution. Offspring trait is normally distributed
         ## with mean of parent value, and stdv equal to stdv of BM
         ## process in metacommunity times average lineage lifetime
-        trt = np.random.normal(parent_trait, self._hackersonly["trait_rate_local"], 1)
+        trt = np.random.normal(parent_trait, self._hackersonly["trait_rate_local"], 1)[0]
 
         self.region._record_local_speciation(sname, trt)
+
+        ## If filtering then update the death probabilities to record
+        ## death probability of the new species
+        if self.region.paramsdict["community_assembly_model"] == "filtering":
+            self._filtering_update_death_probs()
 
         if self.region.paramsdict["speciation_model"] == "point_mutation":
 
@@ -790,6 +816,7 @@ class LocalCommunity(object):
 
     def simulate_seqs(self):
         self.species = []
+        local_info_bak = self.local_info.copy(deep=True)
         try:
             ## Hax. Remove the empty deme from local info. This _might_ break the fancy plots.
             self.local_community = [x for x in self.local_community if x != None]
@@ -821,7 +848,7 @@ class LocalCommunity(object):
                     migration_rate = dat[sp]["post_colonization_migrants"]/float(dat[sp]['colonization_times'])
                 except ZeroDivisionError as inst:
                     ## This should only happen when coltime is 0, which should be never
-                    LOGGER.error("Got bad coltime - {}".format(dat[col]))
+                    LOGGER.error("Got bad divergence time - {}".format(dat[sp]['colonization_times']))
                     migration_rate = 0
 
                 sp_obj = species(name = sp,
@@ -885,10 +912,12 @@ class LocalCommunity(object):
                 sp_obj.get_sumstats(samps, metasamps)
                 self.species.append(sp_obj)
 
+        ## Return local_info to the original state in case you want to keep running
+        ## forward simulations
+        self.local_info = local_info_bak
+
 
     def get_stats(self):
-        if self.rejections:
-            LOGGER.debug("Average number of rejections - {}".format(np.mean(self.rejections)))
 
         LOGGER.debug("Entering get_stats()")
         self.simulate_seqs()
@@ -924,32 +953,6 @@ class LocalCommunity(object):
         return params.append(ss.T)
 
 
-@memoize
-def _get_filtering_death_prob(region, victim_trait):
-    try:
-        val = 1 - (np.exp(-((victim_trait - region.metacommunity._hackersonly["filtering_optimum"]) ** 2)/region.metacommunity.paramsdict["ecological_strength"]))
-    except Exception as inst:
-        raise MESSError("Error getting death prob using trait - {}".format(victim_trait))
-    return val
-
-
-@memoize
-def _get_competition_death_prob(region, victim_trait, mean_local_trait):
-    try:
-        val = death_probability = (np.exp(-((victim_trait - mean_local_trait) ** 2)/region.metacommunity.paramsdict["ecological_strength"]))
-    except Exception as inst:
-        raise MESSError("Error in geting death prob using trait & mean - {} {}".format(victim_trait, mean_local_trait))
-    return val
-
-@memoize
-def _get_trait_rate_local(region):
-    try:
-        ext = region.metacommunity.paramsdict["speciation_rate"] * region.metacommunity.paramsdict["death_proportion"]
-        val = region.metacommunity.paramsdict["trait_rate_meta"]/ (region.metacommunity.paramsdict["speciation_rate"] + ext)
-    except Exception as inst:
-        raise MESSError("Error in geting trait rate for local community")
-    return val
-
 #############################
 ## Model Parameter Info Dicts
 #############################
@@ -958,7 +961,6 @@ LOCAL_PARAMS = {
     "J" : "Number of individuals in the local community",\
     "m" : "Migration rate into local community",\
     "speciation_prob" : "Probability of speciation per timestep in local community",\
-    "background_death" : "Baseline death probability in trait-based models",\
 }
 
 
