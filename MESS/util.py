@@ -71,7 +71,7 @@ def _expander(namepath):
     return namepath
 
 
-def sample_param_range(param, nsamps=1):
+def sample_param_range(param, nsamps=1, loguniform=False):
     """ Sample a parameter from a range. This is used to allow parameter
     values in the params file to be specified as a tuple and have simulations
     sample from the range on the fly.
@@ -79,9 +79,17 @@ def sample_param_range(param, nsamps=1):
     LOGGER.debug("Sampled from range {}".format(param))
     if isinstance(param, tuple):
         if isinstance(param[0], float):
-            param = np.round(np.random.uniform(param[0], param[1], nsamps), 5)
+            if loguniform:
+                param = np.random.uniform(np.log10(param[0]), np.log10(param[1]), size=nsamps)
+                param = np.power(10, param)
+            else:
+                param = np.round(np.random.uniform(param[0], param[1], nsamps), 5)
         else:
-            param = np.random.randint(param[0], param[1], nsamps)
+            if loguniform:
+                param = np.random.uniform(np.log10(param[0]), np.log10(param[1]), nsamps)
+                param = np.int32(np.power(10, param))
+            else:
+                param = np.random.randint(param[0], param[1], nsamps)
     elif param == 0:
         param = np.round(np.random.random(nsamps), 3)
     else:

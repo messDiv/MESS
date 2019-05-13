@@ -155,7 +155,10 @@ class LocalCommunity(object):
         for param in ["J", "m", "speciation_prob"]:
             ## if _priors is empty then this param is fixed
             if np.any(self._priors[param]):
-                self.paramsdict[param] = sample_param_range(new._priors[param])[0]
+                loguniform = False
+                if param in ["m", "speciation_prob"]:
+                    loguniform = True
+                self.paramsdict[param] = sample_param_range(new._priors[param], loguniform=loguniform)[0]
 
         new._hackersonly = self._hackersonly
         LOGGER.debug("Copied LocalCommunity - {}".format(self.paramsdict))
@@ -274,7 +277,7 @@ class LocalCommunity(object):
                 tup = tuplecheck(newvalue, dtype=float)
                 if isinstance(tup, tuple):
                     self._priors[param] = tup
-                    self.paramsdict[param] = sample_param_range(tup)[0]
+                    self.paramsdict[param] = sample_param_range(tup, loguniform=True)[0]
                 else:
                     self.paramsdict[param] = tup
 
@@ -286,7 +289,7 @@ class LocalCommunity(object):
                 tup = tuplecheck(newvalue, dtype=float)
                 if isinstance(tup, tuple):
                     self._priors[param] = tup
-                    self.paramsdict[param] = sample_param_range(tup)[0]
+                    self.paramsdict[param] = sample_param_range(tup, loguniform=True)[0]
                 else:
                     self.paramsdict[param] = tup
 

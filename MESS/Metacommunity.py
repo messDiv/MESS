@@ -92,7 +92,10 @@ class Metacommunity(object):
     def _resample_priors(self):
         for k,v in self._priors.items():
             if np.array(v).any():
-                self.paramsdict[k] = sample_param_range(v)[0]
+                loguniform = False
+                if k in ["ecological_strength"]:
+                    loguniform = True
+                self.paramsdict[k] = sample_param_range(v, loguniform=loguniform)[0]
 
 
     def _simulate_metacommunity(self, J, S_m, speciation_rate, death_proportion, trait_rate_meta):
@@ -191,7 +194,10 @@ class Metacommunity(object):
                 tup = tuplecheck(newvalue, dtype=dtype)
                 if isinstance(tup, tuple):
                     self._priors[param] = tup
-                    self.paramsdict[param] = sample_param_range(tup)[0]
+                    loguniform = False
+                    if param in ["ecological_strength"]:
+                        loguniform = True
+                    self.paramsdict[param] = sample_param_range(tup, loguniform=loguniform)[0]
                 else:
                     self.paramsdict[param] = tup
                 LOGGER.debug("{} {}".format(param, tup))
