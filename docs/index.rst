@@ -7,16 +7,10 @@ Welcome to MESS's documentation!
 ================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    installation
    tutorial_cli
    tutorial_api
    parameters
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
