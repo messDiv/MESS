@@ -13,4 +13,7 @@ Welcome to MESS's documentation!
    tutorial_cli
    tutorial_api
    parameters
+   api documentation
 
+
+The code is on `github <https://github.com/messDiv/MESS>`_
