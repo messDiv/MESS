@@ -292,7 +292,9 @@ class Regressor(Ensemble):
     """
     This class wraps all the parameter estimation machinery.
 
-    .. note:: watdo
+    .. note:: A Regressor class can be constructed in one of two ways: either
+        passing in all the necessary parameters (specifically the empirical
+        df and the simulations), or you can pass in a :class:`.Classifier`
 
     :param pandas.DataFrame empirical_df: A DataFrame containing the empirical
         data. This df has a very specific format which is documented here.
