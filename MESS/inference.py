@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 from boruta import BorutaPy
-from MESS.util import progressbar
+from MESS.util import progressbar, MESSError
 from skgarden import RandomForestQuantileRegressor
 from sklearn import metrics
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier,\
@@ -29,7 +29,8 @@ LOGGER = logging.getLogger(__name__)
 ## calculating summary stats, reading the simulated date, and reshaping the sim 
 ## sumstats to match the stats of the real data.
 class Ensemble(object):
-    def __init__(self, empirical_df, simfile, algorithm="rf", verbose=False):
+    def __init__(self, empirical_df, simfile, target_model=None, algorithm="rf", verbose=False):
+        self.simfile = simfile
         self.algorithm = algorithm
         ## Fetch empirical data and calculate the sumstats for the datatypes passed in
         self.empirical_df = empirical_df
@@ -42,7 +43,14 @@ class Ensemble(object):
         try:
             ## Read in simulated data, split it into features and targets,
             ## and prune the features to correspond to the loaded empirical data
-            self.sim_df = pd.read_csv(simfile, sep="\t", header=0)
+            ## If target_model is passed in then prune out all other sims. This
+            ## is only used by the Regressor code, but it's here because this
+            ## is where the data splitting happens.
+            if target_model:
+                self.sim_df = pd.read_csv(simfile, sep="\t", header=0)
+                self.sim_df = self.sim_df[self.sim_df["community_assembly_model"] == target_model]
+            else:
+                self.sim_df = pd.read_csv(simfile, sep="\t", header=0)
             ## Species richness is the first summary statistic, so split to
             ## features and targets here. We're keeping all features and
             ## targets in the _X and _y variables, and can selectively prune
@@ -116,7 +124,11 @@ class Ensemble(object):
         if verbose: print("Selecting features:")
         for t in self.y:
             if verbose: print("  {}\t".format(t), end='')
-            model = self._base_model(n_estimators=600, max_depth=5)
+            try:
+                model = self._base_model(n_estimators=600, max_depth=5)
+            except TypeError as inst:
+                msg = "Ensemble model must support max_depth parameter to enable feature selection. AdaBoost can't be run with feature_selection."
+                raise MESSError(msg)
 
             if quick:
                 ## Random subset the data and run fewer iterations. If you don't have
@@ -182,6 +194,7 @@ class Ensemble(object):
             for t in self.targets:
                 ## Munge the tmpX to fit the features selected for each target.
                 ## This is annoying housekeeping.
+                #import pdb; pdb.set_trace()
                 tmpX_filt = tmpX[self.model_by_target[t]["features"]]
                 if verbose: print("\t{} - Finding best params using features: {}".format(t, list(tmpX_filt.columns)))
                 cvsearch.fit(tmpX_filt, tmpy[t])
@@ -301,20 +314,27 @@ class Regressor(Ensemble):
     .. note:: A Regressor class can be constructed in one of two ways: either
         passing in all the necessary parameters (specifically the empirical
         df and the simulations), or you can pass in a :class:`.Classifier`
+        object. The logic here is that if the classifier has been trained
+        and used to predict on real data, then the Regressor constructor
+        can pull a bunch of useful stuff out of it. This should be the 
+        typical usage, unless you're not doing model selection.
 
     :param pandas.DataFrame empirical_df: A DataFrame containing the empirical
         data. This df has a very specific format which is documented here.
     :param string simfile: The path to the file containing all the simulations.
     :param string algorithm: The ensemble method to use for parameter estimation.
+    :param string target_model: The community assembly model to specifically use.
+        If you include this then the simulations will be read and then filtered
+        for only this `community_assembly_model`.
     :param bool verbose: Print more info about what's happening
     """
 
     _default_targets = ["alpha", "S_m", "J_m", "speciation_rate", "death_proportion",\
                         "trait_rate_meta", "ecological_strength", "J", "m",\
-                        "speciation_prob", "_lambda"]
+                        "generation", "speciation_prob", "_lambda"]
 
-    def __init__(self, empirical_df, simfile, algorithm="rfq", verbose=False):
-        super(Regressor, self).__init__(empirical_df, simfile, algorithm="rf", verbose=False)
+    def __init__(self, empirical_df, simfile, target_model=None, algorithm="rfq", verbose=False):
+        super(Regressor, self).__init__(empirical_df, simfile, target_model=target_model, algorithm="rf", verbose=False)
 
         if algorithm == "rf":
             self._base_model = RandomForestRegressor
@@ -322,7 +342,7 @@ class Regressor(Ensemble):
             self._base_model = RandomForestQuantileRegressor
         elif algorithm == "gb":
             self._base_model = GradientBoostingRegressor
-        elif self.algorithm == "ab":
+        elif algorithm == "ab":
             self._base_model = AdaBoostRegressor
         else:
             raise Exception(" Unsupported regression algorithm: {}".format(algorithm))
@@ -330,8 +350,9 @@ class Regressor(Ensemble):
         self._param_grid = _get_param_grid(algorithm)
 
         ## Remove invariant targets (save time)
-        self._y = self._y.loc[:, (self._y != self._y.iloc[0]).any()]
-        if verbose: print("Removed invariant targets. Retained: {}".format(list(self._y.columns)))
+        self.y = self.y.loc[:, (self.y != self.y.iloc[0]).any()]
+        self.targets = list(self.y.columns)
+        if verbose: print("Removed invariant targets. Retained: {}".format(list(self.y.columns)))
 
 
     ## Add upper and lower prediction interval for algorithms that support
@@ -492,6 +513,7 @@ def _ab_param_grid():
     learning_rate = np.linspace(0.01, 2, 6)
     random_grid = {'n_estimators':n_estimators,
                     'learning_rate':learning_rate}
+    return random_grid
 
 
 def _rf_param_grid():
