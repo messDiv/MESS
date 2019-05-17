@@ -1,3 +1,9 @@
+"""
+.. module:: inference
+   :synopsis: Machine learning model selection and parameter estimation.
+
+"""
+
 from __future__ import print_function
 
 import MESS.stats
