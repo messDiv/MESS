@@ -2,4 +2,3 @@ nbsphinx
 matplotlib
 pandas
 scipy
-sklearn
