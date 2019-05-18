@@ -29,6 +29,12 @@ LOGGER = logging.getLogger(__name__)
 ## calculating summary stats, reading the simulated date, and reshaping the sim 
 ## sumstats to match the stats of the real data.
 class Ensemble(object):
+    """
+    The Ensemble class is a parent class from which Classifiers and Regressors
+    inherit shared methods. You normally will not want to create an Ensemble
+    class directly, but the methods documented here are inherited by both
+    Classifier() and Regressor() so may be called on either of them.
+    """
     def __init__(self, empirical_df, simfile, target_model=None, algorithm="rf", verbose=False):
         self.simfile = simfile
         self.algorithm = algorithm
@@ -82,6 +88,16 @@ class Ensemble(object):
 
 
     def set_features(self, feature_list=''):
+        """
+        Specify the feature list to use for classification/regression. By
+        default the methods use all features, but if you want to specify exact
+        feature sets to use you may call this method.
+
+        :param list feature_list: The list of features (summary statistics)
+            to retain for downstream analysis. Items in this list should
+            correspond exactly to summary statistics in the simulations or
+            else it will complain.
+        """
         if not len(feature_list):
             self.features = self._X.columns
         else:
@@ -94,6 +110,17 @@ class Ensemble(object):
 
 
     def set_targets(self, target_list=''):
+        """
+        Specify the target (parameter) list to use for classification/regression. By
+        default the classifier will only consider `community_assembly_model`
+        and the regressor will use all targets, but if you want to specify
+        exact target sets to use you may call this method.
+
+        :param list target_list: The list of targets (model parameters)
+            to retain for downstream analysis. Items in this list should
+            correspond exactly to parameters in the simulations or
+            else it will complain.
+        """
         ## If just one target then convert it to a list for compatibility
         if isinstance(target_list, str) and target_list:
             target_list = [target_list]
@@ -116,10 +143,19 @@ class Ensemble(object):
     ## The feature selection method only takes one target vector
     ## at a time, so we'll do each target seperately and then
     ## take the union of the results.
-    ## Uses BorutaPy, an all-relevant feature selection method
-    ## https://github.com/scikit-learn-contrib/boruta_py
-    ## http://danielhomola.com/2015/05/08/borutapy-an-all-relevant-feature-selection-method/
     def feature_selection(self, quick=False, verbose=False):
+        """
+        Access to the feature selection routine. Uses BorutaPy, 
+        an all-relevant feature selection method:
+        https://github.com/scikit-learn-contrib/boruta_py
+        http://danielhomola.com/2015/05/08/borutapy-an-all-relevant-feature-selection-method/
+        
+        :note: Normally you will not run this on your own, but will use it
+        indirectly through the predict() methods.
+
+        :param bool quick: Run fast but do a bad job.
+        :param bool verbose: Print lots of quasi-informative messages.
+        """
         mask = np.zeros(len(self.X.columns), dtype=bool)
         if verbose: print("Selecting features:")
         for t in self.y:
