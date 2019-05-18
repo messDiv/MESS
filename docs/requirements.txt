@@ -3,5 +3,3 @@ matplotlib
 pandas
 scipy
 sklearn
-gsl
-msprime
