@@ -22,6 +22,8 @@ Inference Procedure
 Model Selection (Classification)
 ++++++++++++++++++++++++++++++++
 
+.. autoclass:: MESS.inference.Classifier
+    :members:
 
 +++++++++++++++++++++++++++++++++
 Parameter Estimation (Regression)

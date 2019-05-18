@@ -278,6 +278,17 @@ class Ensemble(object):
 
 
 class Classifier(Ensemble):
+    """
+    This class wraps all the model selection machinery.
+
+    :param pandas.DataFrame empirical_df: A DataFrame containing the empirical
+        data. This df has a very specific format which is documented here.
+    :param string simfile: The path to the file containing all the simulations.
+    :param string algorithm: The ensemble method to use for parameter estimation.
+    :param bool verbose: Print detailed progress information.
+    """
+
+
     _default_targets = ["community_assembly_model"]
 
     def __init__(self, empirical_df, simfile, algorithm="rf", verbose=False):
@@ -296,7 +307,26 @@ class Classifier(Ensemble):
 
 
     def predict(self, select_features=True, param_search=True, by_target=False, quick=False, verbose=False):
-
+        """
+        Predect the most likely community assembly model class.
+    
+        :param bool select_features: Whether to perform relevant feature selection.
+            This will remove features with little information useful for model
+            prediction. Should improve classification performance, but does take 
+            time. (Default: True).
+        :param bool param_search: Whether to perform ML classifier hyperparamter
+            tuning. If ``False`` then classification will be performed with default
+            classifier options, which will almost certainly result in poor performance,
+            but it will run really fast!. (Default: True).
+        :param bool by_target: Whether to predict multiple target variables 
+            simultaneously, or each individually and sequentially. (Default: False).
+        :param bool quick: Reduce the number of retained simulations and the number
+            of feature selection and hyperparameter tuning iterations to make the
+            prediction step run really fast! Useful for testing. (Default:False).
+        :param bool verbose: Print detailed progress information.
+    
+        :return: A tuple including the predicted model and the probabilities per model class.
+        """
         super(Classifier, self).predict(select_features=select_features, param_search=param_search,\
                                         by_target=by_target, quick=quick, verbose=verbose)
 
@@ -343,7 +373,8 @@ class Regressor(Ensemble):
     :param string target_model: The community assembly model to specifically use.
         If you include this then the simulations will be read and then filtered
         for only this `community_assembly_model`.
-    :param bool verbose: Print more info about what's happening
+    :param bool verbose: Print lots of status messages. Good for debugging,
+        or if you're *really* curious about the process.
     """
 
     _default_targets = ["alpha", "S_m", "J_m", "speciation_rate", "death_proportion",\
@@ -415,6 +446,30 @@ class Regressor(Ensemble):
 
 
     def predict(self, select_features=True, param_search=True, by_target=False, quick=False, verbose=False):
+        """
+        Predict parameter estimates for selected targets.
+    
+        :param bool select_features: Whether to perform relevant feature selection.
+            This will remove features with little information useful for parameter
+            estimation. Should improve parameter estimation performance, but does
+            take time. (Default: True).
+        :param bool param_search: Whether to perform ML regressor hyperparamter
+            tuning. If ``False`` then prediction will be performed with default
+            options, which will almost certainly result in poor performance,
+            but it will run really fast!. (Default: True).
+        :param bool by_target: Whether to estimate all parameters simultaneously,
+            or each individually and sequentially. Some ensemble methods are only
+            capable of performing individual parameter estimation, in which case
+            this parameter is forced to ``True``. (Default: False).
+        :param bool quick: Reduce the number of retained simulations and the number
+            of feature selection and hyperparameter tuning iterations to make the
+            prediction step run really fast! Useful for testing. (Default:False).
+        :param bool verbose: Print detailed progress information.
+    
+        :return: A pandas DataFrame including the predicted value per target 
+            parameter, and 95% prediction intervals if the ensemble method
+            specified for this Regressor supports it.
+        """
         super(Regressor, self).predict(select_features=select_features, param_search=param_search,\
                                         by_target=by_target, quick=quick, verbose=verbose)
 
