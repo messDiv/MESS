@@ -13,6 +13,8 @@ Simulation model
 Inference Procedure
 *******************
 
+.. autoclass:: MESS.inference.Ensemble
+    :members:
 
 Model Selection (Classification)
 ++++++++++++++++++++++++++++++++
