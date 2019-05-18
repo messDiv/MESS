@@ -35,7 +35,7 @@ class Ensemble(object):
     class directly, but the methods documented here are inherited by both
     Classifier() and Regressor() so may be called on either of them.
 
-    :warning: Ensemble objects should never be created directly. It is a base class that provides functionality to Classifier() and Regressor().
+    :attention: Ensemble objects should never be created directly. It is a base class that provides functionality to Classifier() and Regressor().
     """
     def __init__(self, empirical_df, simfile, target_model=None, algorithm="rf", verbose=False):
         self.simfile = simfile
@@ -114,7 +114,7 @@ class Ensemble(object):
     def set_targets(self, target_list=''):
         """
         Specify the target (parameter) list to use for classification/regression. By
-        default the classifier will only consider `community_assembly_model`
+        default the classifier will only consider :ref:`community_assembly_model`
         and the regressor will use all targets, but if you want to specify
         exact target sets to use you may call this method.
 
@@ -152,7 +152,7 @@ class Ensemble(object):
         https://github.com/scikit-learn-contrib/boruta_py
         http://danielhomola.com/2015/05/08/borutapy-an-all-relevant-feature-selection-method/
         
-        :attention: Normally you will not run this on your own, but will use it indirectly through the predict() methods.
+        :hint: Normally you will not run this on your own, but will use it indirectly through the predict() methods.
 
         :param bool quick: Run fast but do a bad job.
         :param bool verbose: Print lots of quasi-informative messages.
