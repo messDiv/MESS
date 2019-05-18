@@ -1,9 +1,7 @@
-.. include:: global.rst
-
 .. _parameters:
 
 Community Assembly Parameters
-====================
+=============================
 The parameters contained in a params file affect the behavior of various parts
 of the forward-time and backward-time assembly process. The defaults that we 
 chose are fairly reasonable values as as starting point, however, you will 
@@ -18,7 +16,7 @@ that it affects, and example entries for the parameter into a params.txt file.
 .. _simulation_name:
 
 0. simulation_name
------------------
+------------------
 The simulation name is used as the prefix for all output files. It should be a
 unique identifier for this particular set of simulations, meaning the set of 
 parameters you are using for the current data set. When I run multiple related
@@ -76,7 +74,7 @@ Example entries into params.txt:
 .. _community_assembly_model:
 
 3. community_assembly_model
-----------------
+---------------------------
 With this parameter you may specify a neutral or non-neutral scenario for
 the forward time process. There are currently three different options for
 this parameter: `neutral`, `filtering`, or `competition`. The `neutral`
@@ -98,7 +96,7 @@ Example entries into params.txt:
 .. _speciation_model:
 
 4. speciation_model
---------------------
+-------------------
 
 Specify a speciation process in the local community. If `none` then no
 speciation happens locally. If `point_mutation` then one individual
@@ -148,7 +146,7 @@ of values.
 .. _sequence_length:
 
 7. sequence_length
-------------
+------------------
 Length of the sequence to simulate in the backward-time process under
 an infinite sites model. This value should be specified based on the
 length of the region sequenced for the observed community data in bp.
@@ -192,7 +190,7 @@ Example entries to params.txt:
 .. _speciation_rate:
 
 10. speciation_rate
-------------------------
+-------------------
 
 Example entries to params.txt:
 
@@ -225,6 +223,7 @@ Example entries to params.txt:
     2                    ## [4] [trait_rate_meta]: Trait evolution rate parameter for metacommunity
 
 .. _ecological_strength:
+
 13. ecological_strength
 -----------------------
 This parameter dictates the strength of interactions in the environmental
@@ -275,7 +274,7 @@ Example entries to params.txt:
 .. _name:
 
 14. name
---------------------
+--------
 
 Example entries to params.txt:
 
@@ -287,7 +286,7 @@ Example entries to params.txt:
 .. _J:
 
 15. J
----------------
+-----
 
 Example entries to params.txt:
 
@@ -299,7 +298,7 @@ Example entries to params.txt:
 .. _m:
 
 16. m
---------------------
+-----
 
 Example entries to params.txt:
 
@@ -311,7 +310,7 @@ Example entries to params.txt:
 .. _speciation_prob:
 
 17. speciation_prob
-------------------------
+-------------------
 
 Example entries to params.txt
 

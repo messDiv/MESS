@@ -1,4 +1,4 @@
-.. _sec-api-tutorial:
+.. _sec_api_tutorial:
 
 ==================
 Intro API Tutorial
