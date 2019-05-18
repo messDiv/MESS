@@ -139,7 +139,7 @@ Scaling factor for transforming number of demes to number of individuals.
 ``alpha`` can be specified as either a single integer value or as a range
 of values.
 
-.. code-block:: bash
+Example entries to params.txt file::
 
     2000                 ## [6] [alpha]: Abundance/Ne scaling factor
     1000-10000           ## [6] [alpha]: Abundance/Ne scaling factor
