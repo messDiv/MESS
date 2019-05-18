@@ -153,9 +153,7 @@ Length of the sequence to simulate in the backward-time process under
 an infinite sites model. This value should be specified based on the
 length of the region sequenced for the observed community data in bp.
 
-Example entries to params.txt file:
-
-.. code-block:: bash
+Example entries to params.txt file::
 
     570                  ## [7] [sequence_length]: Length in bases of the sequence to simulate
 
