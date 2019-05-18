@@ -82,7 +82,9 @@ case indicates full ecological equivalence of all species, so all
 individuals have an equal probability of death at each time-step. In the
 `filtering` and `competition` models survival probability is contingent
 on proximity of species trait values to the environmental optimum, or distance
-from the local trait mean, respectively.
+from the local trait mean, respectively. You may also use the wildcard `*`
+here and MESS will randomly sample one community assembly model for each
+simulation.
 
 Example entries into params.txt:
 
