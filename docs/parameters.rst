@@ -23,11 +23,10 @@ parameters you are using for the current data set. When I run multiple related
 simulations I usually use names indicating the specific parameter combinations 
 (e.g., filtering_nospeciation, J5000_neutral). 
 
-Example: New community simulations are created with the -n options to MESS:
+Example: New community simulations are created with the -n options to MESS::
 
-.. code-block:: bash
-
-    >>> MESS -n J1000_neutral          ## create a new assembly named J1000_neutral
+    ## create a new assembly named J1000_neutral
+    $ MESS -n J1000_neutral          
 
 
 .. _project_dir:
@@ -40,9 +39,7 @@ A good name for project_dir will generally be the name of the community/system b
 studied. The project dir path should generally not be changed after simulations/analysis
 are initiated, unless the entire directory is moved to a different location/machine.
 
-Example entries into params.txt:
-
-.. code-block:: bash
+Example entries into params.txt::
 
     /home/watdo/MESS/galapagos         ## [1] create/use project dir called galapagos
     galapagos                          ## [1] create/use project dir called galapagos in cwd (./)
@@ -62,9 +59,7 @@ either an exact Lambda value (a real value between 0 and 1 exclusive), or you
 can set `generations` equal to 0, which will draw random Lambda values between
 0 and 1 for each simulation.
 
-Example entries into params.txt:
-
-.. code-block:: bash
+Example entries into params.txt::
 
     0                  ## [2] [generations]: Sample random Lambda values for each simulation 
     100                ## [2] [generations]: Run each simulation for 100 WF generations
@@ -86,9 +81,7 @@ from the local trait mean, respectively. You may also use the wildcard `*`
 here and MESS will randomly sample one community assembly model for each
 simulation.
 
-Example entries into params.txt:
-
-.. code-block:: bash
+Example entries into params.txt::
 
     neutral             ## [3] [community_assembly_model]: Select the neutral process forward-time
     filtering           ## [3] [community_assembly_model]: Select the environmental filtering process
@@ -109,9 +102,7 @@ two lineages at rate `speciation_prob` with the new lineage receiving
 receiving `1 - n` individuals. `protracted` will specify a model of
 protracted speciation, but this is as yet unimplemented.
 
-Example entries into params.txt:
-
-.. code-block:: bash
+Example entries into params.txt::
 
     none                ## [4] [speciation_model]: No speciation in the local community
     point_mutation      ## [4] [speciation_model]: Point mutation specation process
@@ -125,9 +116,7 @@ Specify the mutation rate for backward-time coalescent simulation of
 genetic variation. This rate is the per base, per generation probability
 of a mutation under an infinite sites model.
 
-Example entries into params.txt:
-
-.. code-block:: bash
+Example entries into params.txt::
 
     2.2e-08             ## [5] [mutation_rate]: Mutation rate scaled per base per generation
 
@@ -165,9 +154,7 @@ S_m specifies the total number of species to simulate in the metacommunity. Larg
 values will result in more singletons in the local community and reduced rates
 of multiple-colonization.
 
-Example entries to params.txt file:
-
-.. code-block:: bash
+Example entries to params.txt file::
 
     500                  ## [0] [S_m]: Number of species in the regional pool
     100-1000             ## [0] [S_m]: Number of species in the regional pool
@@ -179,9 +166,7 @@ Example entries to params.txt file:
 ------
 The total number of individuals in the metacommunity.
 
-Example entries to params.txt:
-
-.. code-block:: bash
+Example entries to params.txt::
 
     0                      ## [9] allow zero low quality bases in a read
     5                      ## [9] allow up to five low quality bases in a read
@@ -192,9 +177,7 @@ Example entries to params.txt:
 10. speciation_rate
 -------------------
 
-Example entries to params.txt:
-
-.. parsed-literal::
+Example entries to params.txt::
 
     2                    ## [2] [speciation_rate]: Speciation rate of metacommunity
 
@@ -204,9 +187,7 @@ Example entries to params.txt:
 11. death_proportion
 --------------------
 
-Example entries to params.txt
-
-.. parsed-literal::
+Example entries to params.txt::
 
     0.7                  ## [3] [death_proportion]: Proportion of speciation rate to be extinction rate
 
@@ -216,9 +197,7 @@ Example entries to params.txt
 12. trait_rate_meta
 -------------------
 
-Example entries to params.txt:
-
-.. parsed-literal::
+Example entries to params.txt::
 
     2                    ## [4] [trait_rate_meta]: Trait evolution rate parameter for metacommunity
 
@@ -263,12 +242,10 @@ thousands of times better than average).
 .. image:: images/ecological_strength_100.png
     :width: 30 %
 
-Example entries to params.txt:
+Example entries to params.txt::
 
-.. parsed-literal::
-
-    1             ## [5] [ecological_strength]: Strength of community assembly process on phenotypic change
-    0.001-1       ## [5] [ecological_strength]: Strength of community assembly process on phenotypic change
+    1                           ## [5] [ecological_strength]: Strength of community assembly process on phenotypic change
+    0.001-1                     ## [5] [ecological_strength]: Strength of community assembly process on phenotypic change
 
 
 .. _name:
@@ -276,11 +253,9 @@ Example entries to params.txt:
 14. name
 --------
 
-Example entries to params.txt:
+Example entries to params.txt::
 
-.. parsed-literal::
-
-    island1              ## [0] [name]: Local community name
+    island1                     ## [0] [name]: Local community name
 
 
 .. _J:
@@ -288,11 +263,9 @@ Example entries to params.txt:
 15. J
 -----
 
-Example entries to params.txt:
+Example entries to params.txt::
 
-.. parsed-literal::
-
-    1000-2000                 ## [1] [J]: Number of individuals in the local community
+    1000-2000                   ## [1] [J]: Number of individuals in the local community
 
 
 .. _m:
@@ -300,11 +273,9 @@ Example entries to params.txt:
 16. m
 -----
 
-Example entries to params.txt:
+Example entries to params.txt::
 
-.. parsed-literal::
-
-    0.01                 ## [2] [m]: Migration rate into local community
+    0.01                        ## [2] [m]: Migration rate into local community
 
 
 .. _speciation_prob:
@@ -312,8 +283,7 @@ Example entries to params.txt:
 17. speciation_prob
 -------------------
 
-Example entries to params.txt
+Example entries to params.txt::
 
-.. parsed-literal::
-
-    0.0001-0.001                    ## [3] [speciation_prob]: Probability of speciation per timestep in local community
+    0                           ## [3] [speciation_prob]: Probability of speciation per timestep in local community
+    0.0001-0.001                ## [3] [speciation_prob]: Probability of speciation per timestep in local community
