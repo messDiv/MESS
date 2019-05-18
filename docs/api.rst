@@ -27,5 +27,5 @@ Model Selection (Classification)
 Parameter Estimation (Regression)
 +++++++++++++++++++++++++++++++++
 
-.. autoclass:: Regressor
+.. autoclass:: MESS.inference.Regressor
     :members:
