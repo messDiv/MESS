@@ -308,7 +308,7 @@ class Classifier(Ensemble):
 
     def predict(self, select_features=True, param_search=True, by_target=False, quick=False, verbose=False):
         """
-        Predect the most likely community assembly model class.
+        Predict the most likely community assembly model class.
     
         :param bool select_features: Whether to perform relevant feature selection.
             This will remove features with little information useful for model
@@ -357,14 +357,6 @@ class Classifier(Ensemble):
 class Regressor(Ensemble):
     """
     This class wraps all the parameter estimation machinery.
-
-    .. note:: A Regressor class can be constructed in one of two ways: either
-        passing in all the necessary parameters (specifically the empirical
-        df and the simulations), or you can pass in a :class:`.Classifier`
-        object. The logic here is that if the classifier has been trained
-        and used to predict on real data, then the Regressor constructor
-        can pull a bunch of useful stuff out of it. This should be the 
-        typical usage, unless you're not doing model selection.
 
     :param pandas.DataFrame empirical_df: A DataFrame containing the empirical
         data. This df has a very specific format which is documented here.
@@ -503,8 +495,32 @@ def posterior_predictive_check(empirical_df,\
                                 outfile='',\
                                 verbose=False):
 
-    ## If est_only, drop the lower and upper prediction interval and just use
-    ## the mean estimated parameters for generating posterior predictive simes
+    """
+    Perform posterior predictive simulations. This function will take
+    parameter estimates and perform MESS simulations using these parameter
+    values. It will then plot the resulting summary statistics in PC
+    space, along with the summary statistics of the observed data. The
+    logic of posterior predictive checks is that if the estimated parameters
+    are a good fit to the data, then summary statistics generated using
+    these parameters should resemble those of the real data.
+
+    :param bool empirical_df: 
+    :param bool parameter_estimats: 
+    :param bool ax: The matplotlib axis to use for plotting. If not specified
+        then a new axis will be created.
+    :param bool est_only: If True, drop the lower and upper prediction 
+        interval (PI) and just use the mean estimated parameters for generating 
+        posterior predictive simulations. If False, and PIs exist, then
+        parameter values will be sampled uniformly between the lower and upper
+        PI.
+    :param bool nsims: The number of posterior predictive simulations to perform.
+    :param bool outfile: A file path for saving the figure. If not specified
+        the figure is simply not saved to the filesystem.
+    :param bool verbose: Print detailed progress information.
+    
+    :return: A matplotlib axis containing the plot.
+    """
+
     if est_only:
         parameter_estimates = pd.DataFrame(parameter_estimates.loc["estimate", :]).T
 
