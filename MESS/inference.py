@@ -314,7 +314,7 @@ class Classifier(Ensemble):
             This will remove features with little information useful for model
             prediction. Should improve classification performance, but does take 
             time. (Default: True).
-        :param bool param_search: Whether to perform ML classifier hyperparamter
+        :param bool param_search: Whether to perform ML classifier hyperparameter
             tuning. If ``False`` then classification will be performed with default
             classifier options, which will almost certainly result in poor performance,
             but it will run really fast!. (Default: True).
