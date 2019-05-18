@@ -34,6 +34,8 @@ class Ensemble(object):
     inherit shared methods. You normally will not want to create an Ensemble
     class directly, but the methods documented here are inherited by both
     Classifier() and Regressor() so may be called on either of them.
+
+    :warning: Ensemble objects should never be created directly. It is a base class that provides functionality to Classifier() and Regressor().
     """
     def __init__(self, empirical_df, simfile, target_model=None, algorithm="rf", verbose=False):
         self.simfile = simfile
@@ -146,12 +148,11 @@ class Ensemble(object):
     def feature_selection(self, quick=False, verbose=False):
         """
         Access to the feature selection routine. Uses BorutaPy, 
-        an all-relevant feature selection method:
+        an all-relevant feature selection method:  
         https://github.com/scikit-learn-contrib/boruta_py
         http://danielhomola.com/2015/05/08/borutapy-an-all-relevant-feature-selection-method/
         
-        :note: Normally you will not run this on your own, but will use it
-        indirectly through the predict() methods.
+        :attention: Normally you will not run this on your own, but will use it indirectly through the predict() methods.
 
         :param bool quick: Run fast but do a bad job.
         :param bool verbose: Print lots of quasi-informative messages.
