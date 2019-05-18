@@ -61,9 +61,9 @@ can set `generations` equal to 0, which will draw random Lambda values between
 
 Example entries into params.txt::
 
-    0                  ## [2] [generations]: Sample random Lambda values for each simulation 
-    100                ## [2] [generations]: Run each simulation for 100 WF generations
-    50-100             ## [2] [generations]: Sample uniform between 50-100 WF generations for each simulation
+    0                   ## [2] [generations]: Sample random Lambda values for each simulation 
+    100                 ## [2] [generations]: Run each simulation for 100 WF generations
+    50-100              ## [2] [generations]: Sample uniform between 50-100 WF generations for each simulation
 
 
 .. _community_assembly_model:
@@ -130,8 +130,8 @@ of values.
 
 Example entries to params.txt file::
 
-    2000                 ## [6] [alpha]: Abundance/Ne scaling factor
-    1000-10000           ## [6] [alpha]: Abundance/Ne scaling factor
+    2000                ## [6] [alpha]: Abundance/Ne scaling factor
+    1000-10000          ## [6] [alpha]: Abundance/Ne scaling factor
 
 
 .. _sequence_length:
@@ -144,7 +144,7 @@ length of the region sequenced for the observed community data in bp.
 
 Example entries to params.txt file::
 
-    570                  ## [7] [sequence_length]: Length in bases of the sequence to simulate
+    570                 ## [7] [sequence_length]: Length in bases of the sequence to simulate
 
 .. _S_m:
 
@@ -156,8 +156,8 @@ of multiple-colonization.
 
 Example entries to params.txt file::
 
-    500                  ## [0] [S_m]: Number of species in the regional pool
-    100-1000             ## [0] [S_m]: Number of species in the regional pool
+    500                 ## [0] [S_m]: Number of species in the regional pool
+    100-1000            ## [0] [S_m]: Number of species in the regional pool
 
 
 .. _J_m:
@@ -168,8 +168,8 @@ The total number of individuals in the metacommunity.
 
 Example entries to params.txt::
 
-    0                      ## [9] allow zero low quality bases in a read
-    5                      ## [9] allow up to five low quality bases in a read
+    0                  ## [9] allow zero low quality bases in a read
+    5                  ## [9] allow up to five low quality bases in a read
 
 
 .. _speciation_rate:
@@ -179,7 +179,7 @@ Example entries to params.txt::
 
 Example entries to params.txt::
 
-    2                    ## [2] [speciation_rate]: Speciation rate of metacommunity
+    2                  ## [2] [speciation_rate]: Speciation rate of metacommunity
 
 
 .. _death_proportion:
@@ -189,7 +189,7 @@ Example entries to params.txt::
 
 Example entries to params.txt::
 
-    0.7                  ## [3] [death_proportion]: Proportion of speciation rate to be extinction rate
+    0.7                ## [3] [death_proportion]: Proportion of speciation rate to be extinction rate
 
 
 .. _trait_rate_meta:
@@ -199,7 +199,7 @@ Example entries to params.txt::
 
 Example entries to params.txt::
 
-    2                    ## [4] [trait_rate_meta]: Trait evolution rate parameter for metacommunity
+    2                  ## [4] [trait_rate_meta]: Trait evolution rate parameter for metacommunity
 
 .. _ecological_strength:
 
@@ -244,8 +244,8 @@ thousands of times better than average).
 
 Example entries to params.txt::
 
-    1                           ## [5] [ecological_strength]: Strength of community assembly process on phenotypic change
-    0.001-1                     ## [5] [ecological_strength]: Strength of community assembly process on phenotypic change
+    1                  ## [5] [ecological_strength]: Strength of community assembly process on phenotypic change
+    0.001-1            ## [5] [ecological_strength]: Strength of community assembly process on phenotypic change
 
 
 .. _name:
@@ -255,7 +255,7 @@ Example entries to params.txt::
 
 Example entries to params.txt::
 
-    island1                     ## [0] [name]: Local community name
+    island1            ## [0] [name]: Local community name
 
 
 .. _J:
@@ -265,7 +265,7 @@ Example entries to params.txt::
 
 Example entries to params.txt::
 
-    1000-2000                   ## [1] [J]: Number of individuals in the local community
+    1000-2000          ## [1] [J]: Number of individuals in the local community
 
 
 .. _m:
@@ -275,7 +275,7 @@ Example entries to params.txt::
 
 Example entries to params.txt::
 
-    0.01                        ## [2] [m]: Migration rate into local community
+    0.01               ## [2] [m]: Migration rate into local community
 
 
 .. _speciation_prob:
@@ -285,5 +285,5 @@ Example entries to params.txt::
 
 Example entries to params.txt::
 
-    0                           ## [3] [speciation_prob]: Probability of speciation per timestep in local community
-    0.0001-0.001                ## [3] [speciation_prob]: Probability of speciation per timestep in local community
+    0                  ## [3] [speciation_prob]: Probability of speciation per timestep in local community
+    0.0001-0.001       ## [3] [speciation_prob]: Probability of speciation per timestep in local community
