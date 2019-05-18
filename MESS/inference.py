@@ -260,6 +260,23 @@ class Ensemble(object):
         return importances
 
 
+    ####################################################################
+    ## Plotting functions
+    ####################################################################
+
+    def plot_feature_importance(self, cutoff=0.05, figsize=(10, 12), layout=None):
+        imps = self.feature_importances()
+        ## Drop any features that are relatively unimportant
+        imps = imps[imps.columns[imps.max() > cutoff]]
+
+        if len(imps) == 1:
+            layout = (1, 1)
+        else:
+            layout = (2, len(imps)/2)
+        axs = imps.T.plot.barh(figsize=figsize, subplots=True, legend=False, width=0.9, layout=layout, sharey=True)
+        return axs
+
+
 class Classifier(Ensemble):
     _default_targets = ["community_assembly_model"]
 
