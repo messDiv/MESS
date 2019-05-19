@@ -417,7 +417,7 @@ class LocalCommunity(object):
             ## TODO: The _ is a standin for trait values, have to do something with them
 
             try:
-                new_species, _ = self.region.get_most_abundant()
+                new_species, _ = self.region._get_most_abundant()
             except Exception as inst:
                 raise MESSError("Error in prepopulate - {}".format(inst))
 
@@ -826,7 +826,7 @@ class LocalCommunity(object):
             ## df.drop will raise if it doesn't find a matching label to drop, in which case we're done.
             pass
 
-        self.local_info.loc["meta_abund"] = [self.region.get_abundance(x) for x in self.local_info]
+        self.local_info.loc["meta_abund"] = [self.region._get_abundance(x) for x in self.local_info]
         self.local_info.loc["local_abund"] = [self.local_community.count(x) for x in self.local_info]
         self.local_info.loc["colonization_times"] = self.current_time - self.local_info.loc["colonization_times"]
         for cname, species_list in self._get_clades().items():
@@ -838,7 +838,7 @@ class LocalCommunity(object):
 
             pop_cfgs = []
             split_events = []
-            meta_abund = self.region.get_abundance(cname)
+            meta_abund = self.region._get_abundance(cname)
             pop_meta = msprime.PopulationConfiguration(sample_size = 10, initial_size = meta_abund)
             pop_cfgs.append(pop_meta)
             species_dict = {}

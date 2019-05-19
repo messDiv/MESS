@@ -435,7 +435,7 @@ class Region(object):
         return self.metacommunity.get_migrant()
 
 
-    def get_most_abundant(self):
+    def _get_most_abundant(self):
         """Just get the most abundant species from the metacommunity"""
         max_idx = self.metacommunity.community["abundances"].argmax()
         new_species = self.metacommunity.community["ids"][max_idx]
@@ -450,7 +450,7 @@ class Region(object):
         return new_species, trait_value
 
 
-    def get_abundance(self, species=None):
+    def _get_abundance(self, species=None):
         """Return abundance of a species in the regional pool."""
         ## This is dumb, metacommunity should be pd
         return self.metacommunity.community["abundances"]\
