@@ -18,13 +18,13 @@ Region
 Metacommunity
 +++++++++++++
 
-.. autoclass:: MESS.LocalCommunity
+.. autoclass:: MESS.Metacommunity
     :members:
 
 Local Community
 +++++++++++++++
 
-.. autoclass:: MESS.Metacommunity
+.. autoclass:: MESS.LocalCommunity
     :members:
 
 Inference Procedure
