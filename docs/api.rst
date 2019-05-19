@@ -12,19 +12,19 @@ Simulation model
 Region
 ++++++
 
-.. autoclass:: MESS.Region.Region
+.. autoclass:: MESS.Region
     :members:
 
 Metacommunity
 +++++++++++++
 
-.. autoclass:: MESS.LocalCommunity.LocalCommunity
+.. autoclass:: MESS.LocalCommunity
     :members:
 
 Local Community
 +++++++++++++++
 
-.. autoclass:: MESS.Metacommunity.Metacommunity
+.. autoclass:: MESS.Metacommunity
     :members:
 
 Inference Procedure
