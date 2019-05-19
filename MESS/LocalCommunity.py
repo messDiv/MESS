@@ -152,7 +152,10 @@ class LocalCommunity(object):
 
 
     def _copy(self):
-        """ Create a new clean copy of this LocalCommunity."""
+        """
+        Create a new clean copy of this LocalCommunity, resampling new values
+        for any parameter that were specified with a prior.
+        """
         LOGGER.debug("Copying LocalCommunity - {}".format(self.name))
         new = LocalCommunity(self.name)
 
@@ -174,8 +177,10 @@ class LocalCommunity(object):
         return new
 
 
-    ## Return fraction of equilibrium obtained by the local community
     def _lambda(self):
+        """
+        Return fraction of equilibrium obtained by the local community
+        """
         percent_equil = 0
         try:
             percent_equil = float(self.founder_flags.count(False))/len(self.founder_flags)
@@ -186,26 +191,25 @@ class LocalCommunity(object):
 
     def _add_local_info(self, sname, abundances_through_time=0,\
                         ancestor='', ancestral_abundance=[], speciation_completion=0):
-        ## Construct a new local_info record for new_species. The fields are:
-        ## colonization time - in the forward time model. This gets converted to
-        ##      divergence time for the backward time model.
-        ## post_colonization_migrants - The count of migrants that have come in
-        ##      that are the same species as this one, since colonization
-        ## abundances_through_time - Dictionary containing history of population
-        ##      size change through time. Default is 0, which indicates a new colonist.
-        ## ancestor - If the species was introduced by speciation rather than
-        ##      colonization, then it'll have an ancestral species.
-        #######################
-        ## Protracted speciation parameters that shouldn't be touched otherwise
-        #######################
-        ## ancestral_abundance - A list of fluctuating ancestral abundances at
-        ##      the time the species split from its sister. Default is empty list which indicates
-        ##      a new colonist from the metacommunity.
-        ## speciation_completion - The point in forward time when this species will become 'good'.
-        ##      before this point it is an incipient species and if the simulation is stopped then
-        ##      all the individuals will be thrown back into the parent species pool.
-        ##      Default is 0 which indicates this is a good species immediately, either a new
-        ##      colonizing lineage or a point mutation species.
+        """
+        Construct a new local_info record for new_species. The fields are:
+        colonization time - in the forward time model. This gets converted to
+            divergence time for the backward time model.
+        post_colonization_migrants - The count of migrants that have come in
+            that are the same species as this one, since colonization
+        abundances_through_time - Dictionary containing history of population
+            size change through time. Default is 0, which indicates a new colonist.
+        ancestor - If the species was introduced by speciation rather than
+            colonization, then it'll have an ancestral species.
+        ancestral_abundance - A list of fluctuating ancestral abundances at
+            the time the species split from its sister. Default is empty list which indicates
+            a new colonist from the metacommunity.
+        speciation_completion - The point in forward time when this species will become 'good'.
+            before this point it is an incipient species and if the simulation is stopped then
+             all the individuals will be thrown back into the parent species pool.
+            Default is 0 which indicates this is a good species immediately, either a new
+            colonizing lineage or a point mutation species.
+        """
         if abundances_through_time == 0: abundances_through_time = OrderedDict([(self.current_time,self._hackersonly["mig_clust_size"])])
         self.local_info[sname] = [self.current_time,\
                                         0,\
@@ -658,15 +662,18 @@ class LocalCommunity(object):
         one individual is randomly selected to undergo speciation.
         Speciation does not change the founder_flag state.
 
-        Currently there are 3 modes implemented:
-        point_mutation - The randomly selected individual becomes a new
+        Currently there are 3 modes implemented::
+
+            point_mutation - The randomly selected individual becomes a new
             species of its own, of abundance 1.
-        random_fission -  The species of the randomly selected individual
+
+            random_fission -  The species of the randomly selected individual
             undergoes random fission. In this mode the abundance of the
             new species is determined by randomly splitting off a chunk
             of the individuals from the parent species. All fission
             sizes are equally likely.
-        protracted - watdo
+
+            protracted - watdo
         """
         LOGGER.debug("Initiate speciation process - {}".format(chx))
 
