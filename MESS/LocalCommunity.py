@@ -276,7 +276,7 @@ class LocalCommunity(object):
         Raises exceptions when params are set to values they should not be.
         """
         ## TODO: This should actually check the values and make sure they make sense
-        ## TODO: Also check here if you're setting the mode parameter you have to rerun prepopulate
+        ## TODO: Also check here if you're setting the mode parameter you have to rerun _prepopulate
         try:
 
             ## Cast params to correct types
@@ -401,7 +401,7 @@ class LocalCommunity(object):
         return "<LocalCommunity {}>".format(self.name)
 
 
-    def prepopulate(self, verbose=False):
+    def _prepopulate(self, verbose=False):
         LOGGER.debug("prepopulating local_community - {}".format(self))
         if not self.region:
             msg = "Skip populating the local community as it is unlinked to a region."
@@ -425,7 +425,7 @@ class LocalCommunity(object):
             try:
                 new_species, _ = self.region._get_most_abundant()
             except Exception as inst:
-                raise MESSError("Error in prepopulate - {}".format(inst))
+                raise MESSError("Error in _prepopulate - {}".format(inst))
 
             ## prepopulate volcanic either with all the most abundant species in the metacommunity
             ## or with one sample of this species and a bunch of "emtpy deme space". The empty
@@ -992,12 +992,12 @@ if __name__ == "__main__":
     ## Allow for either having or not having empty demes
     assert(len(collections.Counter(loc.local_community)) <= 2)
     loc._hackersonly["mode"] = "landbridge"
-    loc.prepopulate()
+    loc._prepopulate()
     assert(len(collections.Counter(loc.local_community)) > 3)
     print(loc.get_abundances())
 
     loc._hackersonly["mode"] = "volcanic"
-    loc.prepopulate()
+    loc._prepopulate()
     loc.step(100000)
     print(len(set(loc.local_community)))
     print(len(loc.local_community))

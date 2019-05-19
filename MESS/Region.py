@@ -138,7 +138,7 @@ class Region(object):
         if not add:
             self.islands = {}
         self.islands[local_community.paramsdict["name"]] = local_community
-        local_community.prepopulate()
+        local_community._prepopulate()
 
 
     def _link_metacommunity(self, metacommunity):
@@ -152,7 +152,7 @@ class Region(object):
         self.metacommunity = metacommunity
 
         for locname in self.islands.keys():
-            self.islands[locname].prepopulate()
+            self.islands[locname]._prepopulate()
 
 
     def _get_simulation_outdir(self, prefix=""):
@@ -265,12 +265,12 @@ class Region(object):
     def _reset_local_communities(self):
         """
         Flip the local community. Basically make a copy, resample any parameters
-        that were specified with priors and prepopulate it.
+        that were specified with priors and _prepopulate it.
         """
         LOGGER.debug("_reset_local_community()")
         for name, island in self.islands.items():
             new = island._copy()
-            new.prepopulate()
+            new._prepopulate()
             self.islands[name] = new
 
 
