@@ -279,9 +279,9 @@ class Region(object):
         Flip the metacommunity. Just regenerate a new metacommunity, resampling
         from any priors that were specified.
         """
-        ## Calling set_metacommunity() again will regenerate a new
+        ## Calling _set_metacommunity() again will regenerate a new
         ## metacommunity using the same parameters each time.
-        self.metacommunity.set_metacommunity(resample=True)
+        self.metacommunity._set_metacommunity(resample=True)
 
 
     ## Getting parameters header and parameters carves off
@@ -406,10 +406,6 @@ class Region(object):
         loc = MESS.LocalCommunity(name=name, J=J, m=m, quiet=quiet)
         ## TODO: Ensure island names aren't dupes
         self._link_local(loc)
-
-
-    def set_metacommunity(self, meta_type):
-        pass
 
 
     def set_colonization_matrix(self, matrix):

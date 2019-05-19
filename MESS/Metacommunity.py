@@ -90,7 +90,7 @@ class Metacommunity(object):
         ## A dictionary for fast trait value lookups
         self.trait_dict = {}
 
-        self.set_metacommunity()
+        self._set_metacommunity()
         LOGGER.debug("Metacommunity paramsdict - {}".format(self.paramsdict))
 
 
@@ -193,7 +193,7 @@ class Metacommunity(object):
         ## TODO: This should actually check the values and make sure they make sense
         try:
             if (not quiet) and MESS.__interactive__:
-                print("  Updating Metacommunity parameters requires running set_metacommunity()"\
+                print("  Updating Metacommunity parameters requires running _set_metacommunity()"\
                         + " to apply the changes.")
 
             ## Cast params to correct types
@@ -278,7 +278,7 @@ class Metacommunity(object):
             paramsfile.write("\n")
 
 
-    def set_metacommunity(self, random=False, resample=False):
+    def _set_metacommunity(self, random=False, resample=False):
         """
         For setting the metacommunity you can either generate a random
         uniform community or read on in from a file that's basically just
@@ -286,7 +286,9 @@ class Metacommunity(object):
         of these locations then the species labels and immigration probs
         are calculated from there
 
-        random=True will set random trait values in the range [0-1]
+        :param bool random: Whether to generate  random trait values in the 
+            range [0-1]
+        :param bool resample: Whether to resample from any specified priors.
         """
         meta_type = self._hackersonly["metacommunity_type"]
         LOGGER.debug("Enter set_metacommunity - {}".format(meta_type))
