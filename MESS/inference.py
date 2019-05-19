@@ -281,9 +281,13 @@ class Ensemble(object):
                 self.best_model.fit(self.X, self.y)
 
 
-    ## Return a summary of feature importances, either summed over all
-    ## parameters, or individually per parameter
     def feature_importances(self):
+        """
+        Assuming predict() has already been called, this method will return
+        the feature importances of all features used for prediction.
+
+        :return: A pandas.DataFrame of feature importances.
+        """
         importances = []
         if self._by_target:
             for t in self.targets:
@@ -301,16 +305,44 @@ class Ensemble(object):
     ## Plotting functions
     ####################################################################
 
-    def plot_feature_importance(self, cutoff=0.05, figsize=(10, 12), layout=None):
+    def plot_feature_importance(self,\
+                                cutoff=0.05,\
+                                figsize=(10, 12),\
+                                layout=None,\
+                                subplots=True,\
+                                legend=False):
+        """
+        Construct a somewhat crude plot of feature importances, useful for a
+        quick and dirty view of these values. If more than one feature present
+        in the model then a grid-layout is constructed and each individual
+        feature is displayed within a subplot. This function is a thin wrapper
+        around pandas.DataFrame.plot.barh().
+
+        :param float cutoff: Remove any features that do not have greater importance
+            than this value across all plotted features. Just remove uninteresting
+            features to reduce the amount of visual noise in the figures.
+        :param tuple figsize: A tuple specifying figure width, height in inches.
+        :param tuple layout: A tuple specifying the row, column layout of the
+            sub-panels. By default we do our best, and it's normally okay.
+        :param bool subplots: Whether to plot each feature individually, or just
+            cram them all into one huge plot. Unless you have few features setting
+            this option to `False` will look insane.
+        :param bool legend: Whether to plot the legend.
+
+        :return: Returns all the matplotlib axis
+        """
         imps = self.feature_importances()
         ## Drop any features that are relatively unimportant
         imps = imps[imps.columns[imps.max() > cutoff]]
 
-        if len(imps) == 1:
-            layout = (1, 1)
-        else:
-            layout = (2, len(imps)/2)
-        axs = imps.T.plot.barh(figsize=figsize, subplots=True, legend=False, width=0.9, layout=layout, sharey=True)
+        ## Just do our best here to figure out a good layout. These should
+        ## work in most normal cases, but you an fall
+        if not layout is None:
+            if len(imps) == 1:
+                layout = (1, 1)
+            else:
+                layout = (2, len(imps)/2)
+        axs = imps.T.plot.barh(figsize=figsize, subplots=subplots, legend=legend, width=0.9, layout=layout, sharey=True)
         return axs
 
 
