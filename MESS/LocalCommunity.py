@@ -272,7 +272,9 @@ class LocalCommunity(object):
 
 
     def _paramschecker(self, param, newvalue, quiet=False):
-        """ Raises exceptions when params are set to values they should not be"""
+        """
+        Raises exceptions when params are set to values they should not be.
+        """
         ## TODO: This should actually check the values and make sure they make sense
         ## TODO: Also check here if you're setting the mode parameter you have to rerun prepopulate
         try:
@@ -323,30 +325,21 @@ class LocalCommunity(object):
         return val
 
 
-    def write_params(self, outfile=None, full=False, append=True):
+    def write_params(self, outfile=None, full=False):
         """
-        Write out the parameters for this island to a file.
-        Normally this isn't called directly, but by the main
-        simulation engine.
+        Write out the parameters of this LocalCommunity to a file properly
+        formatted as input for `MESS -p <params.txt>`.
 
-        append
+        :param string outfile: The name of the params file to write to. If not
+            specified this will default to `params-<Region.name>.txt`.
+        :param bool full: Whether to write out only the parameters of this
+            this particular LocalCommunity realization, or to write out the
+            parameters including any prior ranges.
         """
         if outfile is None:
             raise MESSError("LocalCommunity.write_params outfile must be specified.")
 
-        ## If not appending then we are overwriting
-        if append:
-            filemode = 'a'
-        else:
-            filemode = 'w'
-
-        with open(outfile, filemode) as paramsfile:
-            ## Only write the full header if not appending
-            if not append:
-                header = "------- MESS params file (v.{})".format(MESS.__version__)
-                header += ("-"*(80-len(header)))
-                paramsfile.write(header)
-
+        with open(outfile, 'a') as paramsfile:
             header = "------- LocalCommunity params: {}".format(self.name)
             header += ("-"*(80-len(header)))
             paramsfile.write(header)
