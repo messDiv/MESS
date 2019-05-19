@@ -325,8 +325,8 @@ class Ensemble(object):
         :param tuple layout: A tuple specifying the row, column layout of the
             sub-panels. By default we do our best, and it's normally okay.
         :param bool subplots: Whether to plot each feature individually, or just
-            cram them all into one huge plot. Unless you have few features setting
-            this option to `False` will look insane.
+            cram them all into one huge plot. Unless you have only a few features,
+            setting this option to `False` will look insane.
         :param bool legend: Whether to plot the legend.
 
         :return: Returns all the matplotlib axis
@@ -383,16 +383,16 @@ class Classifier(Ensemble):
         :param bool select_features: Whether to perform relevant feature selection.
             This will remove features with little information useful for model
             prediction. Should improve classification performance, but does take 
-            time. (Default: True).
+            time.
         :param bool param_search: Whether to perform ML classifier hyperparameter
             tuning. If ``False`` then classification will be performed with default
             classifier options, which will almost certainly result in poor performance,
-            but it will run really fast!. (Default: True).
+            but it will run really fast!.
         :param bool by_target: Whether to predict multiple target variables 
-            simultaneously, or each individually and sequentially. (Default: False).
+            simultaneously, or each individually and sequentially.
         :param bool quick: Reduce the number of retained simulations and the number
             of feature selection and hyperparameter tuning iterations to make the
-            prediction step run really fast! Useful for testing. (Default:False).
+            prediction step run really fast! Useful for testing.
         :param bool verbose: Print detailed progress information.
     
         :return: A tuple including the predicted model and the probabilities per model class.
@@ -465,11 +465,22 @@ class Regressor(Ensemble):
         if verbose: print("Removed invariant targets. Retained: {}".format(list(self.y.columns)))
 
 
-    ## Add upper and lower prediction interval for algorithms that support
-    ## quantile regression (rfq, gq)
-    ## The quick parameter doesn't do anything for RFQuantileRegressor because
-    ## it's already really fast (you don't have to refit the model).
     def prediction_interval(self, interval=0.95, quick=False, verbose=False):
+        """
+        Add upper and lower prediction interval for algorithms that support
+        quantile regression (`rf`, `gb`). 
+
+        :hint: You normaly won't have to call this by hand, as it is incorporated automatically into the predict() methods. We allow access to in for experimental purposes.
+
+        :param float interval: The prediction interval to generate. 
+        :param bool quick: Subsample the data to make it run fast, for testing.
+            The `quick` parameter doesn't do anything for `rf` because it's 
+            already really fast (the model doesn't have to be refit).
+        :param bool verbose: Print information about progress.
+
+        :return: A pandas.DataFrame containing the model predictions and the
+            prediction intervals.        
+        """
         if verbose: print("Calculating prediction interval(s)")
         upper = 1.0 - ((1.0 - interval)/2.)
         lower = 1.0 - upper
@@ -514,18 +525,18 @@ class Regressor(Ensemble):
         :param bool select_features: Whether to perform relevant feature selection.
             This will remove features with little information useful for parameter
             estimation. Should improve parameter estimation performance, but does
-            take time. (Default: True).
+            take time.
         :param bool param_search: Whether to perform ML regressor hyperparamter
             tuning. If ``False`` then prediction will be performed with default
             options, which will almost certainly result in poor performance,
-            but it will run really fast!. (Default: True).
+            but it will run really fast!.
         :param bool by_target: Whether to estimate all parameters simultaneously,
             or each individually and sequentially. Some ensemble methods are only
             capable of performing individual parameter estimation, in which case
-            this parameter is forced to ``True``. (Default: False).
+            this parameter is forced to ``True``.
         :param bool quick: Reduce the number of retained simulations and the number
             of feature selection and hyperparameter tuning iterations to make the
-            prediction step run really fast! Useful for testing. (Default:False).
+            prediction step run really fast! Useful for testing.
         :param bool verbose: Print detailed progress information.
     
         :return: A pandas DataFrame including the predicted value per target 
@@ -564,7 +575,6 @@ def posterior_predictive_check(empirical_df,\
                                 nsims=100,\
                                 outfile='',\
                                 verbose=False):
-
     """
     Perform posterior predictive simulations. This function will take
     parameter estimates and perform MESS simulations using these parameter
