@@ -421,13 +421,13 @@ class Region(object):
     ###############################################
     ## Accessor for sampling from the regional pool
     ###############################################
-    def get_nmigrants(self, nmigrants=1):
+    def _get_nmigrants(self, nmigrants=1):
         """Get a sample of inidividuals from the regional pool.
         Returns a list of species ids"""
 
         ## TODO: This could potentially be used to draw migrants from
         ## the local island pool as well as the metacommunity
-        migrants, trait_vals = self.metacommunity.get_nmigrants(nmigrants)
+        migrants, trait_vals = self.metacommunity._get_nmigrants(nmigrants)
         return migrants, trait_vals
 
 

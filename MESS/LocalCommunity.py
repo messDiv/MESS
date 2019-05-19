@@ -409,7 +409,7 @@ class LocalCommunity(object):
         if self._hackersonly["mode"] == "landbridge":
             ## prepopulate the island w/ a random sample from the metacommunity
             ## TODO: The underscore here is ignoring trait values
-            self.local_community, _ = self.region.get_nmigrants(self.paramsdict["J"])
+            self.local_community, _ = self.region._get_nmigrants(self.paramsdict["J"])
 
         elif self._hackersonly["mode"]  == "volcanic":
             ## If not landbridge then doing volcanic, so sample just the most abundant

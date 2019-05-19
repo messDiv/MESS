@@ -448,7 +448,7 @@ class Metacommunity(object):
         return new_species, trait_value
 
 
-    def get_nmigrants(self, nmigrants=1):
+    def _get_nmigrants(self, nmigrants=1):
         migrants = []
         trait_vals = []
         for i in range(nmigrants):
@@ -488,5 +488,5 @@ if __name__ == "__main__":
     for x in range(10):
         print(data.get_migrant())
 
-    migs, traits = data.get_nmigrants(5)
+    migs, traits = data._get_nmigrants(5)
     print(migs, traits)
