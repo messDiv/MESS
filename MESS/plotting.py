@@ -556,7 +556,7 @@ if __name__ == "__main__":
     loc = MESS.LocalCommunity("tmp", J=1000)
     reg._link_local(loc)
     loc.step(1000)
-    loc.simulate_seqs()
+    loc._simulate_seqs()
     print(loc.species_objects)
     print(SAD([x.abundance for x in loc.species_objects], from_abundances=True))
     print(SAD([x.abundance for x in loc.species_objects], from_abundances=True, octaves=True))

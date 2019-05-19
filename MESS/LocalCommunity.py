@@ -386,7 +386,7 @@ class LocalCommunity(object):
         """
         if full:
             self.lambda_through_time[self.current_time] = self._lambda()
-            self.simulate_seqs()
+            self._simulate_seqs()
             self.species_through_time[self.current_time] = self.species
 
         ## Every once in a while test to be sure our community is the same size
@@ -600,7 +600,7 @@ class LocalCommunity(object):
 
     def step(self, nsteps=1):
         """
-        Run one or more generations of birth/death/colonization events. A
+        Run one or more generations of birth/death/colonization timesteps. A
         a generation is J/2 timesteps (convert from Moran to WF generations).
 
         :param int nsteps: The number of generations to simulate.
@@ -855,7 +855,10 @@ class LocalCommunity(object):
         return clades
 
 
-    def simulate_seqs(self):
+    def _simulate_seqs(self):
+        """
+        Simulate genetic variation for each species in the local community.
+        """
         self.species = []
         local_info_bak = self.local_info.copy(deep=True)
         try:
@@ -959,9 +962,16 @@ class LocalCommunity(object):
 
 
     def get_stats(self):
+        """
+        Simulate genetic variation per species in the local community, then
+        aggregate abundance, pi, dxy, and trait data for all species
+        and calculate summary statistics.
 
+        :return: A pandas.DataFrame including all MESS model parameters and
+            all summary statistics.
+        """
         LOGGER.debug("Entering get_stats()")
-        self.simulate_seqs()
+        self._simulate_seqs()
         LOGGER.debug("First 5 species - \n{}".format(self.species[:5]))
 
         abunds = np.array([x.stats["abundance"] for x in self.species])
