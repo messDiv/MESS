@@ -30,6 +30,15 @@ METACOMMUNITY_DTYPE = np.dtype([('ids', object),
                                 ('trait_values', 'f8')])
 
 class Metacommunity(object):
+    """
+    The metacommunity from individuals are sampled for colonization to the
+    local community.
+
+    :param str meta_type: Specify the distribution of abundance among species
+        in the metacommunity. Can be one of: `logser`, `lognorm`, `uniform`,
+        or the file name from which to read metacommunity abundances.
+    :param bool quiet: Whether to print info about metacommunity construction.
+    """
 
     def __init__(self, meta_type="logser", quiet=False):
         self.quiet = quiet
@@ -178,7 +187,9 @@ class Metacommunity(object):
 
 
     def _paramschecker(self, param, newvalue, quiet=True):
-        """ Raises exceptions when params are set to values they should not be"""
+        """
+        Raises exceptions when params are set to values they should not be.
+        """
         ## TODO: This should actually check the values and make sure they make sense
         try:
             if (not quiet) and MESS.__interactive__:
@@ -223,30 +234,21 @@ class Metacommunity(object):
         return self.trait_dict
 
 
-    def write_params(self, outfile=None, full=False, append=True):
+    def _write_params(self, outfile=None, full=False):
         """
-        Write out the parameters for this island to a file.
-        Normally this isn't called directly, but by the main
-        simulation engine.
+        Write out the parameters of this Metacommunity to a file properly
+        formatted as input for `MESS -p <params.txt>`.
 
-        append
+        :param string outfile: The name of the params file to write to. If not
+            specified this will default to `params-<Region.name>.txt`.
+        :param bool full: Whether to write out only the parameters of this
+            this particular Metacommunity realization, or to write out the
+            parameters including any prior ranges.
         """
         if outfile is None:
-            raise MESSError("Metacommunity.write_params outfile must be specified.")
+            raise MESSError("Metacommunity._write_params outfile must be specified.")
 
-        ## If not appending then we are overwriting
-        if append:
-            filemode = 'a'
-        else:
-            filemode = 'w'
-
-        with open(outfile, filemode) as paramsfile:
-            ## Only write the full header if not appending
-            if not append:
-                header = "------- MESS params file (v.{})".format(MESS.__version__)
-                header += ("-"*(80-len(header)))
-                paramsfile.write(header)
-
+        with open(outfile, 'a') as paramsfile:
             header = "------- Metacommunity params: "
             header += ("-"*(80-len(header)))
             paramsfile.write(header)

@@ -332,9 +332,9 @@ class Region(object):
             specified this will default to `params-<Region.name>.txt`.
         :param string outdir: The directory to write the params file to. If not
             specified this will default to the project_dir.
-        :param bool full: Whether to write out only the parameters of this
-            specific parameter values of this particular Region, or to write
-            out the parameters including any prior ranges.
+        :param bool full: Whether to write out only the parameters of the
+            specific parameter values of this Region, or to write out the
+            parameters including prior ranges for parameter values..
         :param bool force: Whether to overwrite if a file already exists.
         """
         if outfile is None:
@@ -392,7 +392,7 @@ class Region(object):
             paramsfile.write("\n")
 
         ## Write parameters of the metacommunity
-        self.metacommunity.write_params(outfile, full=full)
+        self.metacommunity._write_params(outfile, full=full)
 
         ## Write parameters for each island
         for island in self.islands.values():

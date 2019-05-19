@@ -376,7 +376,7 @@ def main():
     if args.new:
         ## Create a tmp assembly, call write_params to make default params.txt
         try:
-            tmpassembly = MESS.Region(args.new, quiet=True, cli=True)
+            tmpassembly = MESS.Region(args.new, quiet=True)
             tmpmeta = MESS.Metacommunity()
             #tmpmeta.set_metacommunity()
             tmpassembly._link_metacommunity(tmpmeta)
