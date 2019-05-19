@@ -92,7 +92,8 @@ def hill_numbers(abunds, orders, granularity=None, do_negative=False):
 
 
 def SAD(community, from_abundances=False, octaves=False, raw_abunds=False):
-    """Generate the species abundance distribution either raw or in 
+    """
+    Generate the species abundance distribution either raw or in 
     octaves of powers of 2. The input here is a simple list of "individuals"
     specified just by their species identifier.
     """

@@ -220,6 +220,9 @@ class LocalCommunity(object):
 
 
     def _set_region(self, region):
+        """
+        Connect this LocalCommunity to its region.
+        """
         self.region = region
         self.SGD = SGD([], ndims=region._hackersonly["sgd_dimensions"], nbins=region._hackersonly["sgd_bins"])
         self._hackersonly["trait_rate_local"] = self._get_trait_rate_local()
@@ -227,6 +230,10 @@ class LocalCommunity(object):
 
 
     def _set_death_step(self):
+        """
+        Set the death step method based on which community assembly model we're
+        running.
+        """
         assembly_model = self.region.paramsdict["community_assembly_model"]
         if assembly_model == "neutral":
             self.death_step = self._neutral_death_step
@@ -370,10 +377,13 @@ class LocalCommunity(object):
 
 
     def _log(self, full=False):
-        """ A function for occasionally logging a ton of information through time.
+        """
+        A function for occasionally logging a ton of information through time.
         Anything that needs to get recorded through time should happen in here.
-        'full' will dump a ton of stuff to the outdir, and is normally only really
-        used for fancy plotting."""
+
+        :param bool full: Dump a ton of stuff to the outdir. Normally only really
+            used for fancy plotting.
+        """
         if full:
             self.lambda_through_time[self.current_time] = self._lambda()
             self.simulate_seqs()
@@ -567,12 +577,14 @@ class LocalCommunity(object):
         return ancestor
 
 
-    def migrate_step(self):
-        """ Allow multiple colonizations. In this case we return the sampled species
+    def _migrate_step(self):
+        """
+        Allow multiple colonizations. In this case we return the sampled species
         as well as a bool reporting whether or not this is the first colonization of
         this species into the local community so that the coltime can be recorded.
         multiple colonizations of a species do not update coltime, but we record them
-        for migration rate calculation."""
+        for migration rate calculation.
+        """
 
         new_species, _ = self.region._get_migrant()
         if new_species in self.local_community:
@@ -587,6 +599,12 @@ class LocalCommunity(object):
 
 
     def step(self, nsteps=1):
+        """
+        Run one or more generations of birth/death/colonization events. A
+        a generation is J/2 timesteps (convert from Moran to WF generations).
+
+        :param int nsteps: The number of generations to simulate.
+        """
         ## Convert time in generations to timesteps (WF -> Moran)
         for step in range(nsteps * self.paramsdict["J"] / 2):
             chx = ''
@@ -600,7 +618,7 @@ class LocalCommunity(object):
                 ## the init_colonization flag is used to test whether to update the divergence time
                 ## Removed the if statement because multiple colonizations are always allowed
                 #if self.region.paramsdict["allow_multiple_colonizations"]:
-                new_species = self.migrate_step()
+                new_species = self._migrate_step()
                 chx = new_species
 
                 ## The invasion code "works" in that it worked last time I tried it, but it's
@@ -639,17 +657,28 @@ class LocalCommunity(object):
                np.random.random_sample() < self.paramsdict["speciation_prob"] and\
                chx != None:
 
-               self.speciate(chx)
+               self._speciate(chx)
 
             ## update current time
             self.current_time += 1
 
 
     def get_abundances(self, octaves=False, raw_abunds=False):
+        """
+        Get the SAD of the local community.
+
+        :param bool octaves: Return the SAD binned into size-class octaves.
+        :param bool raw_abunds: Return the actual list of abundances per
+            species, without binning into SAD.
+
+        :return: If `raw_abunds` then returns a list of abundances per species,
+            otherwise returns an OrderedDict with keys as abundance classes
+            and values as counts of species per class.
+        """
         return SAD(self.local_community, octaves=octaves, raw_abunds=raw_abunds)
 
 
-    def speciate(self, chx):
+    def _speciate(self, chx):
         """
         Occassionally initiate the speciation process. In all modes, one
         one individual is randomly selected to undergo speciation.
@@ -762,10 +791,12 @@ class LocalCommunity(object):
             raise MESSError("Unrecognized speciation model - {}".format(self.region.paramsdict["speciation_model"]))
 
 
-    ## TODO: Unused and not updated to current MESS structure
-    ## How strong is the bottleneck? Strength should be interpreted as percent of local
-    ## community to retain
-    def bottleneck(self, strength=1):
+    ##TODO: Unused and not updated to current MESS structure
+    def _bottleneck(self, strength=1):
+        """
+        How strong is the bottleneck? Strength should be interpreted as percent
+        of local community to retain
+        """
         reduction = int(round(self.paramsdict["J"] * strength))
         self.local_community = self.local_community[:reduction]
 
