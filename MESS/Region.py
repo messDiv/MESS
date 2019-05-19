@@ -396,7 +396,7 @@ class Region(object):
 
         ## Write parameters for each island
         for island in self.islands.values():
-            island.write_params(outfile, full=full)
+            island._write_params(outfile, full=full)
 
 
     ########################

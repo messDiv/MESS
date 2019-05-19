@@ -325,7 +325,7 @@ class LocalCommunity(object):
         return val
 
 
-    def write_params(self, outfile=None, full=False):
+    def _write_params(self, outfile=None, full=False):
         """
         Write out the parameters of this LocalCommunity to a file properly
         formatted as input for `MESS -p <params.txt>`.
@@ -337,7 +337,7 @@ class LocalCommunity(object):
             parameters including any prior ranges.
         """
         if outfile is None:
-            raise MESSError("LocalCommunity.write_params outfile must be specified.")
+            raise MESSError("LocalCommunity._write_params outfile must be specified.")
 
         with open(outfile, 'a') as paramsfile:
             header = "------- LocalCommunity params: {}".format(self.name)
