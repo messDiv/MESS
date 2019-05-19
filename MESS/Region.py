@@ -259,7 +259,7 @@ class Region(object):
         :param string sname: The ID of the new species.
         :param float trait_value: The trait value of the new species.
         """
-        self.metacommunity.update_species_pool(sname, trait_value)
+        self.metacommunity._update_species_pool(sname, trait_value)
 
 
     def _reset_local_communities(self):
