@@ -23,7 +23,16 @@ LOGGER = logging.getLogger(__name__)
 
 
 class LocalCommunity(object):
+    """
+    Construct a local community.
 
+    :param str name: The name of the LocalCommunity.
+    :param int J: The number of individuals in the LocalCommunity.
+    :param float m: Migration rate into the LocalCommunity. This is the
+        probability per time step that a death is replaced by a migrant
+        from the metacommunity.
+    :param bool quiet: Print out some info about the local community.
+    """
     def __init__(self, name="Loc1", J=1000, m=0.01, quiet=False):
         self.quiet = quiet
 
