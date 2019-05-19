@@ -9,6 +9,23 @@ introduction to using this API to run simulations.
 Simulation model
 ****************
 
+Region
+++++++
+
+.. autoclass:: MESS.Region.Region
+    :members:
+
+Metacommunity
++++++++++++++
+
+.. autoclass:: MESS.LocalCommunity.LocalCommunity
+    :members:
+
+Local Community
++++++++++++++++
+
+.. autoclass:: MESS.Metacommunity.Metacommunity
+    :members:
 
 Inference Procedure
 *******************

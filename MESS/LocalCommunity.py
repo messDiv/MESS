@@ -644,19 +644,20 @@ class LocalCommunity(object):
 
 
     def speciate(self, chx):
-        """ Occassionally initiate the speciation process. In all modes, one
-            one individual is randomly selected to undergo speciation.
-            Speciation does not change the founder_flag state.
+        """
+        Occassionally initiate the speciation process. In all modes, one
+        one individual is randomly selected to undergo speciation.
+        Speciation does not change the founder_flag state.
 
-            Currently there are 3 modes implemented:
-            - point_mutation: The randomly selected individual becomes a new
-                species of its own, of abundance 1.
-            - random_fission: The species of the randomly selected individual
-                undergoes random fission. In this mode the abundance of the
-                new species is determined by randomly splitting off a chunk
-                of the individuals from the parent species. All fission
-                sizes are equally likely.
-            - protracted:
+        Currently there are 3 modes implemented:
+        point_mutation - The randomly selected individual becomes a new
+            species of its own, of abundance 1.
+        random_fission -  The species of the randomly selected individual
+            undergoes random fission. In this mode the abundance of the
+            new species is determined by randomly splitting off a chunk
+            of the individuals from the parent species. All fission
+            sizes are equally likely.
+        protracted - watdo
         """
         LOGGER.debug("Initiate speciation process - {}".format(chx))
 
