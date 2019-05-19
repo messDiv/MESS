@@ -568,7 +568,7 @@ class LocalCommunity(object):
         multiple colonizations of a species do not update coltime, but we record them
         for migration rate calculation."""
 
-        new_species, _ = self.region.get_migrant()
+        new_species, _ = self.region._get_migrant()
         if new_species in self.local_community:
             ## This is a post-colonization migrant so record the event and tell downstream
             ## not to update the colonization time.

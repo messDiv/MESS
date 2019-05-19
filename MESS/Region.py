@@ -431,8 +431,8 @@ class Region(object):
         return migrants, trait_vals
 
 
-    def get_migrant(self):
-        return self.metacommunity.get_migrant()
+    def _get_migrant(self):
+        return self.metacommunity._get_migrant()
 
 
     def _get_most_abundant(self):

@@ -419,13 +419,17 @@ class Metacommunity(object):
 
     def _update_species_pool(self, sname, trait_value):
         """
-        Add a new species to the species pool. This is on account of
-        speciation in the local communities and we need to keep track of
-        the trait values globally. New species are appended to the end
-        and given dummy values for their immigration probability and regional
-        abundance. There are no dynamics in the metacommunity so these
-        new species will never act as colonists from the metacommunity.
-        The form of this call is ugly for stupid reasons.
+        Add a new species to the species pool. This is on account of speciation
+        in the local communities and we need to keep track of the trait values
+        globally. New species are appended to the end   and given dummy values
+        for their immigration probability and regional  abundance. There are no
+        dynamics in the metacommunity so these  new species will never act as
+        colonists from the metacommunity. The form of this call is ugly for
+        stupid reasons.
+ 
+        :param str sname: The name of the new species to add to the
+            metacommunity.
+        :param float trait_value: The trait value of the new species.
         """
         try:
             LOGGER.debug("Adding species/trait_value - {}/{}".format(sname, trait_value))
@@ -438,11 +442,9 @@ class Metacommunity(object):
             raise
 
 
-    ##################################
-    ## Publicly useful methods
-    ##################################
-    def get_migrant(self):
-        """ Return one
+    def _get_migrant(self):
+        """
+        Return one migrant individual.
         """
         migrant_draw = np.random.multinomial(1, self.community["immigration_probabilities"], size=1).argmax()
         new_species = self.community["ids"][migrant_draw]
@@ -456,7 +458,7 @@ class Metacommunity(object):
         migrants = []
         trait_vals = []
         for i in range(nmigrants):
-            mig, trait = self.get_migrant()
+            mig, trait = self._get_migrant()
             migrants.append(mig)
             trait_vals.append(trait)
         return migrants, trait_vals
@@ -490,7 +492,7 @@ if __name__ == "__main__":
     print("{} {}".format(data, data.community[:10]))
 
     for x in range(10):
-        print(data.get_migrant())
+        print(data._get_migrant())
 
     migs, traits = data._get_nmigrants(5)
     print(migs, traits)
