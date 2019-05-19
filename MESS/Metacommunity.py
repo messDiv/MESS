@@ -18,10 +18,6 @@ from MESS.util import tuplecheck, sample_param_range, MESSError, set_params
 import logging
 LOGGER = logging.getLogger(__name__)
 
-## Limit on the number of redraws in the event of disallowed
-## multiple migration, error out and warn if exceeded
-MAX_DUPLICATE_REDRAWS_FROM_METACOMMUNITY = 1500
-
 ## id is a variable length string so we set the dtype as "object"
 ## to allow for reference pointing to string objects
 METACOMMUNITY_DTYPE = np.dtype([('ids', object),
@@ -99,6 +95,11 @@ class Metacommunity(object):
                                                         self.paramsdict["S_m"])
 
     def _resample_priors(self):
+        """
+        Draw new parameter valuse if priors are specified for any parameters.
+        Parameters are sampled uniform, except ecological strength, which is
+        sampled loguniform.
+        """
         for k,v in self._priors.items():
             if np.array(v).any():
                 loguniform = False
@@ -108,6 +109,10 @@ class Metacommunity(object):
 
 
     def _simulate_metacommunity(self, J, S_m, speciation_rate, death_proportion, trait_rate_meta):
+        """
+        Simulate the tree, evolve the traits on it and paste on abundances.
+        Calls out to R code.
+        """
         import rpy2.robjects as robjects
         from rpy2.robjects import r, pandas2ri
 
@@ -286,7 +291,7 @@ class Metacommunity(object):
         of these locations then the species labels and immigration probs
         are calculated from there
 
-        :param bool random: Whether to generate  random trait values in the 
+        :param bool random: Whether to generate random trait values in the 
             range [0-1]
         :param bool resample: Whether to resample from any specified priors.
         """
@@ -446,17 +451,25 @@ class Metacommunity(object):
 
     def _get_migrant(self):
         """
-        Return one migrant individual.
+        Return one individual randomly sampled from the entire metacommunity.
+
+        :return: A tuple containing the species ID (str) and the trait
+            value (float).
         """
         migrant_draw = np.random.multinomial(1, self.community["immigration_probabilities"], size=1).argmax()
         new_species = self.community["ids"][migrant_draw]
         trait_value = self.community["trait_values"][migrant_draw]
 
-        #LOGGER.debug("Migrant idx {}\tid {}\t trait_val {}".format(migrant_draw, new_species, trait_value))
         return new_species, trait_value
 
 
     def _get_nmigrants(self, nmigrants=1):
+        """
+        Sample multiple individuals, each uniformly and independently picked
+        from the metacommunity.
+
+        :return: A tuple of lists of species IDs and trait values.
+        """
         migrants = []
         trait_vals = []
         for i in range(nmigrants):
