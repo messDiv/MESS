@@ -321,7 +321,8 @@ class Classifier(Ensemble):
     :param pandas.DataFrame empirical_df: A DataFrame containing the empirical
         data. This df has a very specific format which is documented here.
     :param string simfile: The path to the file containing all the simulations.
-    :param string algorithm: The ensemble method to use for parameter estimation.
+    :param string algorithm: One of the :ref:`ensemble_methods` to use for
+        parameter estimation.
     :param bool verbose: Print detailed progress information.
     """
 
