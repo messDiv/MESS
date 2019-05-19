@@ -425,7 +425,7 @@ class LocalCommunity(object):
         if self._hackersonly["mode"] == "landbridge":
             ## prepopulate the island w/ a random sample from the metacommunity
             ## TODO: The underscore here is ignoring trait values
-            self.local_community, _ = self.region._get_nmigrants(self.paramsdict["J"])
+            self.local_community, _ = self.region._get_migrants(self.paramsdict["J"])
 
         elif self._hackersonly["mode"]  == "volcanic":
             ## If not landbridge then doing volcanic, so sample just the most abundant
@@ -615,9 +615,6 @@ class LocalCommunity(object):
                     self.death_step()
 
                 ## Grab the new colonizing species
-                ## the init_colonization flag is used to test whether to update the divergence time
-                ## Removed the if statement because multiple colonizations are always allowed
-                #if self.region.paramsdict["allow_multiple_colonizations"]:
                 new_species = self._migrate_step()
                 chx = new_species
 

@@ -323,10 +323,9 @@ class Region(object):
     def write_params(self, outfile=None, outdir=None, full=False, force=False):
         """
         Write out the parameters of this model to a file properly formatted as
-        input for `MESS -p <params.txt>`. A good and simple way to 
-        share/archive parameter settings for simulations. This is also the 
-        function that's used by __main__ to generate default params.txt files
-        for `MESS -n`.
+        input for the MESS CLI. A good and simple way to share/archive 
+        parameter settings for simulations. This is also the function that's
+        used by __main__ to generate default params.txt files for `MESS -n`.
 
         :param string outfile: The name of the params file to generate. If not
             specified this will default to `params-<Region.name>.txt`.
@@ -417,13 +416,13 @@ class Region(object):
     ###############################################
     ## Accessor for sampling from the regional pool
     ###############################################
-    def _get_nmigrants(self, nmigrants=1):
+    def _get_migrants(self, nmigrants=1):
         """Get a sample of inidividuals from the regional pool.
         Returns a list of species ids"""
 
         ## TODO: This could potentially be used to draw migrants from
         ## the local island pool as well as the metacommunity
-        migrants, trait_vals = self.metacommunity._get_nmigrants(nmigrants)
+        migrants, trait_vals = self.metacommunity.get_migrants(nmigrants)
         return migrants, trait_vals
 
 

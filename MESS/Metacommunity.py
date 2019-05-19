@@ -463,12 +463,12 @@ class Metacommunity(object):
         return new_species, trait_value
 
 
-    def _get_nmigrants(self, nmigrants=1):
+    def get_migrants(self, nmigrants=1):
         """
-        Sample multiple individuals, each uniformly and independently picked
-        from the metacommunity.
+        Sample individuals from the Metacommunity. Each individual is uniformly
+        and independently sampled with replacement from the Metacommunity.
 
-        :return: A tuple of lists of species IDs and trait values.
+        :return: A tuple of lists of species IDs (str) and trait values (float).
         """
         migrants = []
         trait_vals = []
@@ -509,5 +509,5 @@ if __name__ == "__main__":
     for x in range(10):
         print(data._get_migrant())
 
-    migs, traits = data._get_nmigrants(5)
+    migs, traits = data.get_migrants(5)
     print(migs, traits)
