@@ -25,12 +25,12 @@ import warnings
 with warnings.catch_warnings(record=True) as w:
     matplotlib.use("agg")
 
-import inference
-import stats
-from .util import *
-from .Region import Region 
-from .LocalCommunity import LocalCommunity
-from .Metacommunity import Metacommunity
+from util import *
+from Region import Region
+from LocalCommunity import LocalCommunity
+from Metacommunity import Metacommunity
+from inference import *
+from stats import *
 
 
 ####################################################################

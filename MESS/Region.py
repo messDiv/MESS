@@ -14,11 +14,22 @@ from .util import *
 LOGGER = logging.getLogger(__name__)
 
 class Region(object):
-    """ A Massive eco-evolutionary synthesis simulation object.
+    """
+    The MESS Region is the fundamental unit of a batch of simulation scenarios.
+    A Region encompasses both a Metacommunity and one or more Local Communities,
+    and orchestrates the community assembly process.
 
+    :param str name: The name of this MESS simulation. This is used for
+        creating output files.
+    :param bool quiet: Whether to print progress of simulations or remain silent.
+    :param bool log_files: For each community assembly simulation create a
+        a directory in the `outdir`, write the exact parameters for the simulation,
+        and dump the megalog to a file. The megalog includes all information
+        about the final state of the local community, prior to calculating
+        summary statistics per species. Primarily for debugging purposes.
     """
 
-    def __init__(self, name, quiet=False, log_files=False, **kwargs):
+    def __init__(self, name, quiet=False, log_files=False):
         if not name:
             raise MESSError(REQUIRE_NAME)
 
@@ -111,10 +122,14 @@ class Region(object):
 
 
     def _link_local(self, local_community, add=False):
-        """ Just link a local community that was created externally.
+        """
+        Just link a local community that was created externally.
         This is primarily used by __main__ during the initialization process.
 
-        add: Wether to add this local community to the pool, or link and replace."""
+        :param local_community: The target local community to link.
+        :param bool add: Wether to add this local community to the pool, or to
+            link and replace.
+        """
         LOGGER.debug("Linking local community - {}".format(local_community))
         local_community._set_region(self)
         ## TODO: This is somewhat hax. If we want to link and replace
@@ -123,23 +138,32 @@ class Region(object):
         if not add:
             self.islands = {}
         self.islands[local_community.paramsdict["name"]] = local_community
-        local_community.prepopulate()
+        local_community._prepopulate()
 
 
     def _link_metacommunity(self, metacommunity):
-        """ Just import a metacommunity object that's been created externally."""
+        """
+        Just import a metacommunity object that's been created externally.
+
+        :param metacommunity: The metacommunity to link.
+        """
         LOGGER.debug("Linking metacommunity - {}".format(metacommunity))
 
         self.metacommunity = metacommunity
 
         for locname in self.islands.keys():
-            self.islands[locname].prepopulate()
+            self.islands[locname]._prepopulate()
 
 
     def _get_simulation_outdir(self, prefix=""):
-        """ Construct an output directory for a simulation run.
+        """
+        Construct an output directory for a simulation run.
         Make output directory formatted like <output_dir>/<name>-<timestamp><random 2 digit #>
-        This will _mostly_ avoid output directory collisions, right?"""
+        This will _mostly_ avoid output directory collisions, right?
+
+        :param string prefix: The directory within which to create the
+            simulation output directory.
+        """
 
         dirname = prefix + self.paramsdict["simulation_name"]
         outdir = os.path.join(self.paramsdict["project_dir"],\
@@ -158,7 +182,14 @@ class Region(object):
 
 
     def _paramschecker(self, param, newvalue, quiet=True):
-        """ Raises exceptions when params are set to values they should not be"""
+        """
+        Check and set parameters for the Region. Raises exceptions when params
+        are set to values they should not be.
+
+        :param string param: The parameter to set.
+        :param newvalue: The value of the parameter.
+        :param bool quiet: Whether to print info.
+        """
         ## TODO: This should actually check the values and make sure they make sense
         try:
             ## Cast params to correct types
@@ -219,26 +250,38 @@ class Region(object):
 
 
     def _record_local_speciation(self, sname, trait_value):
-        """ Local speciation events need to be recorded, for
-        example the trait value needs to get added to the
-        metacommunity trait value list. Maybe other stuff needs
-        to happen at speciation time, so we create a function.
-        This function is called by LocalCommunity.speciate()"""
-        self.metacommunity.update_species_pool(sname, trait_value)
+        """
+        Local speciation events need to be recorded, for example the trait 
+        value needs to get added to the metacommunity trait value list. Maybe
+        other stuff needs to happen at speciation time, so we create a function.
+        This function is called by LocalCommunity.speciate().
+
+        :param string sname: The ID of the new species.
+        :param float trait_value: The trait value of the new species.
+        """
+        self.metacommunity._update_species_pool(sname, trait_value)
 
 
     def _reset_local_communities(self):
+        """
+        Flip the local community. Basically make a copy, resample any parameters
+        that were specified with priors and _prepopulate it.
+        """
         LOGGER.debug("_reset_local_community()")
         for name, island in self.islands.items():
             new = island._copy()
-            new.prepopulate()
+            new._prepopulate()
             self.islands[name] = new
 
 
     def _reset_metacommunity(self):
-        ## Calling set_metacommunity() again will regenerate a new
+        """
+        Flip the metacommunity. Just regenerate a new metacommunity, resampling
+        from any priors that were specified.
+        """
+        ## Calling _set_metacommunity() again will regenerate a new
         ## metacommunity using the same parameters each time.
-        self.metacommunity.set_metacommunity(resample=True)
+        self.metacommunity._set_metacommunity(resample=True)
 
 
     ## Getting parameters header and parameters carves off
@@ -251,10 +294,19 @@ class Region(object):
         return list(self.paramsdict.values())[2:]
 
 
-    ## A convenience function for setting a parameter in the API
-    ## mode, which turns out to be a little annoying if you don't
-    ## allow this.
     def set_param(self, param, value, quiet=True):
+        """
+        A convenience function for setting parameters in the API mode, which
+        turns out to be a little annoying if you don't provide this. With
+        the set_param method you can set parameters on the Region, the
+        Metacommunity, or the LocalCommunity. Simply pass the parameter
+        name and the value, and this method identifies the appropriate target
+        parameter.
+
+        :param string param: The name of the parameter to set.
+        :param value: The value of the parameter to set.
+        :param bool quiet: Whether to print info to the console.
+        """
         try:
             self = set_params(self, param, value, quiet)
         except:
@@ -269,11 +321,20 @@ class Region(object):
 
 
     def write_params(self, outfile=None, outdir=None, full=False, force=False):
-        """ Write out the parameters of this model to a file properly
-        formatted as input for `MESS -p <params.txt>`. A good and
-        simple way to share/archive parameter settings for simulations.
-        This is also the function that's used by __main__ to
-        generate default params.txt files for `MESS -n`
+        """
+        Write out the parameters of this model to a file properly formatted as
+        input for the MESS CLI. A good and simple way to share/archive 
+        parameter settings for simulations. This is also the function that's
+        used by __main__ to generate default params.txt files for `MESS -n`.
+
+        :param string outfile: The name of the params file to generate. If not
+            specified this will default to `params-<Region.name>.txt`.
+        :param string outdir: The directory to write the params file to. If not
+            specified this will default to the project_dir.
+        :param bool full: Whether to write out only the parameters of the
+            specific parameter values of this Region, or to write out the
+            parameters including prior ranges for parameter values..
+        :param bool force: Whether to overwrite if a file already exists.
         """
         if outfile is None:
             outfile = "params-"+self.paramsdict["simulation_name"]+".txt"
@@ -330,11 +391,11 @@ class Region(object):
             paramsfile.write("\n")
 
         ## Write parameters of the metacommunity
-        self.metacommunity.write_params(outfile, full=full)
+        self.metacommunity._write_params(outfile, full=full)
 
         ## Write parameters for each island
         for island in self.islands.values():
-            island.write_params(outfile, full=full)
+            island._write_params(outfile, full=full)
 
 
     ########################
@@ -346,10 +407,6 @@ class Region(object):
         self._link_local(loc)
 
 
-    def set_metacommunity(self, meta_type):
-        pass
-
-
     def set_colonization_matrix(self, matrix):
         """ Set the matrix that describes colonization rate between local communities."""
         ## TODO: Make sure the matrix is the right shape
@@ -359,21 +416,21 @@ class Region(object):
     ###############################################
     ## Accessor for sampling from the regional pool
     ###############################################
-    def get_nmigrants(self, nmigrants=1):
+    def _get_migrants(self, nmigrants=1):
         """Get a sample of inidividuals from the regional pool.
         Returns a list of species ids"""
 
         ## TODO: This could potentially be used to draw migrants from
         ## the local island pool as well as the metacommunity
-        migrants, trait_vals = self.metacommunity.get_nmigrants(nmigrants)
+        migrants, trait_vals = self.metacommunity.get_migrants(nmigrants)
         return migrants, trait_vals
 
 
-    def get_migrant(self):
-        return self.metacommunity.get_migrant()
+    def _get_migrant(self):
+        return self.metacommunity._get_migrant()
 
 
-    def get_most_abundant(self):
+    def _get_most_abundant(self):
         """Just get the most abundant species from the metacommunity"""
         max_idx = self.metacommunity.community["abundances"].argmax()
         new_species = self.metacommunity.community["ids"][max_idx]
@@ -388,7 +445,7 @@ class Region(object):
         return new_species, trait_value
 
 
-    def get_abundance(self, species=None):
+    def _get_abundance(self, species=None):
         """Return abundance of a species in the regional pool."""
         ## This is dumb, metacommunity should be pd
         return self.metacommunity.community["abundances"]\

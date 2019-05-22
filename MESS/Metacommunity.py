@@ -18,10 +18,6 @@ from MESS.util import tuplecheck, sample_param_range, MESSError, set_params
 import logging
 LOGGER = logging.getLogger(__name__)
 
-## Limit on the number of redraws in the event of disallowed
-## multiple migration, error out and warn if exceeded
-MAX_DUPLICATE_REDRAWS_FROM_METACOMMUNITY = 1500
-
 ## id is a variable length string so we set the dtype as "object"
 ## to allow for reference pointing to string objects
 METACOMMUNITY_DTYPE = np.dtype([('ids', object),
@@ -30,6 +26,15 @@ METACOMMUNITY_DTYPE = np.dtype([('ids', object),
                                 ('trait_values', 'f8')])
 
 class Metacommunity(object):
+    """
+    The metacommunity from individuals are sampled for colonization to the
+    local community.
+
+    :param str meta_type: Specify the distribution of abundance among species
+        in the metacommunity. Can be one of: `logser`, `lognorm`, `uniform`,
+        or the file name from which to read metacommunity abundances.
+    :param bool quiet: Whether to print info about metacommunity construction.
+    """
 
     def __init__(self, meta_type="logser", quiet=False):
         self.quiet = quiet
@@ -81,7 +86,7 @@ class Metacommunity(object):
         ## A dictionary for fast trait value lookups
         self.trait_dict = {}
 
-        self.set_metacommunity()
+        self._set_metacommunity()
         LOGGER.debug("Metacommunity paramsdict - {}".format(self.paramsdict))
 
 
@@ -90,6 +95,11 @@ class Metacommunity(object):
                                                         self.paramsdict["S_m"])
 
     def _resample_priors(self):
+        """
+        Draw new parameter valuse if priors are specified for any parameters.
+        Parameters are sampled uniform, except ecological strength, which is
+        sampled loguniform.
+        """
         for k,v in self._priors.items():
             if np.array(v).any():
                 loguniform = False
@@ -99,6 +109,10 @@ class Metacommunity(object):
 
 
     def _simulate_metacommunity(self, J, S_m, speciation_rate, death_proportion, trait_rate_meta):
+        """
+        Simulate the tree, evolve the traits on it and paste on abundances.
+        Calls out to R code.
+        """
         import rpy2.robjects as robjects
         from rpy2.robjects import r, pandas2ri
 
@@ -178,11 +192,13 @@ class Metacommunity(object):
 
 
     def _paramschecker(self, param, newvalue, quiet=True):
-        """ Raises exceptions when params are set to values they should not be"""
+        """
+        Raises exceptions when params are set to values they should not be.
+        """
         ## TODO: This should actually check the values and make sure they make sense
         try:
             if (not quiet) and MESS.__interactive__:
-                print("  Updating Metacommunity parameters requires running set_metacommunity()"\
+                print("  Updating Metacommunity parameters requires running _set_metacommunity()"\
                         + " to apply the changes.")
 
             ## Cast params to correct types
@@ -223,30 +239,21 @@ class Metacommunity(object):
         return self.trait_dict
 
 
-    def write_params(self, outfile=None, full=False, append=True):
+    def _write_params(self, outfile=None, full=False):
         """
-        Write out the parameters for this island to a file.
-        Normally this isn't called directly, but by the main
-        simulation engine.
+        Write out the parameters of this Metacommunity to a file properly
+        formatted as input for `MESS -p <params.txt>`.
 
-        append
+        :param string outfile: The name of the params file to write to. If not
+            specified this will default to `params-<Region.name>.txt`.
+        :param bool full: Whether to write out only the parameters of this
+            this particular Metacommunity realization, or to write out the
+            parameters including any prior ranges.
         """
         if outfile is None:
-            raise MESSError("Metacommunity.write_params outfile must be specified.")
+            raise MESSError("Metacommunity._write_params outfile must be specified.")
 
-        ## If not appending then we are overwriting
-        if append:
-            filemode = 'a'
-        else:
-            filemode = 'w'
-
-        with open(outfile, filemode) as paramsfile:
-            ## Only write the full header if not appending
-            if not append:
-                header = "------- MESS params file (v.{})".format(MESS.__version__)
-                header += ("-"*(80-len(header)))
-                paramsfile.write(header)
-
+        with open(outfile, 'a') as paramsfile:
             header = "------- Metacommunity params: "
             header += ("-"*(80-len(header)))
             paramsfile.write(header)
@@ -276,7 +283,7 @@ class Metacommunity(object):
             paramsfile.write("\n")
 
 
-    def set_metacommunity(self, random=False, resample=False):
+    def _set_metacommunity(self, random=False, resample=False):
         """
         For setting the metacommunity you can either generate a random
         uniform community or read on in from a file that's basically just
@@ -284,7 +291,9 @@ class Metacommunity(object):
         of these locations then the species labels and immigration probs
         are calculated from there
 
-        random=True will set random trait values in the range [0-1]
+        :param bool random: Whether to generate random trait values in the 
+            range [0-1]
+        :param bool resample: Whether to resample from any specified priors.
         """
         meta_type = self._hackersonly["metacommunity_type"]
         LOGGER.debug("Enter set_metacommunity - {}".format(meta_type))
@@ -415,44 +424,56 @@ class Metacommunity(object):
         LOGGER.debug("Metacommunity info: shape {}\n[:10] {}".format(self.community.shape, self.community[:10]))
 
 
-    def update_species_pool(self, sname, trait_value):
-        """ Add a new species to the species pool. This is on account of
-        speciation in the local communities and we need to keep track of
-        the trait values globally. New species are appended to the end
-        and given dummy values for their immigration probability and regional
-        abundance. There are no dynamics in the metacommunity so these
-        new species will never act as colonists from the metacommunity.
-        The form of this call is ugly for stupid reasons"""
+    def _update_species_pool(self, sname, trait_value):
+        """
+        Add a new species to the species pool. This is on account of speciation
+        in the local communities and we need to keep track of the trait values
+        globally. New species are appended to the end   and given dummy values
+        for their immigration probability and regional  abundance. There are no
+        dynamics in the metacommunity so these  new species will never act as
+        colonists from the metacommunity. The form of this call is ugly for
+        stupid reasons.
+ 
+        :param str sname: The name of the new species to add to the
+            metacommunity.
+        :param float trait_value: The trait value of the new species.
+        """
         try:
             LOGGER.debug("Adding species/trait_value - {}/{}".format(sname, trait_value))
             self.community = np.hstack((self.community,\
                                         np.array([tuple([sname, 0, 0, trait_value])], dtype=METACOMMUNITY_DTYPE)))
             self.trait_dict[sname] = trait_value
         except Exception as inst:
-            LOGGER.error("Error in Metacommunity.update_species_pool - {}".format(inst))
+            LOGGER.error("Error in Metacommunity._update_species_pool - {}".format(inst))
             LOGGER.error("sname/trait_value - {}/{}".format(sname, trait_value))
             raise
 
 
-    ##################################
-    ## Publicly useful methods
-    ##################################
-    def get_migrant(self):
-        """ Return one
+    def _get_migrant(self):
+        """
+        Return one individual randomly sampled from the entire metacommunity.
+
+        :return: A tuple containing the species ID (str) and the trait
+            value (float).
         """
         migrant_draw = np.random.multinomial(1, self.community["immigration_probabilities"], size=1).argmax()
         new_species = self.community["ids"][migrant_draw]
         trait_value = self.community["trait_values"][migrant_draw]
 
-        #LOGGER.debug("Migrant idx {}\tid {}\t trait_val {}".format(migrant_draw, new_species, trait_value))
         return new_species, trait_value
 
 
-    def get_nmigrants(self, nmigrants=1):
+    def get_migrants(self, nmigrants=1):
+        """
+        Sample individuals from the Metacommunity. Each individual is uniformly
+        and independently sampled with replacement from the Metacommunity.
+
+        :return: A tuple of lists of species IDs (str) and trait values (float).
+        """
         migrants = []
         trait_vals = []
         for i in range(nmigrants):
-            mig, trait = self.get_migrant()
+            mig, trait = self._get_migrant()
             migrants.append(mig)
             trait_vals.append(trait)
         return migrants, trait_vals
@@ -486,7 +507,7 @@ if __name__ == "__main__":
     print("{} {}".format(data, data.community[:10]))
 
     for x in range(10):
-        print(data.get_migrant())
+        print(data._get_migrant())
 
-    migs, traits = data.get_nmigrants(5)
+    migs, traits = data.get_migrants(5)
     print(migs, traits)

@@ -13,3 +13,4 @@ mess_log.txt
 params*
 *.swp
 *_MESS/
+docs/_build

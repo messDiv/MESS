@@ -23,7 +23,16 @@ LOGGER = logging.getLogger(__name__)
 
 
 class LocalCommunity(object):
+    """
+    Construct a local community.
 
+    :param str name: The name of the LocalCommunity.
+    :param int J: The number of individuals in the LocalCommunity.
+    :param float m: Migration rate into the LocalCommunity. This is the
+        probability per time step that a death is replaced by a migrant
+        from the metacommunity.
+    :param bool quiet: Print out some info about the local community.
+    """
     def __init__(self, name="Loc1", J=1000, m=0.01, quiet=False):
         self.quiet = quiet
 
@@ -143,7 +152,10 @@ class LocalCommunity(object):
 
 
     def _copy(self):
-        """ Create a new clean copy of this LocalCommunity."""
+        """
+        Create a new clean copy of this LocalCommunity, resampling new values
+        for any parameter that were specified with a prior.
+        """
         LOGGER.debug("Copying LocalCommunity - {}".format(self.name))
         new = LocalCommunity(self.name)
 
@@ -165,8 +177,10 @@ class LocalCommunity(object):
         return new
 
 
-    ## Return fraction of equilibrium obtained by the local community
     def _lambda(self):
+        """
+        Return fraction of equilibrium obtained by the local community
+        """
         percent_equil = 0
         try:
             percent_equil = float(self.founder_flags.count(False))/len(self.founder_flags)
@@ -177,26 +191,25 @@ class LocalCommunity(object):
 
     def _add_local_info(self, sname, abundances_through_time=0,\
                         ancestor='', ancestral_abundance=[], speciation_completion=0):
-        ## Construct a new local_info record for new_species. The fields are:
-        ## colonization time - in the forward time model. This gets converted to
-        ##      divergence time for the backward time model.
-        ## post_colonization_migrants - The count of migrants that have come in
-        ##      that are the same species as this one, since colonization
-        ## abundances_through_time - Dictionary containing history of population
-        ##      size change through time. Default is 0, which indicates a new colonist.
-        ## ancestor - If the species was introduced by speciation rather than
-        ##      colonization, then it'll have an ancestral species.
-        #######################
-        ## Protracted speciation parameters that shouldn't be touched otherwise
-        #######################
-        ## ancestral_abundance - A list of fluctuating ancestral abundances at
-        ##      the time the species split from its sister. Default is empty list which indicates
-        ##      a new colonist from the metacommunity.
-        ## speciation_completion - The point in forward time when this species will become 'good'.
-        ##      before this point it is an incipient species and if the simulation is stopped then
-        ##      all the individuals will be thrown back into the parent species pool.
-        ##      Default is 0 which indicates this is a good species immediately, either a new
-        ##      colonizing lineage or a point mutation species.
+        """
+        Construct a new local_info record for new_species. The fields are:
+        colonization time - in the forward time model. This gets converted to
+            divergence time for the backward time model.
+        post_colonization_migrants - The count of migrants that have come in
+            that are the same species as this one, since colonization
+        abundances_through_time - Dictionary containing history of population
+            size change through time. Default is 0, which indicates a new colonist.
+        ancestor - If the species was introduced by speciation rather than
+            colonization, then it'll have an ancestral species.
+        ancestral_abundance - A list of fluctuating ancestral abundances at
+            the time the species split from its sister. Default is empty list which indicates
+            a new colonist from the metacommunity.
+        speciation_completion - The point in forward time when this species will become 'good'.
+            before this point it is an incipient species and if the simulation is stopped then
+             all the individuals will be thrown back into the parent species pool.
+            Default is 0 which indicates this is a good species immediately, either a new
+            colonizing lineage or a point mutation species.
+        """
         if abundances_through_time == 0: abundances_through_time = OrderedDict([(self.current_time,self._hackersonly["mig_clust_size"])])
         self.local_info[sname] = [self.current_time,\
                                         0,\
@@ -207,6 +220,9 @@ class LocalCommunity(object):
 
 
     def _set_region(self, region):
+        """
+        Connect this LocalCommunity to its region.
+        """
         self.region = region
         self.SGD = SGD([], ndims=region._hackersonly["sgd_dimensions"], nbins=region._hackersonly["sgd_bins"])
         self._hackersonly["trait_rate_local"] = self._get_trait_rate_local()
@@ -214,6 +230,10 @@ class LocalCommunity(object):
 
 
     def _set_death_step(self):
+        """
+        Set the death step method based on which community assembly model we're
+        running.
+        """
         assembly_model = self.region.paramsdict["community_assembly_model"]
         if assembly_model == "neutral":
             self.death_step = self._neutral_death_step
@@ -259,9 +279,11 @@ class LocalCommunity(object):
 
 
     def _paramschecker(self, param, newvalue, quiet=False):
-        """ Raises exceptions when params are set to values they should not be"""
+        """
+        Raises exceptions when params are set to values they should not be.
+        """
         ## TODO: This should actually check the values and make sure they make sense
-        ## TODO: Also check here if you're setting the mode parameter you have to rerun prepopulate
+        ## TODO: Also check here if you're setting the mode parameter you have to rerun _prepopulate
         try:
 
             ## Cast params to correct types
@@ -310,30 +332,21 @@ class LocalCommunity(object):
         return val
 
 
-    def write_params(self, outfile=None, full=False, append=True):
+    def _write_params(self, outfile=None, full=False):
         """
-        Write out the parameters for this island to a file.
-        Normally this isn't called directly, but by the main
-        simulation engine.
+        Write out the parameters of this LocalCommunity to a file properly
+        formatted as input for `MESS -p <params.txt>`.
 
-        append
+        :param string outfile: The name of the params file to write to. If not
+            specified this will default to `params-<Region.name>.txt`.
+        :param bool full: Whether to write out only the parameters of this
+            this particular LocalCommunity realization, or to write out the
+            parameters including any prior ranges.
         """
         if outfile is None:
-            raise MESSError("LocalCommunity.write_params outfile must be specified.")
+            raise MESSError("LocalCommunity._write_params outfile must be specified.")
 
-        ## If not appending then we are overwriting
-        if append:
-            filemode = 'a'
-        else:
-            filemode = 'w'
-
-        with open(outfile, filemode) as paramsfile:
-            ## Only write the full header if not appending
-            if not append:
-                header = "------- MESS params file (v.{})".format(MESS.__version__)
-                header += ("-"*(80-len(header)))
-                paramsfile.write(header)
-
+        with open(outfile, 'a') as paramsfile:
             header = "------- LocalCommunity params: {}".format(self.name)
             header += ("-"*(80-len(header)))
             paramsfile.write(header)
@@ -364,13 +377,16 @@ class LocalCommunity(object):
 
 
     def _log(self, full=False):
-        """ A function for occasionally logging a ton of information through time.
+        """
+        A function for occasionally logging a ton of information through time.
         Anything that needs to get recorded through time should happen in here.
-        'full' will dump a ton of stuff to the outdir, and is normally only really
-        used for fancy plotting."""
+
+        :param bool full: Dump a ton of stuff to the outdir. Normally only really
+            used for fancy plotting.
+        """
         if full:
             self.lambda_through_time[self.current_time] = self._lambda()
-            self.simulate_seqs()
+            self._simulate_seqs()
             self.species_through_time[self.current_time] = self.species
 
         ## Every once in a while test to be sure our community is the same size
@@ -395,7 +411,7 @@ class LocalCommunity(object):
         return "<LocalCommunity {}>".format(self.name)
 
 
-    def prepopulate(self, verbose=False):
+    def _prepopulate(self, verbose=False):
         LOGGER.debug("prepopulating local_community - {}".format(self))
         if not self.region:
             msg = "Skip populating the local community as it is unlinked to a region."
@@ -409,7 +425,7 @@ class LocalCommunity(object):
         if self._hackersonly["mode"] == "landbridge":
             ## prepopulate the island w/ a random sample from the metacommunity
             ## TODO: The underscore here is ignoring trait values
-            self.local_community, _ = self.region.get_nmigrants(self.paramsdict["J"])
+            self.local_community, _ = self.region._get_migrants(self.paramsdict["J"])
 
         elif self._hackersonly["mode"]  == "volcanic":
             ## If not landbridge then doing volcanic, so sample just the most abundant
@@ -417,9 +433,9 @@ class LocalCommunity(object):
             ## TODO: The _ is a standin for trait values, have to do something with them
 
             try:
-                new_species, _ = self.region.get_most_abundant()
+                new_species, _ = self.region._get_most_abundant()
             except Exception as inst:
-                raise MESSError("Error in prepopulate - {}".format(inst))
+                raise MESSError("Error in _prepopulate - {}".format(inst))
 
             ## prepopulate volcanic either with all the most abundant species in the metacommunity
             ## or with one sample of this species and a bunch of "emtpy deme space". The empty
@@ -561,14 +577,16 @@ class LocalCommunity(object):
         return ancestor
 
 
-    def migrate_step(self):
-        """ Allow multiple colonizations. In this case we return the sampled species
+    def _migrate_step(self):
+        """
+        Allow multiple colonizations. In this case we return the sampled species
         as well as a bool reporting whether or not this is the first colonization of
         this species into the local community so that the coltime can be recorded.
         multiple colonizations of a species do not update coltime, but we record them
-        for migration rate calculation."""
+        for migration rate calculation.
+        """
 
-        new_species, _ = self.region.get_migrant()
+        new_species, _ = self.region._get_migrant()
         if new_species in self.local_community:
             ## This is a post-colonization migrant so record the event and tell downstream
             ## not to update the colonization time.
@@ -581,6 +599,12 @@ class LocalCommunity(object):
 
 
     def step(self, nsteps=1):
+        """
+        Run one or more generations of birth/death/colonization timesteps. A
+        a generation is J/2 timesteps (convert from Moran to WF generations).
+
+        :param int nsteps: The number of generations to simulate.
+        """
         ## Convert time in generations to timesteps (WF -> Moran)
         for step in range(nsteps * self.paramsdict["J"] / 2):
             chx = ''
@@ -591,10 +615,7 @@ class LocalCommunity(object):
                     self.death_step()
 
                 ## Grab the new colonizing species
-                ## the init_colonization flag is used to test whether to update the divergence time
-                ## Removed the if statement because multiple colonizations are always allowed
-                #if self.region.paramsdict["allow_multiple_colonizations"]:
-                new_species = self.migrate_step()
+                new_species = self._migrate_step()
                 chx = new_species
 
                 ## The invasion code "works" in that it worked last time I tried it, but it's
@@ -633,30 +654,45 @@ class LocalCommunity(object):
                np.random.random_sample() < self.paramsdict["speciation_prob"] and\
                chx != None:
 
-               self.speciate(chx)
+               self._speciate(chx)
 
             ## update current time
             self.current_time += 1
 
 
     def get_abundances(self, octaves=False, raw_abunds=False):
+        """
+        Get the SAD of the local community.
+
+        :param bool octaves: Return the SAD binned into size-class octaves.
+        :param bool raw_abunds: Return the actual list of abundances per
+            species, without binning into SAD.
+
+        :return: If `raw_abunds` then returns a list of abundances per species,
+            otherwise returns an OrderedDict with keys as abundance classes
+            and values as counts of species per class.
+        """
         return SAD(self.local_community, octaves=octaves, raw_abunds=raw_abunds)
 
 
-    def speciate(self, chx):
-        """ Occassionally initiate the speciation process. In all modes, one
-            one individual is randomly selected to undergo speciation.
-            Speciation does not change the founder_flag state.
+    def _speciate(self, chx):
+        """
+        Occassionally initiate the speciation process. In all modes, one
+        one individual is randomly selected to undergo speciation.
+        Speciation does not change the founder_flag state.
 
-            Currently there are 3 modes implemented:
-            - point_mutation: The randomly selected individual becomes a new
-                species of its own, of abundance 1.
-            - random_fission: The species of the randomly selected individual
-                undergoes random fission. In this mode the abundance of the
-                new species is determined by randomly splitting off a chunk
-                of the individuals from the parent species. All fission
-                sizes are equally likely.
-            - protracted:
+        Currently there are 3 modes implemented::
+
+            point_mutation - The randomly selected individual becomes a new
+            species of its own, of abundance 1.
+
+            random_fission -  The species of the randomly selected individual
+            undergoes random fission. In this mode the abundance of the
+            new species is determined by randomly splitting off a chunk
+            of the individuals from the parent species. All fission
+            sizes are equally likely.
+
+            protracted - watdo
         """
         LOGGER.debug("Initiate speciation process - {}".format(chx))
 
@@ -752,10 +788,12 @@ class LocalCommunity(object):
             raise MESSError("Unrecognized speciation model - {}".format(self.region.paramsdict["speciation_model"]))
 
 
-    ## TODO: Unused and not updated to current MESS structure
-    ## How strong is the bottleneck? Strength should be interpreted as percent of local
-    ## community to retain
-    def bottleneck(self, strength=1):
+    ##TODO: Unused and not updated to current MESS structure
+    def _bottleneck(self, strength=1):
+        """
+        How strong is the bottleneck? Strength should be interpreted as percent
+        of local community to retain
+        """
         reduction = int(round(self.paramsdict["J"] * strength))
         self.local_community = self.local_community[:reduction]
 
@@ -814,7 +852,10 @@ class LocalCommunity(object):
         return clades
 
 
-    def simulate_seqs(self):
+    def _simulate_seqs(self):
+        """
+        Simulate genetic variation for each species in the local community.
+        """
         self.species = []
         local_info_bak = self.local_info.copy(deep=True)
         try:
@@ -825,7 +866,7 @@ class LocalCommunity(object):
             ## df.drop will raise if it doesn't find a matching label to drop, in which case we're done.
             pass
 
-        self.local_info.loc["meta_abund"] = [self.region.get_abundance(x) for x in self.local_info]
+        self.local_info.loc["meta_abund"] = [self.region._get_abundance(x) for x in self.local_info]
         self.local_info.loc["local_abund"] = [self.local_community.count(x) for x in self.local_info]
         self.local_info.loc["colonization_times"] = self.current_time - self.local_info.loc["colonization_times"]
         for cname, species_list in self._get_clades().items():
@@ -837,7 +878,7 @@ class LocalCommunity(object):
 
             pop_cfgs = []
             split_events = []
-            meta_abund = self.region.get_abundance(cname)
+            meta_abund = self.region._get_abundance(cname)
             pop_meta = msprime.PopulationConfiguration(sample_size = 10, initial_size = meta_abund)
             pop_cfgs.append(pop_meta)
             species_dict = {}
@@ -918,9 +959,16 @@ class LocalCommunity(object):
 
 
     def get_stats(self):
+        """
+        Simulate genetic variation per species in the local community, then
+        aggregate abundance, pi, dxy, and trait data for all species
+        and calculate summary statistics.
 
+        :return: A pandas.DataFrame including all MESS model parameters and
+            all summary statistics.
+        """
         LOGGER.debug("Entering get_stats()")
-        self.simulate_seqs()
+        self._simulate_seqs()
         LOGGER.debug("First 5 species - \n{}".format(self.species[:5]))
 
         abunds = np.array([x.stats["abundance"] for x in self.species])
@@ -982,12 +1030,12 @@ if __name__ == "__main__":
     ## Allow for either having or not having empty demes
     assert(len(collections.Counter(loc.local_community)) <= 2)
     loc._hackersonly["mode"] = "landbridge"
-    loc.prepopulate()
+    loc._prepopulate()
     assert(len(collections.Counter(loc.local_community)) > 3)
     print(loc.get_abundances())
 
     loc._hackersonly["mode"] = "volcanic"
-    loc.prepopulate()
+    loc._prepopulate()
     loc.step(100000)
     print(len(set(loc.local_community)))
     print(len(loc.local_community))

@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 from boruta import BorutaPy
-from MESS.util import progressbar
+from MESS.util import progressbar, MESSError
 from skgarden import RandomForestQuantileRegressor
 from sklearn import metrics
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier,\
@@ -29,7 +29,16 @@ LOGGER = logging.getLogger(__name__)
 ## calculating summary stats, reading the simulated date, and reshaping the sim 
 ## sumstats to match the stats of the real data.
 class Ensemble(object):
-    def __init__(self, empirical_df, simfile, algorithm="rf", verbose=False):
+    """
+    The Ensemble class is a parent class from which Classifiers and Regressors
+    inherit shared methods. You normally will not want to create an Ensemble
+    class directly, but the methods documented here are inherited by both
+    Classifier() and Regressor() so may be called on either of them.
+
+    :attention: Ensemble objects should never be created directly. It is a base class that provides functionality to Classifier() and Regressor().
+    """
+    def __init__(self, empirical_df, simfile, target_model=None, algorithm="rf", verbose=False):
+        self.simfile = simfile
         self.algorithm = algorithm
         ## Fetch empirical data and calculate the sumstats for the datatypes passed in
         self.empirical_df = empirical_df
@@ -42,7 +51,14 @@ class Ensemble(object):
         try:
             ## Read in simulated data, split it into features and targets,
             ## and prune the features to correspond to the loaded empirical data
-            self.sim_df = pd.read_csv(simfile, sep="\t", header=0)
+            ## If target_model is passed in then prune out all other sims. This
+            ## is only used by the Regressor code, but it's here because this
+            ## is where the data splitting happens.
+            if target_model:
+                self.sim_df = pd.read_csv(simfile, sep="\t", header=0)
+                self.sim_df = self.sim_df[self.sim_df["community_assembly_model"] == target_model]
+            else:
+                self.sim_df = pd.read_csv(simfile, sep="\t", header=0)
             ## Species richness is the first summary statistic, so split to
             ## features and targets here. We're keeping all features and
             ## targets in the _X and _y variables, and can selectively prune
@@ -74,6 +90,16 @@ class Ensemble(object):
 
 
     def set_features(self, feature_list=''):
+        """
+        Specify the feature list to use for classification/regression. By
+        default the methods use all features, but if you want to specify exact
+        feature sets to use you may call this method.
+
+        :param list feature_list: The list of features (summary statistics)
+            to retain for downstream analysis. Items in this list should
+            correspond exactly to summary statistics in the simulations or
+            else it will complain.
+        """
         if not len(feature_list):
             self.features = self._X.columns
         else:
@@ -86,6 +112,20 @@ class Ensemble(object):
 
 
     def set_targets(self, target_list=''):
+<<<<<<< HEAD
+=======
+        """
+        Specify the target (parameter) list to use for classification/regression. By
+        default the classifier will only consider :ref:`community_assembly_model`
+        and the regressor will use all targets, but if you want to specify
+        exact target sets to use you may call this method.
+
+        :param list target_list: The list of targets (model parameters)
+            to retain for downstream analysis. Items in this list should
+            correspond exactly to parameters in the simulations or
+            else it will complain.
+        """
+>>>>>>> e40902b1c805fc529c5b5475655397a65cbaf99e
         ## If just one target then convert it to a list for compatibility
         if isinstance(target_list, str) and target_list:
             target_list = [target_list]
@@ -108,15 +148,27 @@ class Ensemble(object):
     ## The feature selection method only takes one target vector
     ## at a time, so we'll do each target seperately and then
     ## take the union of the results.
-    ## Uses BorutaPy, an all-relevant feature selection method
-    ## https://github.com/scikit-learn-contrib/boruta_py
-    ## http://danielhomola.com/2015/05/08/borutapy-an-all-relevant-feature-selection-method/
     def feature_selection(self, quick=False, verbose=False):
+        """
+        Access to the feature selection routine. Uses BorutaPy, 
+        an all-relevant feature selection method:  
+        https://github.com/scikit-learn-contrib/boruta_py
+        http://danielhomola.com/2015/05/08/borutapy-an-all-relevant-feature-selection-method/
+        
+        :hint: Normally you will not run this on your own, but will use it indirectly through the predict() methods.
+
+        :param bool quick: Run fast but do a bad job.
+        :param bool verbose: Print lots of quasi-informative messages.
+        """
         mask = np.zeros(len(self.X.columns), dtype=bool)
         if verbose: print("Selecting features:")
         for t in self.y:
             if verbose: print("  {}\t".format(t), end='')
-            model = self._base_model(n_estimators=600, max_depth=5)
+            try:
+                model = self._base_model(n_estimators=600, max_depth=5)
+            except TypeError as inst:
+                msg = "Ensemble model must support max_depth parameter to enable feature selection. AdaBoost can't be run with feature_selection."
+                raise MESSError(msg)
 
             if quick:
                 ## Random subset the data and run fewer iterations. If you don't have
@@ -182,6 +234,7 @@ class Ensemble(object):
             for t in self.targets:
                 ## Munge the tmpX to fit the features selected for each target.
                 ## This is annoying housekeeping.
+                #import pdb; pdb.set_trace()
                 tmpX_filt = tmpX[self.model_by_target[t]["features"]]
                 if verbose: print("\t{} - Finding best params using features: {}".format(t, list(tmpX_filt.columns)))
                 cvsearch.fit(tmpX_filt, tmpy[t])
@@ -231,9 +284,13 @@ class Ensemble(object):
                 self.best_model.fit(self.X, self.y)
 
 
-    ## Return a summary of feature importances, either summed over all
-    ## parameters, or individually per parameter
     def feature_importances(self):
+        """
+        Assuming predict() has already been called, this method will return
+        the feature importances of all features used for prediction.
+
+        :return: A pandas.DataFrame of feature importances.
+        """
         importances = []
         if self._by_target:
             for t in self.targets:
@@ -247,7 +304,64 @@ class Ensemble(object):
         return importances
 
 
+    ####################################################################
+    ## Plotting functions
+    ####################################################################
+
+    def plot_feature_importance(self,\
+                                cutoff=0.05,\
+                                figsize=(10, 12),\
+                                layout=None,\
+                                subplots=True,\
+                                legend=False):
+        """
+        Construct a somewhat crude plot of feature importances, useful for a
+        quick and dirty view of these values. If more than one feature present
+        in the model then a grid-layout is constructed and each individual
+        feature is displayed within a subplot. This function is a thin wrapper
+        around pandas.DataFrame.plot.barh().
+
+        :param float cutoff: Remove any features that do not have greater importance
+            than this value across all plotted features. Just remove uninteresting
+            features to reduce the amount of visual noise in the figures.
+        :param tuple figsize: A tuple specifying figure width, height in inches.
+        :param tuple layout: A tuple specifying the row, column layout of the
+            sub-panels. By default we do our best, and it's normally okay.
+        :param bool subplots: Whether to plot each feature individually, or just
+            cram them all into one huge plot. Unless you have only a few features,
+            setting this option to `False` will look insane.
+        :param bool legend: Whether to plot the legend.
+
+        :return: Returns all the matplotlib axis
+        """
+        imps = self.feature_importances()
+        ## Drop any features that are relatively unimportant
+        imps = imps[imps.columns[imps.max() > cutoff]]
+
+        ## Just do our best here to figure out a good layout. These should
+        ## work in most normal cases, but you an fall
+        if not layout is None:
+            if len(imps) == 1:
+                layout = (1, 1)
+            else:
+                layout = (2, len(imps)/2)
+        axs = imps.T.plot.barh(figsize=figsize, subplots=subplots, legend=legend, width=0.9, layout=layout, sharey=True)
+        return axs
+
+
 class Classifier(Ensemble):
+    """
+    This class wraps all the model selection machinery.
+
+    :param pandas.DataFrame empirical_df: A DataFrame containing the empirical
+        data. This df has a very specific format which is documented here.
+    :param string simfile: The path to the file containing all the simulations.
+    :param string algorithm: One of the :ref:`ensemble_methods` to use for
+        parameter estimation.
+    :param bool verbose: Print detailed progress information.
+    """
+
+
     _default_targets = ["community_assembly_model"]
 
     def __init__(self, empirical_df, simfile, algorithm="rf", verbose=False):
@@ -266,7 +380,26 @@ class Classifier(Ensemble):
 
 
     def predict(self, select_features=True, param_search=True, by_target=False, quick=False, verbose=False):
-
+        """
+        Predict the most likely community assembly model class.
+    
+        :param bool select_features: Whether to perform relevant feature selection.
+            This will remove features with little information useful for model
+            prediction. Should improve classification performance, but does take 
+            time.
+        :param bool param_search: Whether to perform ML classifier hyperparameter
+            tuning. If ``False`` then classification will be performed with default
+            classifier options, which will almost certainly result in poor performance,
+            but it will run really fast!.
+        :param bool by_target: Whether to predict multiple target variables 
+            simultaneously, or each individually and sequentially.
+        :param bool quick: Reduce the number of retained simulations and the number
+            of feature selection and hyperparameter tuning iterations to make the
+            prediction step run really fast! Useful for testing.
+        :param bool verbose: Print detailed progress information.
+    
+        :return: A tuple including the predicted model and the probabilities per model class.
+        """
         super(Classifier, self).predict(select_features=select_features, param_search=param_search,\
                                         by_target=by_target, quick=quick, verbose=verbose)
 
@@ -298,23 +431,41 @@ class Regressor(Ensemble):
     """
     This class wraps all the parameter estimation machinery.
 
+<<<<<<< HEAD
     .. note:: A Regressor class can be constructed in one of two ways: either
         passing in all the necessary parameters (specifically the empirical
         df and the simulations), or you can pass in a :class:`.Classifier`
 
+=======
+>>>>>>> e40902b1c805fc529c5b5475655397a65cbaf99e
     :param pandas.DataFrame empirical_df: A DataFrame containing the empirical
         data. This df has a very specific format which is documented here.
     :param string simfile: The path to the file containing all the simulations.
     :param string algorithm: The ensemble method to use for parameter estimation.
+<<<<<<< HEAD
     :param bool verbose: Print more info about what's happening
+=======
+    :param string target_model: The community assembly model to specifically use.
+        If you include this then the simulations will be read and then filtered
+        for only this `community_assembly_model`.
+    :param bool verbose: Print lots of status messages. Good for debugging,
+        or if you're *really* curious about the process.
+>>>>>>> e40902b1c805fc529c5b5475655397a65cbaf99e
     """
 
     _default_targets = ["alpha", "S_m", "J_m", "speciation_rate", "death_proportion",\
                         "trait_rate_meta", "ecological_strength", "J", "m",\
+<<<<<<< HEAD
                         "speciation_prob", "_lambda"]
 
     def __init__(self, empirical_df, simfile, algorithm="rfq", verbose=False):
         super(Regressor, self).__init__(empirical_df, simfile, algorithm="rf", verbose=False)
+=======
+                        "generation", "speciation_prob", "_lambda"]
+
+    def __init__(self, empirical_df, simfile, target_model=None, algorithm="rfq", verbose=False):
+        super(Regressor, self).__init__(empirical_df, simfile, target_model=target_model, algorithm="rf", verbose=False)
+>>>>>>> e40902b1c805fc529c5b5475655397a65cbaf99e
 
         if algorithm == "rf":
             self._base_model = RandomForestRegressor
@@ -322,7 +473,7 @@ class Regressor(Ensemble):
             self._base_model = RandomForestQuantileRegressor
         elif algorithm == "gb":
             self._base_model = GradientBoostingRegressor
-        elif self.algorithm == "ab":
+        elif algorithm == "ab":
             self._base_model = AdaBoostRegressor
         else:
             raise Exception(" Unsupported regression algorithm: {}".format(algorithm))
@@ -330,15 +481,32 @@ class Regressor(Ensemble):
         self._param_grid = _get_param_grid(algorithm)
 
         ## Remove invariant targets (save time)
+<<<<<<< HEAD
         self._y = self._y.loc[:, (self._y != self._y.iloc[0]).any()]
         if verbose: print("Removed invariant targets. Retained: {}".format(list(self._y.columns)))
+=======
+        self.y = self.y.loc[:, (self.y != self.y.iloc[0]).any()]
+        self.targets = list(self.y.columns)
+        if verbose: print("Removed invariant targets. Retained: {}".format(list(self.y.columns)))
+>>>>>>> e40902b1c805fc529c5b5475655397a65cbaf99e
 
 
-    ## Add upper and lower prediction interval for algorithms that support
-    ## quantile regression (rfq, gq)
-    ## The quick parameter doesn't do anything for RFQuantileRegressor because
-    ## it's already really fast (you don't have to refit the model).
     def prediction_interval(self, interval=0.95, quick=False, verbose=False):
+        """
+        Add upper and lower prediction interval for algorithms that support
+        quantile regression (`rf`, `gb`). 
+
+        :hint: You normaly won't have to call this by hand, as it is incorporated automatically into the predict() methods. We allow access to in for experimental purposes.
+
+        :param float interval: The prediction interval to generate. 
+        :param bool quick: Subsample the data to make it run fast, for testing.
+            The `quick` parameter doesn't do anything for `rf` because it's 
+            already really fast (the model doesn't have to be refit).
+        :param bool verbose: Print information about progress.
+
+        :return: A pandas.DataFrame containing the model predictions and the
+            prediction intervals.        
+        """
         if verbose: print("Calculating prediction interval(s)")
         upper = 1.0 - ((1.0 - interval)/2.)
         lower = 1.0 - upper
@@ -377,6 +545,30 @@ class Regressor(Ensemble):
 
 
     def predict(self, select_features=True, param_search=True, by_target=False, quick=False, verbose=False):
+        """
+        Predict parameter estimates for selected targets.
+    
+        :param bool select_features: Whether to perform relevant feature selection.
+            This will remove features with little information useful for parameter
+            estimation. Should improve parameter estimation performance, but does
+            take time.
+        :param bool param_search: Whether to perform ML regressor hyperparamter
+            tuning. If ``False`` then prediction will be performed with default
+            options, which will almost certainly result in poor performance,
+            but it will run really fast!.
+        :param bool by_target: Whether to estimate all parameters simultaneously,
+            or each individually and sequentially. Some ensemble methods are only
+            capable of performing individual parameter estimation, in which case
+            this parameter is forced to ``True``.
+        :param bool quick: Reduce the number of retained simulations and the number
+            of feature selection and hyperparameter tuning iterations to make the
+            prediction step run really fast! Useful for testing.
+        :param bool verbose: Print detailed progress information.
+    
+        :return: A pandas DataFrame including the predicted value per target 
+            parameter, and 95% prediction intervals if the ensemble method
+            specified for this Regressor supports it.
+        """
         super(Regressor, self).predict(select_features=select_features, param_search=param_search,\
                                         by_target=by_target, quick=quick, verbose=verbose)
 
@@ -409,9 +601,32 @@ def posterior_predictive_check(empirical_df,\
                                 nsims=100,\
                                 outfile='',\
                                 verbose=False):
+    """
+    Perform posterior predictive simulations. This function will take
+    parameter estimates and perform MESS simulations using these parameter
+    values. It will then plot the resulting summary statistics in PC
+    space, along with the summary statistics of the observed data. The
+    logic of posterior predictive checks is that if the estimated parameters
+    are a good fit to the data, then summary statistics generated using
+    these parameters should resemble those of the real data.
 
-    ## If est_only, drop the lower and upper prediction interval and just use
-    ## the mean estimated parameters for generating posterior predictive simes
+    :param bool empirical_df: 
+    :param bool parameter_estimats: 
+    :param bool ax: The matplotlib axis to use for plotting. If not specified
+        then a new axis will be created.
+    :param bool est_only: If True, drop the lower and upper prediction 
+        interval (PI) and just use the mean estimated parameters for generating 
+        posterior predictive simulations. If False, and PIs exist, then
+        parameter values will be sampled uniformly between the lower and upper
+        PI.
+    :param bool nsims: The number of posterior predictive simulations to perform.
+    :param bool outfile: A file path for saving the figure. If not specified
+        the figure is simply not saved to the filesystem.
+    :param bool verbose: Print detailed progress information.
+    
+    :return: A matplotlib axis containing the plot.
+    """
+
     if est_only:
         parameter_estimates = pd.DataFrame(parameter_estimates.loc["estimate", :]).T
 
@@ -492,6 +707,7 @@ def _ab_param_grid():
     learning_rate = np.linspace(0.01, 2, 6)
     random_grid = {'n_estimators':n_estimators,
                     'learning_rate':learning_rate}
+    return random_grid
 
 
 def _rf_param_grid():

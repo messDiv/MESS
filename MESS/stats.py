@@ -10,18 +10,32 @@ from sklearn.metrics import pairwise_distances
 from MESS.SGD import SGD
 
 
-def generalized_hill_number(abunds, vals=None, order=1):
-    ## This is the Chao et al generalized Hill # formula
-    ## Get one hill humber from a list of abundances (a column vector from the OTU table)
-    ## Generalized function to calculate one hill number from a distribution
-    ## of values of some statistic and abundances.
-    ## vals:   A list of statistics calculated per species (e.g. pi)
-    ## abunds: A list of corresponding abundances per species
+def generalized_hill_number(abunds, vals=None, order=1, scale=True, debug=False):
+    """
+    This is the Chao et al (2014) generalized Hill # formula. Get one Hill
+    humber from a list of abundances (a column vector from the OTU table)
+    Generalized function to calculate one Hill number from a distribution
+    of values of some statistic and abundances.
 
+    :param abunds: A list of abundances per species
+    :param vals:   A list of statistics calculated per species (e.g. pi). If
+        this parameter is empty then abundance Hill numbers are calculated.
+    :param float order: The Hill number to calculate. 0 is species richness.
+        Positive values calculate Hill numbers placing increasing weight on
+        the most abundant species. Negative values can also be specified
+        (placing more weight on the rare species), but these are uncommonly
+        used in practice.
+    :param bool scale: Whether to scale to effective numbers of species, or
+        return the raw attribute diversity. Equivalent to equation 5c in
+        Chao et al 2014. You will almost never want to use turn this off.
+    """
     ## Degenerate edge cases can cause all zero values, particulary for pi
     ## in which case we bail out immediately
     if not np.any(abunds):
         return 0
+
+    ## Be sure abundance is scaled to relative abundance and convert to np
+    abunds = np.array(abunds)/np.sum(abunds)
 
     ## If vals is empty then populate the vector with a list of ones
     ## and this function collapses to the standard Hill number for abundance
@@ -30,19 +44,22 @@ def generalized_hill_number(abunds, vals=None, order=1):
 
     ## Make sure vals is a np array or else order > 2 will act crazy
     vals = np.array(vals)
+    if debug: print("sums:", "dij", np.sum(vals), "pij", np.sum(abunds))
     ## sum of values weighted by abundance
     V_bar = np.sum(vals*abunds)
+    if debug: print("vbar", V_bar)
 
+    ## Use the special formula for order = 1
     if order == 1:
         proportions = vals*(abunds/V_bar)
         h = np.exp(-np.sum(proportions * np.log(abunds/V_bar)))
     else:
         h = np.sum(vals*(abunds/V_bar)**order)**(1./(1-order))
-    h = h/V_bar
+    if scale: h = h/V_bar
     return h
 
 
-def trait_hill_number(abunds, traits, order=1):
+def trait_hill_number(abunds, traits, order=1, debug=False):
     ## If there's only one species in the community then the pairwise_distances
     ## function will return 0, and generalized_hill will return inf,
     ## and you'll get nans in the final output. Not good. If only one species
@@ -56,7 +73,7 @@ def trait_hill_number(abunds, traits, order=1):
     ## Reshape the np.array to make sklearn happy about it, then flatten it to a vector
     ## Then get the pairwise euclidean distances between all species trait values
     dij = pairwise_distances(traits.values.reshape(-1, 1)).flatten()
-    return generalized_hill_number(abunds=pij, vals=dij, order=order)**(1/2.)
+    return generalized_hill_number(abunds=pij, vals=dij, order=order, debug=debug)**(1/2.)
 
 
 ## Get one hill humber from a list of abundances (a column vector from the OTU table)
@@ -92,7 +109,8 @@ def hill_numbers(abunds, orders, granularity=None, do_negative=False):
 
 
 def SAD(community, from_abundances=False, octaves=False, raw_abunds=False):
-    """Generate the species abundance distribution either raw or in 
+    """
+    Generate the species abundance distribution either raw or in 
     octaves of powers of 2. The input here is a simple list of "individuals"
     specified just by their species identifier.
     """
@@ -275,14 +293,14 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=2, metacommunity_trai
     ## going on.
     valid = set(["abundance", "pi", "dxy", "trait"])
     for pair in combinations(sorted(set(diversity_df.columns).intersection(valid)), r=2):
+        tmp_df = diversity_df.copy()
         ## If doing traits then transform the trait values into distance from
         ## local trait mean. Should see positive correlation in filtering and
         ## negative in competition.
-        if "trait" in pair[0]:
-            diversity_df[pair[0]] = np.abs(diversity_df[pair[0]] - np.sum(diversity_df[pair[0]])/len(diversity_df))
-        elif "trait" in pair[1]:
-            diversity_df[pair[1]] = np.abs(diversity_df[pair[1]] - np.sum(diversity_df[pair[1]])/len(diversity_df))
-        cor = spearmanr(diversity_df[pair[0]], diversity_df[pair[1]])[0]
+        if "trait" in pair:
+            idx = pair.index("trait")
+            tmp_df[pair[idx]] = np.abs(tmp_df[pair[idx]] - tmp_df["trait"].mean())
+        cor = spearmanr(tmp_df[pair[0]], tmp_df[pair[1]])[0]
         if np.isnan(cor): cor = 0
         stat_dict["{}_{}_cor".format(pair[0], pair[1])] = cor
 
