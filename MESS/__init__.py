@@ -1,7 +1,7 @@
-#!/usr/bin/env python2
+"""
+Massive Eco-Evolutionary Synthesis Simulations
+"""
 
-
-## dunders
 __version__ = "0.0.99"
 __author__ = "Isaac Overcast, Megan Ruffley"
 

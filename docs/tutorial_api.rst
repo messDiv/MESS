@@ -33,4 +33,8 @@ Example API::
   
   print(results)
   
+Inference Procedure
+===================
+
+
 The code is on `github <https://github.com/messDiv/MESS>`_

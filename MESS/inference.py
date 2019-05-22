@@ -1,3 +1,9 @@
+"""
+.. module:: inference
+   :synopsis: Machine learning model selection and parameter estimation.
+
+"""
+
 from __future__ import print_function
 
 import MESS.stats
@@ -80,12 +86,18 @@ class Ensemble(object):
 
 
     def set_targets(self, target_list=''):
+        ## If just one target then convert it to a list for compatibility
         if isinstance(target_list, str) and target_list:
             target_list = [target_list]
+        ## If no targets passed in then just use the defaults (all),
+        ## otherwise use the list of targets passed in.
         if not len(target_list):
             self.targets = self._default_targets
         else:
             self.targets = target_list
+        ## Filter (and do not modify) the internal full targets dataset (_y).
+        ## This makes it so you can easily change self.y, without reloading
+        ## the data.
         try:
             self.y = self._y[self.targets]
         except Exception as inst:
@@ -283,7 +295,23 @@ class Classifier(Ensemble):
 
 
 class Regressor(Ensemble):
-    _default_targets = ["alpha", "J_m", "ecological_strength", "m", "speciation_prob", "_lambda"]
+    """
+    This class wraps all the parameter estimation machinery.
+
+    .. note:: A Regressor class can be constructed in one of two ways: either
+        passing in all the necessary parameters (specifically the empirical
+        df and the simulations), or you can pass in a :class:`.Classifier`
+
+    :param pandas.DataFrame empirical_df: A DataFrame containing the empirical
+        data. This df has a very specific format which is documented here.
+    :param string simfile: The path to the file containing all the simulations.
+    :param string algorithm: The ensemble method to use for parameter estimation.
+    :param bool verbose: Print more info about what's happening
+    """
+
+    _default_targets = ["alpha", "S_m", "J_m", "speciation_rate", "death_proportion",\
+                        "trait_rate_meta", "ecological_strength", "J", "m",\
+                        "speciation_prob", "_lambda"]
 
     def __init__(self, empirical_df, simfile, algorithm="rfq", verbose=False):
         super(Regressor, self).__init__(empirical_df, simfile, algorithm="rf", verbose=False)
@@ -300,6 +328,10 @@ class Regressor(Ensemble):
             raise Exception(" Unsupported regression algorithm: {}".format(algorithm))
         self.algorithm = algorithm
         self._param_grid = _get_param_grid(algorithm)
+
+        ## Remove invariant targets (save time)
+        self._y = self._y.loc[:, (self._y != self._y.iloc[0]).any()]
+        if verbose: print("Removed invariant targets. Retained: {}".format(list(self._y.columns)))
 
 
     ## Add upper and lower prediction interval for algorithms that support
