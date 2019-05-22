@@ -26,7 +26,7 @@ import logging
 LOGGER = logging.getLogger(__name__)
 
 ## The base Ensemble class takes care of reading in the empirical dataframe,
-## calculating summary stats, reading the simulated date, and reshaping the sim 
+## calculating summary stats, reading the simulated date, and reshaping the sim
 ## sumstats to match the stats of the real data.
 class Ensemble(object):
     """
@@ -112,8 +112,7 @@ class Ensemble(object):
 
 
     def set_targets(self, target_list=''):
-<<<<<<< HEAD
-=======
+
         """
         Specify the target (parameter) list to use for classification/regression. By
         default the classifier will only consider :ref:`community_assembly_model`
@@ -125,7 +124,7 @@ class Ensemble(object):
             correspond exactly to parameters in the simulations or
             else it will complain.
         """
->>>>>>> e40902b1c805fc529c5b5475655397a65cbaf99e
+
         ## If just one target then convert it to a list for compatibility
         if isinstance(target_list, str) and target_list:
             target_list = [target_list]
@@ -150,11 +149,11 @@ class Ensemble(object):
     ## take the union of the results.
     def feature_selection(self, quick=False, verbose=False):
         """
-        Access to the feature selection routine. Uses BorutaPy, 
-        an all-relevant feature selection method:  
+        Access to the feature selection routine. Uses BorutaPy,
+        an all-relevant feature selection method:
         https://github.com/scikit-learn-contrib/boruta_py
         http://danielhomola.com/2015/05/08/borutapy-an-all-relevant-feature-selection-method/
-        
+
         :hint: Normally you will not run this on your own, but will use it indirectly through the predict() methods.
 
         :param bool quick: Run fast but do a bad job.
@@ -180,7 +179,7 @@ class Ensemble(object):
                 max_iter=10
             else:
                 tmpX = self.X.values
-                tmpy = self.y[t].values 
+                tmpy = self.y[t].values
                 max_iter=100
 
             # define Boruta feature selection method
@@ -205,7 +204,7 @@ class Ensemble(object):
         selected_features = self.features[mask]
         if verbose: print("All selected features: {}".format(" ".join(selected_features)))
         ## Filter on the selected features
-        self.X = self.X[selected_features]   
+        self.X = self.X[selected_features]
         ## Also filter the empirical sumstats
         self.empirical_sumstats = self.empirical_sumstats[selected_features]
 
@@ -382,22 +381,22 @@ class Classifier(Ensemble):
     def predict(self, select_features=True, param_search=True, by_target=False, quick=False, verbose=False):
         """
         Predict the most likely community assembly model class.
-    
+
         :param bool select_features: Whether to perform relevant feature selection.
             This will remove features with little information useful for model
-            prediction. Should improve classification performance, but does take 
+            prediction. Should improve classification performance, but does take
             time.
         :param bool param_search: Whether to perform ML classifier hyperparameter
             tuning. If ``False`` then classification will be performed with default
             classifier options, which will almost certainly result in poor performance,
             but it will run really fast!.
-        :param bool by_target: Whether to predict multiple target variables 
+        :param bool by_target: Whether to predict multiple target variables
             simultaneously, or each individually and sequentially.
         :param bool quick: Reduce the number of retained simulations and the number
             of feature selection and hyperparameter tuning iterations to make the
             prediction step run really fast! Useful for testing.
         :param bool verbose: Print detailed progress information.
-    
+
         :return: A tuple including the predicted model and the probabilities per model class.
         """
         super(Classifier, self).predict(select_features=select_features, param_search=param_search,\
@@ -430,42 +429,23 @@ class Classifier(Ensemble):
 class Regressor(Ensemble):
     """
     This class wraps all the parameter estimation machinery.
-
-<<<<<<< HEAD
-    .. note:: A Regressor class can be constructed in one of two ways: either
-        passing in all the necessary parameters (specifically the empirical
-        df and the simulations), or you can pass in a :class:`.Classifier`
-
-=======
->>>>>>> e40902b1c805fc529c5b5475655397a65cbaf99e
     :param pandas.DataFrame empirical_df: A DataFrame containing the empirical
         data. This df has a very specific format which is documented here.
     :param string simfile: The path to the file containing all the simulations.
     :param string algorithm: The ensemble method to use for parameter estimation.
-<<<<<<< HEAD
-    :param bool verbose: Print more info about what's happening
-=======
     :param string target_model: The community assembly model to specifically use.
         If you include this then the simulations will be read and then filtered
         for only this `community_assembly_model`.
     :param bool verbose: Print lots of status messages. Good for debugging,
         or if you're *really* curious about the process.
->>>>>>> e40902b1c805fc529c5b5475655397a65cbaf99e
     """
 
     _default_targets = ["alpha", "S_m", "J_m", "speciation_rate", "death_proportion",\
                         "trait_rate_meta", "ecological_strength", "J", "m",\
-<<<<<<< HEAD
-                        "speciation_prob", "_lambda"]
-
-    def __init__(self, empirical_df, simfile, algorithm="rfq", verbose=False):
-        super(Regressor, self).__init__(empirical_df, simfile, algorithm="rf", verbose=False)
-=======
                         "generation", "speciation_prob", "_lambda"]
 
     def __init__(self, empirical_df, simfile, target_model=None, algorithm="rfq", verbose=False):
         super(Regressor, self).__init__(empirical_df, simfile, target_model=target_model, algorithm="rf", verbose=False)
->>>>>>> e40902b1c805fc529c5b5475655397a65cbaf99e
 
         if algorithm == "rf":
             self._base_model = RandomForestRegressor
@@ -481,31 +461,25 @@ class Regressor(Ensemble):
         self._param_grid = _get_param_grid(algorithm)
 
         ## Remove invariant targets (save time)
-<<<<<<< HEAD
-        self._y = self._y.loc[:, (self._y != self._y.iloc[0]).any()]
-        if verbose: print("Removed invariant targets. Retained: {}".format(list(self._y.columns)))
-=======
         self.y = self.y.loc[:, (self.y != self.y.iloc[0]).any()]
         self.targets = list(self.y.columns)
         if verbose: print("Removed invariant targets. Retained: {}".format(list(self.y.columns)))
->>>>>>> e40902b1c805fc529c5b5475655397a65cbaf99e
-
 
     def prediction_interval(self, interval=0.95, quick=False, verbose=False):
         """
         Add upper and lower prediction interval for algorithms that support
-        quantile regression (`rf`, `gb`). 
+        quantile regression (`rf`, `gb`).
 
         :hint: You normaly won't have to call this by hand, as it is incorporated automatically into the predict() methods. We allow access to in for experimental purposes.
 
-        :param float interval: The prediction interval to generate. 
+        :param float interval: The prediction interval to generate.
         :param bool quick: Subsample the data to make it run fast, for testing.
-            The `quick` parameter doesn't do anything for `rf` because it's 
+            The `quick` parameter doesn't do anything for `rf` because it's
             already really fast (the model doesn't have to be refit).
         :param bool verbose: Print information about progress.
 
         :return: A pandas.DataFrame containing the model predictions and the
-            prediction intervals.        
+            prediction intervals.
         """
         if verbose: print("Calculating prediction interval(s)")
         upper = 1.0 - ((1.0 - interval)/2.)
@@ -547,7 +521,7 @@ class Regressor(Ensemble):
     def predict(self, select_features=True, param_search=True, by_target=False, quick=False, verbose=False):
         """
         Predict parameter estimates for selected targets.
-    
+
         :param bool select_features: Whether to perform relevant feature selection.
             This will remove features with little information useful for parameter
             estimation. Should improve parameter estimation performance, but does
@@ -564,8 +538,8 @@ class Regressor(Ensemble):
             of feature selection and hyperparameter tuning iterations to make the
             prediction step run really fast! Useful for testing.
         :param bool verbose: Print detailed progress information.
-    
-        :return: A pandas DataFrame including the predicted value per target 
+
+        :return: A pandas DataFrame including the predicted value per target
             parameter, and 95% prediction intervals if the ensemble method
             specified for this Regressor supports it.
         """
@@ -610,12 +584,12 @@ def posterior_predictive_check(empirical_df,\
     are a good fit to the data, then summary statistics generated using
     these parameters should resemble those of the real data.
 
-    :param bool empirical_df: 
-    :param bool parameter_estimats: 
+    :param bool empirical_df:
+    :param bool parameter_estimats:
     :param bool ax: The matplotlib axis to use for plotting. If not specified
         then a new axis will be created.
-    :param bool est_only: If True, drop the lower and upper prediction 
-        interval (PI) and just use the mean estimated parameters for generating 
+    :param bool est_only: If True, drop the lower and upper prediction
+        interval (PI) and just use the mean estimated parameters for generating
         posterior predictive simulations. If False, and PIs exist, then
         parameter values will be sampled uniformly between the lower and upper
         PI.
@@ -623,7 +597,7 @@ def posterior_predictive_check(empirical_df,\
     :param bool outfile: A file path for saving the figure. If not specified
         the figure is simply not saved to the filesystem.
     :param bool verbose: Print detailed progress information.
-    
+
     :return: A matplotlib axis containing the plot.
     """
 
