@@ -37,16 +37,16 @@ class Ensemble(object):
 
     :attention: Ensemble objects should never be created directly. It is a base class that provides functionality to Classifier() and Regressor().
     """
-    def __init__(self, empirical_df, simfile, target_model=None, algorithm="rf", verbose=False):
+    def __init__(self, empirical_df, simfile, target_model=None, algorithm="rf", metacommunity_traits=None, verbose=False):
         self.simfile = simfile
         self.algorithm = algorithm
         ## Fetch empirical data and calculate the sumstats for the datatypes passed in
         self.empirical_df = empirical_df
         try:
-            self.empirical_sumstats = MESS.stats.calculate_sumstats(empirical_df)
+            self.empirical_sumstats = MESS.stats.calculate_sumstats(empirical_df, metacommunity_traits=metacommunity_traits)
             if verbose: print("Got empirical summary statistics: {}".format(self.empirical_sumstats))
         except Exception as inst:
-            print("  Malformed input dataframe: {}".format(inst))
+            raise MESSError("  Malformed input dataframe: {}".format(inst))
 
         try:
             ## Read in simulated data, split it into features and targets,
@@ -357,14 +357,17 @@ class Classifier(Ensemble):
     :param string simfile: The path to the file containing all the simulations.
     :param string algorithm: One of the :ref:`ensemble_methods` to use for
         parameter estimation.
+    :param list metacommunity_traits: A list or np.array of the trait values
+        from the metacommunity. Used for calculating some of the trait based
+        summary statistics.
     :param bool verbose: Print detailed progress information.
     """
 
 
     _default_targets = ["community_assembly_model"]
 
-    def __init__(self, empirical_df, simfile, algorithm="rf", verbose=False):
-        super(Classifier, self).__init__(empirical_df, simfile, algorithm=algorithm, verbose=verbose)
+    def __init__(self, empirical_df, simfile, algorithm="rf", metacommunity_traits=None, verbose=False):
+        super(Classifier, self).__init__(empirical_df, simfile, algorithm=algorithm, metacommunity_traits=metacommunity_traits, verbose=verbose)
 
         if algorithm == "rf":
             self._base_model = RandomForestClassifier
@@ -436,6 +439,9 @@ class Regressor(Ensemble):
     :param string target_model: The community assembly model to specifically use.
         If you include this then the simulations will be read and then filtered
         for only this `community_assembly_model`.
+    :param list metacommunity_traits: A list or np.array of the trait values
+        from the metacommunity. Used for calculating some of the trait based
+        summary statistics.
     :param bool verbose: Print lots of status messages. Good for debugging,
         or if you're *really* curious about the process.
     """
@@ -444,8 +450,8 @@ class Regressor(Ensemble):
                         "trait_rate_meta", "ecological_strength", "J", "m",\
                         "generation", "speciation_prob", "_lambda"]
 
-    def __init__(self, empirical_df, simfile, target_model=None, algorithm="rfq", verbose=False):
-        super(Regressor, self).__init__(empirical_df, simfile, target_model=target_model, algorithm="rf", verbose=False)
+    def __init__(self, empirical_df, simfile, target_model=None, algorithm="rfq", metacommunity_traits=None, verbose=False):
+        super(Regressor, self).__init__(empirical_df, simfile, target_model=target_model, algorithm="rf", metacommunity_traits=metacommunity_traits, verbose=False)
 
         if algorithm == "rf":
             self._base_model = RandomForestRegressor
