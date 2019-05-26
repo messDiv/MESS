@@ -510,6 +510,7 @@ class Classifier(Ensemble):
 class Regressor(Ensemble):
     """
     This class wraps all the parameter estimation machinery.
+
     :param pandas.DataFrame empirical_df: A DataFrame containing the empirical
         data. This df has a very specific format which is documented here.
     :param string simfile: The path to the file containing all the simulations.
