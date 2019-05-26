@@ -5,7 +5,7 @@ import pandas as pd
 import math
 from collections import Counter, OrderedDict
 from itertools import combinations
-from scipy.stats import entropy, kurtosis, iqr, skew, spearmanr
+from scipy.stats import entropy, kurtosis, hmean, iqr, skew, spearmanr
 from sklearn.metrics import pairwise_distances
 from MESS.SGD import SGD
 
@@ -208,6 +208,71 @@ def dxy(ihaps_t, mhaps_t):
     return dxy
 
 
+def _hnum(N):
+    """
+    The N-th Harmonic number
+    """
+    return (N)*(1./hmean(range(1, N+1)))
+
+
+def _n_segsites_pooled(seq):
+    ## This is pooled data so we are looking at one sequence per
+    ## species. Only count IUPAC ambiguity codes.
+    c = Counter(seq)
+    try:
+        for i in ["A", "C", "G", "T", "-", "?", "N", "\n"]:
+            c.pop(i)
+    except:
+        pass
+    return sum(c.values())
+
+
+def Watterson(seqs, nsamples=0, per_base=True):
+    """
+    Return Watterson's theta per base.
+
+    :param seqs: The DNA sequence over which to calculate the statistic.
+        This parameter can be a single DNA sequence as a string, in which
+        case we assume it is pooled data. It can be a file path to a fasta
+        file, or it can be a list of sequences which may or may not include
+        the sample names (they will be removed).
+    :param nsamples: The number of samples in the pooled sequence
+        (for pooled data only).
+    :param bool per_base: Whether to average over the length of the sequence.
+    """
+    if isinstance(seqs, str):
+        try:
+            segsites = _n_segsites_pooled(seqs)
+        except Exception as inst:
+            try:
+                ## If seqs is a file just read in the data here and do the
+                ## calculation in the block below
+                seqs = open(seqs).readlines()
+            except IOError, TypeError:
+                ## Not a file
+                pass
+
+    if isinstance(seqs, list):
+        ## Remove all the fasta names, if any, convert to a numpy array
+        ## and transpose, so now it's a list of lists of bases per sample.
+        seqs = np.array([list(x) for x in seqs if not ">" in x]).T
+        ## Get the number of samples
+        nsamples = seqs.shape[1]
+        ## Count the number of non-unique bases (the -1 turns monomorphic sites
+        ## into zeros.
+        segsites = np.count_nonzero(np.array(map(len, map(lambda x: set(x), seqs))) - 1)
+
+    if nsamples == 0:
+        raise MESS.util.MESSError("If using pooled data you must include the `nsamples` parameter.")
+
+    w_theta = segsites/_hnum(nsamples)
+
+    if per_base:
+        w_theta = w_theta/float(len(seqs))
+
+    return w_theta
+
+
 def _get_sumstats_header(sgd_bins=10, sgd_dims=2, metacommunity_traits=None):
     ## Create some random data so the sumstats calculation doesn't freak out
     pis = np.random.random(10)/10
@@ -221,7 +286,6 @@ def _get_sumstats_header(sgd_bins=10, sgd_dims=2, metacommunity_traits=None):
     dat["dxy"] = dxys
     dat["abundance"] = abunds
     dat["trait"] = trts
-
     header = list(calculate_sumstats(dat, sgd_bins, sgd_dims, metacommunity_traits=metacommunity_traits).columns)
     return header
 
@@ -266,19 +330,23 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=2, metacommunity_trai
             stat_dict["trait_h{}".format(order)] = trait_hill_number(diversity_df["abundance"],\
                                                                     diversity_df["trait"],\
                                                                     order=order)
-        for name, func in moments.items():
-            stat_dict["{}_local_traits".format(name)] = func(diversity_df["trait"])
     except:
-        if verbose: print("  No trait data present")
+        if verbose: print("  Trait hill numbers ignored since abundances not present.")
+    finally:
+        try:
+            for name, func in moments.items():
+                stat_dict["{}_local_traits".format(name)] = func(diversity_df["trait"])
+            if np.any(metacommunity_traits):
+                for name, func in moments.items():
+                    val = func(metacommunity_traits)
+                    stat_dict["{}_regional_traits".format(name)] = val
+                ## Double for-loop here so the traits stay together in the sumstats output
+                for name, func in moments.items():
+                    val = func(metacommunity_traits)
+                    stat_dict["reg_loc_{}_trait_dif".format(name)] = val - stat_dict["{}_local_traits".format(name)]
+        except:
+            if verbose: print("  No trait data present")
 
-    if np.any(metacommunity_traits):
-        for name, func in moments.items():
-            val = func(metacommunity_traits)
-            stat_dict["{}_regional_traits".format(name)] = val
-        ## Double for-loop here so the traits stay together in the sumstats output
-        for name, func in moments.items():
-            val = func(metacommunity_traits)
-            stat_dict["reg_loc_{}_trait_dif".format(name)] = val - stat_dict["{}_local_traits".format(name)]
 
     ## Calculate correlations between all the distributions we have
     ## This may not make much sense for the trait data at this point.
