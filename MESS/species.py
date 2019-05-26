@@ -42,20 +42,9 @@ class species(object):
             index=[ "name",
                     "trait",
                     "abundance",
-                    "tdiv",
-                    "migration_rate",
-                    "growth_rate",
                     "Ne_local",
                     "Ne_meta",
-                    "segsites_tot",
-                    "segsites_local",
-                    "segsites_meta",
-                    "pi_tot",
-                    "pi_local",
-                    "pi_meta",
-                    "da",
-                    "dxy",
-                    "tajd_local"]).astype(np.object)
+                    "tdiv"]).astype(np.object)
 
         self.stats["name"] = name
         self.stats["trait"] = trait_value
@@ -164,7 +153,7 @@ class species(object):
         return size_change_events
 
 
-    def _get_local_meta_split(self, source_idx = 1, dest_idx = 0):
+    def _get_local_meta_split(self, source_idx = 0, dest_idx = 1):
         ## Going backwards in time, at colonization time throw all lineages from
         ## the local community back into the metacommunity
 
@@ -177,24 +166,20 @@ class species(object):
                                             destination = dest_idx,\
                                             proportion = 1)
 
-        local_rate_change = msprime.PopulationParametersChange(\
-                                            time = self.stats["tdiv"],\
-                                            growth_rate = 0,\
-                                            population_id = 0)
-
         ## TODO: Could mess with 'initial_size' here, but you don't want
         ## to sample too much from the metacommunity or the local pi
         ## goes way up.
         local_size_change = msprime.PopulationParametersChange(\
                                             time = self.stats["tdiv"],\
                                             initial_size = .01,\
+                                            growth_rate = 0,
                                             population_id = source_idx)
 
         migrate_change = msprime.MigrationRateChange(
                                             time = self.stats["tdiv"],\
                                             rate = 0)
 
-        return [migrate_change, local_size_change, local_rate_change, split_event]
+        return [migrate_change, local_size_change, split_event]
 
 
     def simulate_seqs(self):
@@ -232,17 +217,17 @@ class species(object):
                                               demographic_events = split_events)
         self.get_sumstats()
 
-        tree = self.tree_sequence.first()
-        colour_map = {0:"red", 1:"blue"}
-        node_colours = {u: colour_map[tree.population(u)] for u in tree.nodes()}
-        node_labels = {
-            u: (str(u) if u < 8 else "{} (t={:.2f})".format(u, tree.time(u))) 
-            for u in tree.nodes()}
+        ## Dump a bunch of svg files to /tmp to validate that the model looks okay
+        #tree = self.tree_sequence.first()
+        #colour_map = {0:"red", 1:"blue"}
+        #node_colours = {u:colour_map[tree.population(u)] for u in tree.nodes()}
+        #node_labels = {
+        #    u: (str(u) if u < 8 else "{} (t={:.2f})".format(u, tree.time(u))) 
+        #    for u in tree.nodes()}
         #tree.draw(path="/tmp/{}.svg".format(self.name.replace(" ", "_")), height=500, width=1000, node_labels=node_labels, node_colours=node_colours)
 
 
     def get_sumstats(self, samps=np.array([]), metasamps=np.array([]), pooled=False):
-
         LOGGER.debug("Entering get_sumstats - {}".format(self.name))
 
         self.stats["segsites_tot"] = len(next(self.tree_sequence.haplotypes()))
