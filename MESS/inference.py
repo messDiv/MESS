@@ -8,6 +8,7 @@ from __future__ import print_function
 
 import MESS.stats
 import matplotlib.pyplot as plt
+import joblib
 import numpy as np
 import pandas as pd
 
@@ -40,13 +41,11 @@ class Ensemble(object):
     def __init__(self, empirical_df, simfile, target_model=None, algorithm="rf", metacommunity_traits=None, verbose=False):
         self.simfile = simfile
         self.algorithm = algorithm
-        ## Fetch empirical data and calculate the sumstats for the datatypes passed in
-        self.empirical_df = empirical_df
-        try:
-            self.empirical_sumstats = MESS.stats.calculate_sumstats(empirical_df, metacommunity_traits=metacommunity_traits)
-            if verbose: print("Got empirical summary statistics: {}".format(self.empirical_sumstats))
-        except Exception as inst:
-            raise MESSError("  Malformed input dataframe: {}".format(inst))
+        self.metacommunity_traits = metacommunity_traits
+
+        self.set_data(empirical_df,\
+                        metacommunity_traits=metacommunity_traits,\
+                        verbose=verbose)
 
         try:
             ## Read in simulated data, split it into features and targets,
@@ -87,6 +86,74 @@ class Ensemble(object):
 
     def __repr__(self):
         return "{}: nsims - {}\n\tFeatures - {}\n\tTargets - {}".format(type(self), len(self._X), list(self.features), self.targets)
+
+
+    def set_data(self, empirical_df, metacommunity_traits=None, verbose=False):
+        """
+        A convenience function to allow using pre-trained models to make
+        predictions on new datasets without retraining the model. This will
+        calculate summary statistics on input data (recycling metacommunity
+        traits if these were previously input), and reshape the statistics
+        to match the features selected during initial model construction.
+
+        This is only sensible if the data from the input community consists
+        of identical axes as the data used to build the model. This will be
+        useful if you have community data from mutiple islands in the same
+        archipelago, different communities that share a common features,
+        and share a metacommunity.
+
+        :param pandas.DataFrame empirical_df: A DataFrame containing the empirical
+            data. This df has a very specific format which is documented here.
+        :param array-like metacommunity_traits: A list or np.array of the trait values
+            from the metacommunity. Used for calculating some of the trait based
+            summary statistics.
+        :param bool verbose: Print progress information.
+        """
+        ## Fetch empirical data and calculate the sumstats for the datatypes passed in
+        self.empirical_df = empirical_df
+
+        if metacommunity_traits is None:
+            try:
+                metacommunity_traits = self.metacommunity_traits
+            except AttributeError:
+                ## If you don't pass it in, and it isn't already set on the
+                ## on the model, then just keep on truckin'.
+                pass
+
+        try:
+            self.empirical_sumstats = MESS.stats.calculate_sumstats(empirical_df, metacommunity_traits=metacommunity_traits)
+            if verbose: print("Got empirical summary statistics: {}".format(self.empirical_sumstats))
+        except Exception as inst:
+            raise MESSError("  Malformed input dataframe: {}".format(inst))
+
+        try:
+            ## Reshape the input sumstats to fit the previously trained model
+            ## if there is one. If self.features is unset (on Ensemble.__init__)
+            ## this will raise, which is fine.
+            self.empirical_sumstats = self.empirical_sumstats[self.features]
+        except AttributeError:
+            if verbose: print("No features previously selected, using all.")
+
+
+    def dump(self, outfile):
+        """
+        Save the model to a file on disk. Useful for saving trained models
+        to prevent having to retrain them.
+
+        :param str outfile: The file to save the model to.
+        """
+        joblib.dump(self, outfile)
+
+
+    @staticmethod
+    def load(infile):
+        """
+        Load a MESS.inference model from disk. This is complementary to the
+        MESS.inference.Ensemble.dump() method.
+
+        :param str infile: The file to load a trained model from.
+        """
+        return joblib.load(infile)
 
 
     def set_features(self, feature_list=''):
@@ -252,7 +319,16 @@ class Ensemble(object):
 
 
     ## The magic method to just do-it-all
-    def predict(self, select_features=True, param_search=True, by_target=False, quick=False, verbose=False):
+    def predict(self, select_features=True, param_search=True, by_target=False, quick=False, force=False, verbose=False):
+
+        try:
+            _ = self.best_model
+            if not force:
+                if verbose: "Model already trained. Use 'force' to retrain."
+                return
+        except AttributeError:
+            pass
+
         ## Select relevant features
         if select_features:
             self.feature_selection(quick=quick, verbose=verbose)
@@ -277,6 +353,8 @@ class Ensemble(object):
                     self.model_by_target[t]["model"] = self._base_model()
                     self.model_by_target[t]["model"].fit(self.X[self.model_by_target[t]["features"]], self.y[t])
                     self.model_by_target[t]["feature_importances"] = self.model_by_target[t]["model"].feature_importances_
+                ## Set the best_model variable just using the model for the first target
+                self.best_model = self.model_by_target[self.targets[0]]["model"]
             else:
                 ## TODO: Make default base_model params smarter
                 self.best_model = self._base_model(n_jobs=-1)
@@ -357,7 +435,7 @@ class Classifier(Ensemble):
     :param string simfile: The path to the file containing all the simulations.
     :param string algorithm: One of the :ref:`ensemble_methods` to use for
         parameter estimation.
-    :param list metacommunity_traits: A list or np.array of the trait values
+    :param array-like metacommunity_traits: A list or np.array of the trait values
         from the metacommunity. Used for calculating some of the trait based
         summary statistics.
     :param bool verbose: Print detailed progress information.
@@ -439,7 +517,7 @@ class Regressor(Ensemble):
     :param string target_model: The community assembly model to specifically use.
         If you include this then the simulations will be read and then filtered
         for only this `community_assembly_model`.
-    :param list metacommunity_traits: A list or np.array of the trait values
+    :param array-like metacommunity_traits: A list or np.array of the trait values
         from the metacommunity. Used for calculating some of the trait based
         summary statistics.
     :param bool verbose: Print lots of status messages. Good for debugging,
@@ -574,12 +652,17 @@ class Regressor(Ensemble):
         return self.empirical_pred
 
 
+#############################
+## Module methods
+#############################
+
 def posterior_predictive_check(empirical_df,\
                                 parameter_estimates,\
                                 ax='',\
                                 est_only=False,\
                                 nsims=100,\
                                 outfile='',\
+                                use_lambda=True,\
                                 verbose=False):
     """
     Perform posterior predictive simulations. This function will take
@@ -590,8 +673,11 @@ def posterior_predictive_check(empirical_df,\
     are a good fit to the data, then summary statistics generated using
     these parameters should resemble those of the real data.
 
-    :param bool empirical_df:
-    :param bool parameter_estimats:
+    :param pandas.DataFrame empirical_df: A DataFrame containing the empirical
+        data. This df has a very specific format which is documented here.
+    :param pandas.DataFrame parameter_estimates: A DataFrame containing the
+        the parameter estimates from a MESS.inference.Regressor.predict() call
+        and optional prediction interval upper and lower bounds.
     :param bool ax: The matplotlib axis to use for plotting. If not specified
         then a new axis will be created.
     :param bool est_only: If True, drop the lower and upper prediction
@@ -602,6 +688,8 @@ def posterior_predictive_check(empirical_df,\
     :param bool nsims: The number of posterior predictive simulations to perform.
     :param bool outfile: A file path for saving the figure. If not specified
         the figure is simply not saved to the filesystem.
+    :param bool use_lambda: Whether to generated simulations using time
+        as measured in _lambda or in generations.
     :param bool verbose: Print detailed progress information.
 
     :return: A matplotlib axis containing the plot.
@@ -630,13 +718,19 @@ def posterior_predictive_check(empirical_df,\
     r.set_param("project_dir", "./ppc")
 
     if verbose: progressbar(nsims, 0, "Performing simulations")
+    ## FIXME: Oh boy, this is not parallelized at all. Fix this.
     for i in range(nsims):
         for param in parameter_estimates:
+            ## Only use one of either the estimated lambda values
+            ## or the time in generations, not both.
             if param == "_lambda":
-                #r.set_param("generations", est[param]["estimate"])
-                r.set_param("generations", param_df[param].iloc[i])
+                if use_lambda == True:
+                    r.set_param("generations", param_df[param].iloc[i])
+                else: pass
+            elif param == "generation":
+                if use_lambda == False:
+                    r.set_param("generations", param_df[param].iloc[i])
             else:
-                #r.set_param(param, est[param]["estimate"])
                 r.set_param(param, param_df[param].iloc[i])
         r.run(sims=1, quiet=True)
 
