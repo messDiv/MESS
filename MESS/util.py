@@ -10,7 +10,7 @@ import os
 import logging
 LOGGER = logging.getLogger(__name__)
 
-from .stats import *
+from .stats import hill_number
 from .SGD import SGD
 
 ## Custom exception class
