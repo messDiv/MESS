@@ -459,8 +459,21 @@ class Region(object):
 
 
     ## Main function for managing cluster parallelized simulations
-    def run(self, sims, force=False, ipyclient=None, quiet=False):
-        """ Do the heavy lifting here"""
+    def run(self, sims, ipyclient=None, force=False, quiet=False):
+        """
+        Do the heavy lifting here. 
+
+        :param int sims: The number of MESS community assembly simulations to
+            perform.
+        :param ipyparallel.Client ipyclient: If specified use this ipyparallel
+            client to parallelize simulation runs. If not specified simulations
+            will be run serially.
+        :param bool force: Whether to append to or overwrite results from
+            previous simulations. Setting `force` to ``True`` will overwrite
+            any previously generated simulation in the `project_dir/SIMOUT.txt"
+            file..
+        :para bool quiet: Whether to display progress of these simulations.
+        """
         if not quiet: print("    Generating {} simulation(s).".format(sims))
 
         if not os.path.exists(self.paramsdict["project_dir"]):
