@@ -300,11 +300,8 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=2, metacommunity_trai
 
     * abundance: Abundances per species as counts of individuals.
     * pi: Nucleotide diversity per base per species.
-    * dxy: Absolute divergence between each species in the local community
-        and the sister species in the metacommunity.
-    * trait: The trait value of each species. Trait values are continuous
-        and the distribution of trait values in the local community should be
-        zero centered.
+    * dxy: Absolute divergence between each species in the local community and the sister species in the metacommunity.
+    * trait: The trait value of each species. Trait values are continuous and the distribution of trait values in the local community should be zero centered.
 
     .. note:: This method should be used for calculating summary statistics for
         all empirical datasets as this is the method that is used to generate
@@ -429,7 +426,7 @@ def feature_sets(empirical_df=None):
     Convenience function for getting all the different combinations of summary
     statistics (features) that are relevant for the axes available in the
     empirical data. For example, if you have abundance and pi in your observed
-    data then this function will return you features relevant to using only
+    data then this function will return 3 feature sets relevant to: using only
     abundance as the data, using only pi as the data, and using both abundance
     and pi.
 
