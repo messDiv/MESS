@@ -49,3 +49,8 @@ Posterior Predictive Checks
 +++++++++++++++++++++++++++
 
 .. autofunction:: MESS.inference.posterior_predictive_check
+
+Stats
+*****
+
+.. autofunction:: MESS.stats.feature_sets
