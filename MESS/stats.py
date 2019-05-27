@@ -293,7 +293,7 @@ def Watterson(seqs, nsamples=0, per_base=True):
     """
     Calculate Watterson's theta and optionally average over sequence length.
 
-    :param (string or array-like) seqs: The DNA sequence(s) over which to 
+    :param str/array-like seqs: The DNA sequence(s) over which to 
         calculate the statistic. This parameter can be a single DNA sequence
         as a string, in which case we assume it is pooled data with IUPAC
         ambiguity codes indicating segregating sites. It can also be a string

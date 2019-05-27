@@ -470,7 +470,7 @@ class Region(object):
             will be run serially.
         :param bool force: Whether to append to or overwrite results from
             previous simulations. Setting `force` to ``True`` will overwrite
-            any previously generated simulation in the `project_dir/SIMOUT.txt"
+            any previously generated simulation in the `project_dir/SIMOUT.txt`
             file..
         :para bool quiet: Whether to display progress of these simulations.
         """

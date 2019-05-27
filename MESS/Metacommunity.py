@@ -27,7 +27,7 @@ METACOMMUNITY_DTYPE = np.dtype([('ids', object),
 
 class Metacommunity(object):
     """
-    The metacommunity from individuals are sampled for colonization to the
+    The metacommunity from which individuals are sampled for colonization to the
     local community.
 
     :param str meta_type: Specify the distribution of abundance among species
