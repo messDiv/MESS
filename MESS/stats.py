@@ -10,7 +10,7 @@ from sklearn.metrics import pairwise_distances
 from MESS.SGD import SGD
 
 
-def generalized_hill_number(abunds, vals=None, order=1, scale=True, debug=False):
+def generalized_hill_number(abunds, vals=None, order=1, scale=True, verbose=False):
     """
     This is the Chao et al (2014) generalized Hill # formula. Get one Hill
     humber from a list of abundances (a column vector from the OTU table)
@@ -44,10 +44,10 @@ def generalized_hill_number(abunds, vals=None, order=1, scale=True, debug=False)
 
     ## Make sure vals is a np array or else order > 2 will act crazy
     vals = np.array(vals)
-    if debug: print("sums:", "dij", np.sum(vals), "pij", np.sum(abunds))
+    if verbose: print("sums:", "dij", np.sum(vals), "pij", np.sum(abunds))
     ## sum of values weighted by abundance
     V_bar = np.sum(vals*abunds)
-    if debug: print("vbar", V_bar)
+    if verbose: print("vbar", V_bar)
 
     ## Use the special formula for order = 1
     if order == 1:
@@ -59,7 +59,15 @@ def generalized_hill_number(abunds, vals=None, order=1, scale=True, debug=False)
     return h
 
 
-def trait_hill_number(abunds, traits, order=1, debug=False):
+def trait_hill_number(abunds, traits, order=1, verbose=False):
+    """
+    Calculate trait Hill numbers using the generalized Hill number equation.
+
+    :param array-like abunds:
+    :param list traits:
+    :param float order:
+    :param bool verbose:
+    """
     ## If there's only one species in the community then the pairwise_distances
     ## function will return 0, and generalized_hill will return inf,
     ## and you'll get nans in the final output. Not good. If only one species
@@ -73,11 +81,19 @@ def trait_hill_number(abunds, traits, order=1, debug=False):
     ## Reshape the np.array to make sklearn happy about it, then flatten it to a vector
     ## Then get the pairwise euclidean distances between all species trait values
     dij = pairwise_distances(traits.values.reshape(-1, 1)).flatten()
-    return generalized_hill_number(abunds=pij, vals=dij, order=order, debug=debug)**(1/2.)
+    return generalized_hill_number(abunds=pij, vals=dij, order=order, verbose=verbose)**(1/2.)
 
 
-## Get one hill humber from a list of abundances (a column vector from the OTU table)
 def hill_number(abunds, order=0):
+    """
+    Get one hill humber from an array-like of abundances.
+
+    :param array-like abunds: An `array-like` of counts of individuals per
+        species.
+    :param float order: The order of the Hill number to calculate.
+
+    :return: The Hill number of order `order`.
+    """
     ## Make sure abunds is a np array or else order > 2 will act crazy
     abunds = np.array(abunds)
     ## Degenerate edge cases can cause all zero values, particulary for pi
@@ -95,8 +111,27 @@ def hill_number(abunds, order=0):
     return h2
 
 
-## Get all hill numbers from 0 to 'orders' from a column vector of abundances
 def hill_numbers(abunds, orders, granularity=None, do_negative=False):
+    """
+    Get all hill numbers from 0 to 'orders' from an array-like of abundances.
+    If `granularity` is specified then calculate fractional Hill numbers
+    such that the returned `numpy.array` contains `granularity` count of Hill
+    numbers calculated and equally spaced between 0 and `orders`. The
+    `do_negative` parameter will include both positive and negative values
+    of Hill numbers up to order equal to `orders`.
+
+    :param array-like abunds: An `array-like` of counts of individuals per
+        species.
+    :param int orders: The max order of Hill numbers to calculate.
+    :param int granularity: The number of equally spaced fractional Hill
+        numbers to calculate between 0 and `orders`. If not specified then
+        returns only integer values of Hill numbers between 0 and `orders`.
+    :param bool do_negative: Whether to calculate negative as well as positive
+        Hill numbers between 0 and `orders`.
+
+    :return numpy.array: An array of Hill numbers from 0 to (+/-) `orders`
+        in intervals of defined by the `granularity` parameter.
+    """
     ret = []
     min_order = 0
     if not granularity: granularity = orders + 1
@@ -110,9 +145,25 @@ def hill_numbers(abunds, orders, granularity=None, do_negative=False):
 
 def SAD(community, from_abundances=False, octaves=False, raw_abunds=False):
     """
-    Generate the species abundance distribution either raw or in 
-    octaves of powers of 2. The input here is a simple list of "individuals"
-    specified just by their species identifier.
+    Generate the species abundance distribution either raw or in octaves of
+    powers of 2. The input here is a simple list of individuals specified
+    as species names.
+
+    .. note:: The `from_abundances` and `raw_abunds` arguments are probably
+        not useful and may be deprecated in the future.
+
+    :param list community: The list of individual in the local community.
+        This list should be of length `J` and should contain only the species
+        id of each individual in the local community.
+    :param bool from_abundances: If the input community list is already
+        counts of individuals per species then unpack it into a list of
+        individuals per species.
+    :param bool octaves: Whether to return the SAD in octaves of powers of 2.
+    :param bool raw_abunds: Wether to return the SAD binned into abundance
+        classes or simply return the list of abundances per species.
+
+    :return OrderedDict: An ordered dictionary with keys equal to abundance
+        classes and values equal to counts of species per class.
     """
 
     ## If input data is abundances per species and not the raw community
@@ -210,7 +261,9 @@ def dxy(ihaps_t, mhaps_t):
 
 def _hnum(N):
     """
-    The N-th Harmonic number
+    The N-th harmonic number. Used by the Watterson function.
+
+    :param int N: The harmonic number to calculate.
     """
     return (N)*(1./hmean(range(1, N+1)))
 
@@ -229,14 +282,15 @@ def _n_segsites_pooled(seq):
 
 def Watterson(seqs, nsamples=0, per_base=True):
     """
-    Calculate Watterson's theta per base.
+    Calculate Watterson's theta and optionally average over sequence length.
 
-    :param seqs: The DNA sequence over which to calculate the statistic.
-        This parameter can be a single DNA sequence as a string, in which
-        case we assume it is pooled data. It can be a file path to a fasta
-        file, or it can be a list of sequences which may or may not include
-        the sample names (they will be removed).
-    :param nsamples: The number of samples in the pooled sequence
+    :param (string or array-like) seqs: The DNA sequence(s) over which to 
+        calculate the statistic. This parameter can be a single DNA sequence
+        as a string, in which case we assume it is pooled data with IUPAC
+        ambiguity codes indicating segregating sites. It can also be a string
+        indicating the path to a fasta file, or a list of sequences which
+        may or may not include the sample names (they will be removed).
+    :param int nsamples: The number of samples in the pooled sequence
         (for pooled data only).
     :param bool per_base: Whether to average over the length of the sequence.
 
@@ -372,7 +426,8 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=2, metacommunity_trai
         for order in range(1,5):
             stat_dict["trait_h{}".format(order)] = trait_hill_number(diversity_df["abundance"],\
                                                                     diversity_df["trait"],\
-                                                                    order=order)
+                                                                    order=order,\
+                                                                    verbose=verbose)
     except:
         if verbose: print("  Trait hill numbers ignored since abundances not present.")
     finally:
