@@ -1,17 +1,19 @@
 from __future__ import print_function
 import collections
-import functools
-import subprocess
-import shlex
 import glob
-import sys
-import os
-
+import functools
 import logging
-LOGGER = logging.getLogger(__name__)
+import numpy as np
+import os
+import pandas as pd
+import shlex
+import subprocess
+import sys
 
 from .stats import hill_number
 from .SGD import SGD
+
+LOGGER = logging.getLogger(__name__)
 
 ## Custom exception class
 class MESSError(Exception):
