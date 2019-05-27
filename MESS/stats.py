@@ -229,7 +229,7 @@ def _n_segsites_pooled(seq):
 
 def Watterson(seqs, nsamples=0, per_base=True):
     """
-    Return Watterson's theta per base.
+    Calculate Watterson's theta per base.
 
     :param seqs: The DNA sequence over which to calculate the statistic.
         This parameter can be a single DNA sequence as a string, in which
@@ -239,6 +239,8 @@ def Watterson(seqs, nsamples=0, per_base=True):
     :param nsamples: The number of samples in the pooled sequence
         (for pooled data only).
     :param bool per_base: Whether to average over the length of the sequence.
+
+    :return float: The value of Watterson's estimator of theta per base.
     """
     if isinstance(seqs, str):
         try:
@@ -274,6 +276,14 @@ def Watterson(seqs, nsamples=0, per_base=True):
 
 
 def _get_sumstats_header(sgd_bins=10, sgd_dims=1, metacommunity_traits=None):
+    """
+    Return the full list of supported summary statistics. This is an internal
+    function used to generate, among other things, the SIMOUT header.
+
+    :param int sgd_bins: The number of bins per axis of the SGD.
+    :param int sgd_dims: The number of dimensions of the SGD (1 or 2)
+    :param array-like metacommunity_traits: Metacommunity trait values.
+    """
     ## Create some random data so the sumstats calculation doesn't freak out
     pis = np.random.random(10)/10
     dxys = np.random.random(10)/10
@@ -298,17 +308,19 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=2, metacommunity_trai
     of the dataset. The passed in `diversity_df` may contain one or more of
     the following data axes:
 
-    * abundance: Abundances per species as counts of individuals.
-    * pi: Nucleotide diversity per base per species.
-    * dxy: Absolute divergence between each species in the local community and the sister species in the metacommunity.
-    * trait: The trait value of each species. Trait values are continuous and the distribution of trait values in the local community should be zero centered.
+    * ``abundance``: Abundances per species as counts of individuals.
+    * ``pi``: Nucleotide diversity per base per species.
+    * ``dxy``: Absolute divergence between each species in the local community and the sister species in the metacommunity.
+    * ``trait``: The trait value of each species. Trait values are continuous and the distribution of trait values in the local community should be zero centered.
 
     .. note:: This method should be used for calculating summary statistics for
         all empirical datasets as this is the method that is used to generate
         summary statistics for the simulations. This guarantees that observed
         and simulated statistics are calculated identically.
 
-    :param pandas.DataFrame diversity_df:
+
+    :param pandas.DataFrame empirical_df: A DataFrame containing the empirical
+        data. This df has a very specific format which is specified above.
     :param int sgd_bins: The number of bins per axis of the constructed SGD.
         This must match the number of bins specified for simulations.
     :param int sgd_dims: The number of dimensions of the constructed SGD.
