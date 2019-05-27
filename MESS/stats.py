@@ -291,7 +291,41 @@ def _get_sumstats_header(sgd_bins=10, sgd_dims=1, metacommunity_traits=None):
 
 
 def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=2, metacommunity_traits=None, verbose=False):
+    """
+    Calculate all summary statistics on a dataset composed of one or more of
+    the target data axes. This function will automatically detect the
+    appropriate set of summary statistics to calculate based on the columns
+    of the dataset. The passed in `diversity_df` may contain one or more of
+    the following data axes:
 
+    * abundance: Abundances per species as counts of individuals.
+    * pi: Nucleotide diversity per base per species.
+    * dxy: Absolute divergence between each species in the local community
+        and the sister species in the metacommunity.
+    * trait: The trait value of each species. Trait values are continuous
+        and the distribution of trait values in the local community should be
+        zero centered.
+
+    .. note:: This method should be used for calculating summary statistics for
+        all empirical datasets as this is the method that is used to generate
+        summary statistics for the simulations. This guarantees that observed
+        and simulated statistics are calculated identically.
+
+    :param pandas.DataFrame diversity_df:
+    :param int sgd_bins: The number of bins per axis of the constructed SGD.
+        This must match the number of bins specified for simulations.
+    :param int sgd_dims: The number of dimensions of the constructed SGD.
+        This value can be either 1 (pi only) or 2 (both pi and dxy). This
+        parameter must match the number of dimensions specified for simulations.
+    :param array-like metacommunity_traits: A list or np.array of the trait values
+        from the metacommunity. Used for calculating some of the trait based
+        summary statistics. These values take the same form as the values of the
+        local trait data (i.e. they should be continuous and zero centered).
+    :param bool verbose: Whether to print some informational messages.
+
+    :return: Returns a pandas.Dataframe with one row containing all of the
+        applicable summary statistic for the input dataframe.
+    """
     moments = OrderedDict()
     for name, func in zip(["mean", "std", "skewness", "kurtosis", "median", "iqr"],\
                             [np.mean, np.std, skew, kurtosis, np.median, iqr]):
@@ -378,7 +412,7 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=2, metacommunity_trai
                   nbins = sgd_bins, ndims = sgd_dims)
         stat_dict.update(sgd.to_dict())
     except KeyError as inst:
-        ## No Dxy data, try just py
+        ## No Dxy data, try just pi
         try:
             sgd = SGD(diversity_df["pi"],\
                       nbins = sgd_bins, ndims = 1)

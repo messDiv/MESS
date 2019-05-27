@@ -53,4 +53,6 @@ Posterior Predictive Checks
 Stats
 *****
 
+.. autofunction:: MESS.stats.calculate_sumstats
+
 .. autofunction:: MESS.stats.feature_sets
