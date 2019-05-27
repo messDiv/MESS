@@ -273,7 +273,7 @@ def Watterson(seqs, nsamples=0, per_base=True):
     return w_theta
 
 
-def _get_sumstats_header(sgd_bins=10, sgd_dims=2, metacommunity_traits=None):
+def _get_sumstats_header(sgd_bins=10, sgd_dims=1, metacommunity_traits=None):
     ## Create some random data so the sumstats calculation doesn't freak out
     pis = np.random.random(10)/10
     dxys = np.random.random(10)/10
@@ -388,6 +388,60 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=2, metacommunity_trai
             pass
 
     return pd.DataFrame(stat_dict, index=[0])
+
+
+def feature_sets(empirical_df=None):
+    """
+    Convenience function for getting all the different combinations of summary
+    statistics (features) that are relevant for the axes available in the
+    empirical data. For example, if you have abundance and pi in your observed
+    data then this function will return you features relevant to using only
+    abundance as the data, using only pi as the data, and using both abundance
+    and pi.
+
+    :param pandas.DataFrame empirical_df: A DataFrame containing the empirical
+        data. This df has a very specific format which is documented here. If
+        none is provided then summary statistics for all possible combinations
+        of data axes are returned
+
+    :return: A dictionary with keys being string descriptors the focal data axes
+        and values being a list of summary statistics. Data axes that encompass
+        more than one axis will be keyed by a single string with the name of
+        both axes concatenated by a '+' sign (e.g. "abundance+pi+trait" is the
+        key that will give summary statistics relevant for all three of these
+        data axes.
+    """
+    data_axes = ["abundance", "pi", "dxy", "trait"]
+    empirical_axes = ["abundance", "pi", "dxy", "trait"]
+    if empirical_df is not None:
+        empirical_axes = empirical_df.columns
+
+    sumstats = _get_sumstats_header()
+    feature_sets = OrderedDict({})
+    feature_sets["abundance"] = ["S"] + [x for x in sumstats if "abund" in x and "_cor" not in x]
+    feature_sets["pi"] = [x for x in sumstats if ("pi" in x or "SGD" in x) and "_cor" not in x]
+    feature_sets["dxy"] = [x for x in sumstats if "dxy" in x and "_cor" not in x and "_cor" not in x]
+    feature_sets["trait"] = [x for x in sumstats if "trait" in x and "_cor" not in x]
+    
+
+    feature_sets["abundance+pi"] =  feature_sets["abundance"] + feature_sets["pi"] + ["abundance_pi_cor"]
+    feature_sets["pi+dxy"] = feature_sets["pi"] + feature_sets["dxy"] + ["dxy_pi_cor"]
+    feature_sets["pi+trait"] = feature_sets["pi"] + feature_sets["trait"] + ["pi_trait_cor"]
+    feature_sets["abundance+trait"] = feature_sets["abundance"] + feature_sets["trait"] + ["abundance_trait_cor"]
+
+    feature_sets["abundance+pi+trait"] = feature_sets["abundance+pi"] + feature_sets["trait"] + ["abundance_trait_cor"] + ["pi_trait_cor"]
+
+    feature_sets["all"] = sumstats
+
+    missing_axes = set(data_axes).difference(set(empirical_axes))
+    if missing_axes:
+        feature_sets.pop("all", '')
+        for k in feature_sets.keys():
+            for m in missing_axes:
+                if m in k:
+                    feature_sets.pop(k, '')
+
+    return feature_sets
 
 
 if __name__ == "__main__":
