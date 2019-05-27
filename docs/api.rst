@@ -56,3 +56,5 @@ Stats
 .. autofunction:: MESS.stats.calculate_sumstats
 
 .. autofunction:: MESS.stats.feature_sets
+
+.. autofunction:: MESS.stats.Watterson
