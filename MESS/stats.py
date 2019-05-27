@@ -12,14 +12,14 @@ from MESS.SGD import SGD
 
 def generalized_hill_number(abunds, vals=None, order=1, scale=True, verbose=False):
     """
-    This is the Chao et al (2014) generalized Hill # formula. Get one Hill
-    humber from a list of abundances (a column vector from the OTU table)
-    Generalized function to calculate one Hill number from a distribution
-    of values of some statistic and abundances.
+    This is the Chao et al (2014) generalized Hill # formula. Generalized
+    function to calculate one Hill number from a distribution of values of
+    some statistic and abundances.
 
-    :param abunds: A list of abundances per species
-    :param vals:   A list of statistics calculated per species (e.g. pi). If
-        this parameter is empty then abundance Hill numbers are calculated.
+    :param array-like abunds: An `array-like` of abundances per species.
+    :param array-like vals: An `array-like` of values per species (e.g. 
+        pi values per species, or trait values per species). If this parameter
+        is empty then only abundance Hill numbers are calculated.
     :param float order: The Hill number to calculate. 0 is species richness.
         Positive values calculate Hill numbers placing increasing weight on
         the most abundant species. Negative values can also be specified
@@ -27,7 +27,10 @@ def generalized_hill_number(abunds, vals=None, order=1, scale=True, verbose=Fals
         used in practice.
     :param bool scale: Whether to scale to effective numbers of species, or
         return the raw attribute diversity. Equivalent to equation 5c in
-        Chao et al 2014. You will almost never want to use turn this off.
+        Chao et al 2014. You will almost never want to disable this.
+
+    :return float: The generalized Hill number of order `order` for the given
+        data axis using the formula proposed by Chao et al (2014).
     """
     ## Degenerate edge cases can cause all zero values, particulary for pi
     ## in which case we bail out immediately
@@ -42,7 +45,7 @@ def generalized_hill_number(abunds, vals=None, order=1, scale=True, verbose=Fals
     if vals is None:
         vals = np.ones(len(abunds))
 
-    ## Make sure vals is a np array or else order > 2 will act crazy
+    ## Make sure vals is an np array or else order > 2 will act crazy
     vals = np.array(vals)
     if verbose: print("sums:", "dij", np.sum(vals), "pij", np.sum(abunds))
     ## sum of values weighted by abundance
@@ -62,11 +65,17 @@ def generalized_hill_number(abunds, vals=None, order=1, scale=True, verbose=Fals
 def trait_hill_number(abunds, traits, order=1, verbose=False):
     """
     Calculate trait Hill numbers using the generalized Hill number equation.
+    For this function `abunds` and `traits` should be array-likes of equal
+    length where the abundance of the `i`-th element corresponds to the
+    trait value of the `i`-th species.
 
-    :param array-like abunds:
-    :param list traits:
-    :param float order:
-    :param bool verbose:
+    :param array-like abunds: Abundances per species in the local community.
+    :param array-like traits: Corresponding trait values for each species.
+    :param float order: Order of the Hill number to calculate.
+    :param bool verbose: Whether to print informational messages.
+
+    :return float: The Hill number of the trait values for this community
+        using the generalized forumla proposed by Chao et al (2014).
     """
     ## If there's only one species in the community then the pairwise_distances
     ## function will return 0, and generalized_hill will return inf,
@@ -94,7 +103,7 @@ def hill_number(abunds, order=0):
 
     :return: The Hill number of order `order`.
     """
-    ## Make sure abunds is a np array or else order > 2 will act crazy
+    ## Make sure abunds is an np array or else order > 2 will act crazy
     abunds = np.array(abunds)
     ## Degenerate edge cases can cause all zero values, particulary for pi
     if not np.any(abunds):
