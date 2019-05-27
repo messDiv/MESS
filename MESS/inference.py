@@ -743,7 +743,7 @@ def posterior_predictive_check(empirical_df,\
     sim_df = pd.read_csv(simfile, sep="\t", header=0)
 
     ## Chop the sims down to only include ss contained in the observed data
-    obs_ss = MESS.util.calculate_sumstats(empirical_df)
+    obs_ss = MESS.stats.calculate_sumstats(empirical_df)
     sim_df = sim_df[obs_ss.columns]
 
     if not ax:
