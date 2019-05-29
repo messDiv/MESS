@@ -363,7 +363,7 @@ def _get_sumstats_header(sgd_bins=10, sgd_dims=1, metacommunity_traits=None):
     return header
 
 
-def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=2, metacommunity_traits=None, verbose=False):
+def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=1, metacommunity_traits=None, verbose=False):
     """
     Calculate all summary statistics on a dataset composed of one or more of
     the target data axes. This function will automatically detect the
