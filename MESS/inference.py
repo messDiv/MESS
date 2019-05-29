@@ -19,7 +19,7 @@ from sklearn import metrics
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier,\
                             GradientBoostingClassifier, GradientBoostingRegressor,\
                             AdaBoostRegressor, AdaBoostClassifier
-from sklearn.model_selection import train_test_split, cross_val_score, RandomizedSearchCV
+from sklearn.model_selection import train_test_split, cross_val_predict, cross_val_score, RandomizedSearchCV
 from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
 
@@ -39,6 +39,7 @@ class Ensemble(object):
     :attention: Ensemble objects should never be created directly. It is a base class that provides functionality to Classifier() and Regressor().
     """
     def __init__(self, empirical_df, simfile, target_model=None, algorithm="rf", metacommunity_traits=None, verbose=False):
+        self.empirical_df = empirical_df
         self.simfile = simfile
         self.algorithm = algorithm
         self.metacommunity_traits = metacommunity_traits
@@ -122,7 +123,7 @@ class Ensemble(object):
 
         try:
             self.empirical_sumstats = MESS.stats.calculate_sumstats(empirical_df, metacommunity_traits=metacommunity_traits)
-            if verbose: print("Got empirical summary statistics: {}".format(self.empirical_sumstats))
+            if verbose: print("Got empirical summary statistics:\n{}".format(self.empirical_sumstats))
         except Exception as inst:
             raise MESSError("  Malformed input dataframe: {}".format(inst))
 
@@ -173,7 +174,7 @@ class Ensemble(object):
             self.features = feature_list
         try:
             self.X = self._X[self.features]
-        except exception as inst:
+        except Exception as inst:
             print("  Failed setting features: {}".format(inst))
             raise
 
@@ -300,7 +301,6 @@ class Ensemble(object):
             for t in self.targets:
                 ## Munge the tmpX to fit the features selected for each target.
                 ## This is annoying housekeeping.
-                #import pdb; pdb.set_trace()
                 tmpX_filt = tmpX[self.model_by_target[t]["features"]]
                 if verbose: print("\t{} - Finding best params using features: {}".format(t, list(tmpX_filt.columns)))
                 cvsearch.fit(tmpX_filt, tmpy[t])
@@ -381,6 +381,41 @@ class Ensemble(object):
         return importances
 
 
+    def _cv_check(self, quick=False, verbose=False):
+        try:
+            _ = self.best_model
+        except:
+            msg = """
+Estimator has not been optimized prior to CV. Performing estimator CV skipping
+feature selection and hyperparameter optimization. For better performance call
+predict() on the estimator prior to calling the cv_predict/cv_score methods.
+"""
+            if verbose: print(msg)
+            self.predict(select_features=(not quick), param_search=(not quick), quick=quick) 
+
+
+    def cross_val_predict(self, cv=5, quick=False, verbose=False):
+        """
+
+        :param int cv:
+        :param bool quick:
+        :param bool verbose:
+        """
+        self._cv_check(quick=quick, verbose=verbose)
+        self.cv_preds = cross_val_predict(self.best_model, self.X, self.y, cv=cv, n_jobs=-1)
+
+
+    def cross_val_score(self, cv=5, quick=False, verbose=False):
+        """
+
+        :param int cv:
+        :param bool quick:
+        :param bool verbose:
+        """
+        self._cv_check(quick=quick, verbose=verbose)
+        self.cv_scores = cross_val_score(self.best_model, self.X, self.y, cv=cv, n_jobs=-1)
+
+
     ####################################################################
     ## Plotting functions
     ####################################################################
@@ -459,7 +494,7 @@ class Classifier(Ensemble):
         self._param_grid = _get_param_grid(algorithm)
 
 
-    def predict(self, select_features=True, param_search=True, by_target=False, quick=False, verbose=False):
+    def predict(self, select_features=True, param_search=True, by_target=False, quick=False, force=False, verbose=False):
         """
         Predict the most likely community assembly model class.
 
@@ -476,6 +511,11 @@ class Classifier(Ensemble):
         :param bool quick: Reduce the number of retained simulations and the number
             of feature selection and hyperparameter tuning iterations to make the
             prediction step run really fast! Useful for testing.
+        :param bool force: Force re-running feature selection and hyper-parameter
+            tuning. This is basically here to prevent you from shooting yourself
+            in the foot inside a for loop with `select_features=True` when
+            really what you want (most of the time) is to just run this once,
+            and call predict() multiple times without redoing this. 
         :param bool verbose: Print detailed progress information.
 
         :return: A tuple including the predicted model and the probabilities per model class.
@@ -530,7 +570,7 @@ class Regressor(Ensemble):
                         "generation", "speciation_prob", "_lambda"]
 
     def __init__(self, empirical_df, simfile, target_model=None, algorithm="rfq", metacommunity_traits=None, verbose=False):
-        super(Regressor, self).__init__(empirical_df, simfile, target_model=target_model, algorithm="rf", metacommunity_traits=metacommunity_traits, verbose=False)
+        super(Regressor, self).__init__(empirical_df, simfile, target_model=target_model, algorithm=algorithm, metacommunity_traits=metacommunity_traits, verbose=False)
 
         if algorithm == "rf":
             self._base_model = RandomForestRegressor
@@ -603,7 +643,7 @@ class Regressor(Ensemble):
         return self.empirical_pred
 
 
-    def predict(self, select_features=True, param_search=True, by_target=False, quick=False, verbose=False):
+    def predict(self, select_features=True, param_search=True, by_target=False, quick=False, force=True, verbose=False):
         """
         Predict parameter estimates for selected targets.
 
@@ -622,6 +662,11 @@ class Regressor(Ensemble):
         :param bool quick: Reduce the number of retained simulations and the number
             of feature selection and hyperparameter tuning iterations to make the
             prediction step run really fast! Useful for testing.
+        :param bool force: Force re-running feature selection and hyper-parameter
+            tuning. This is basically here to prevent you from shooting yourself
+            in the foot inside a for loop with `select_features=True` when
+            really what you want (most of the time) is to just run this once,
+            and call predict() multiple times without redoing this. 
         :param bool verbose: Print detailed progress information.
 
         :return: A pandas DataFrame including the predicted value per target
@@ -656,6 +701,37 @@ class Regressor(Ensemble):
 #############################
 ## Module methods
 #############################
+
+def parameter_estimation_cv(simfile, outdir='', target_model=None, data_axes='',
+                            algorithm="rf", quick=True, verbose=False):
+
+    ## Make outdir if it doesn't exist.
+    if not os.path.exists(model_outdir):
+        os.mkdir(model_outdir)
+    importance_out_df = pd.DataFrame([], index=feature_sets["all"])
+
+    if not data_axes:
+        data_axes = ["abundance", "pi", "dxy", "trait"]
+
+    ## Generate a synthetic community and filter only data axes specified.
+    synthetic_community = MESS.util.synthetic_community()[data_axes]
+
+    rgr = MESS.inference.Regressor(empirical_df=synthetic_community,\
+                                    simfile=simfile,\
+                                    target_model=target_model,\
+                                    verbose=verbose)
+
+    ## Feature selection is independent of the real data, so it doesn't matter
+    ## that we passed in synthetic empirical data here. It chooses features
+    ## that are only relevant for each summary statistic.
+    rgr.feature_selection(quick=quick, verbose=verbose)
+    ## Searching for the best model hyperparameters is the same, it is done
+    ## independently of the observed data.
+    rgr.param_search_cv(by_target=rgr._by_target, quick=quick, verbose=verbose)
+
+    
+    cv_preds = cross_val_predict(rgr.best_model, rgr.X, rgr.y, cv=5, n_jobs=-1)
+
 
 def posterior_predictive_check(empirical_df,\
                                 parameter_estimates,\
