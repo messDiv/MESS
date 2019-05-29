@@ -396,10 +396,25 @@ predict() on the estimator prior to calling the cv_predict/cv_score methods.
 
     def cross_val_predict(self, cv=5, quick=False, verbose=False):
         """
+        Perform K-fold cross-validation prediction. For each of `cv` folds
+            simulations will be split into sets of `K - (1/K)` training
+            simulations and 1/K test simulations.
 
-        :param int cv:
-        :param bool quick:
-        :param bool verbose:
+        .. note:: CV predictions are not appropriate for evaluating model
+            generalizability, these should only be used for visualization and
+            exploration.
+
+        :param int cv: The number of K-fold cross-validation splits to perform.
+        :param bool quick: If `True` skip feature selection and
+            hyper-parameter tuning, and subset simulations. Runs fast but does
+            a bad job. For testing.
+        :param bool verbose: Report on progress. Depending on the number of CV
+            folds this will be more or less chatty (mostly useless except for
+            debugging).
+
+        :return: The array of predicted targets for each set of features when
+            it was a member of the held-out testing set. Also saves the results
+            in the Estimator.cv_preds variable.
         """
         self._cv_check(quick=quick, verbose=verbose)
         self.cv_preds = cross_val_predict(self.best_model, self.X, self.y, cv=cv, n_jobs=-1)
@@ -407,14 +422,25 @@ predict() on the estimator prior to calling the cv_predict/cv_score methods.
 
     def cross_val_score(self, cv=5, quick=False, verbose=False):
         """
+        Perform K-fold cross-validation scoring. For each of `cv` folds
+            simulations will be split into sets of `K - (1/K)` training
+            simulations and 1/K test simulations.
 
-        :param int cv:
-        :param bool quick:
-        :param bool verbose:
+        :param int cv: The number of K-fold cross-validation splits to perform.
+        :param bool quick: If `True` skip feature selection and
+            hyper-parameter tuning, and subset simulations. Runs fast but does
+            a bad job. For testing.
+        :param bool verbose: Report on progress. Depending on the number of CV
+            folds this will be more or less chatty (mostly useless except for
+            debugging).
+
+        :return: The array of scores of the estimator for each K-fold. Also
+            saves the results in the Estimator.cv_scores variable.
         """
         self._cv_check(quick=quick, verbose=verbose)
         self.cv_scores = cross_val_score(self.best_model, self.X, self.y, cv=cv, n_jobs=-1)
 
+        return self.cv_scores
 
     ####################################################################
     ## Plotting functions
