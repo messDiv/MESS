@@ -49,3 +49,12 @@ Posterior Predictive Checks
 +++++++++++++++++++++++++++
 
 .. autofunction:: MESS.inference.posterior_predictive_check
+
+Stats
+*****
+
+.. autofunction:: MESS.stats.calculate_sumstats
+
+.. autofunction:: MESS.stats.feature_sets
+
+.. autofunction:: MESS.stats.Watterson

@@ -8,6 +8,7 @@ from __future__ import print_function
 
 import MESS.stats
 import matplotlib.pyplot as plt
+import joblib
 import numpy as np
 import pandas as pd
 
@@ -18,7 +19,7 @@ from sklearn import metrics
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier,\
                             GradientBoostingClassifier, GradientBoostingRegressor,\
                             AdaBoostRegressor, AdaBoostClassifier
-from sklearn.model_selection import train_test_split, cross_val_score, RandomizedSearchCV
+from sklearn.model_selection import train_test_split, cross_val_predict, cross_val_score, RandomizedSearchCV
 from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
 
@@ -26,7 +27,7 @@ import logging
 LOGGER = logging.getLogger(__name__)
 
 ## The base Ensemble class takes care of reading in the empirical dataframe,
-## calculating summary stats, reading the simulated date, and reshaping the sim 
+## calculating summary stats, reading the simulated date, and reshaping the sim
 ## sumstats to match the stats of the real data.
 class Ensemble(object):
     """
@@ -37,16 +38,15 @@ class Ensemble(object):
 
     :attention: Ensemble objects should never be created directly. It is a base class that provides functionality to Classifier() and Regressor().
     """
-    def __init__(self, empirical_df, simfile, target_model=None, algorithm="rf", verbose=False):
+    def __init__(self, empirical_df, simfile, target_model=None, algorithm="rf", metacommunity_traits=None, verbose=False):
+        self.empirical_df = empirical_df
         self.simfile = simfile
         self.algorithm = algorithm
-        ## Fetch empirical data and calculate the sumstats for the datatypes passed in
-        self.empirical_df = empirical_df
-        try:
-            self.empirical_sumstats = MESS.stats.calculate_sumstats(empirical_df)
-            if verbose: print("Got empirical summary statistics: {}".format(self.empirical_sumstats))
-        except Exception as inst:
-            print("  Malformed input dataframe: {}".format(inst))
+        self.metacommunity_traits = metacommunity_traits
+
+        self.set_data(empirical_df,\
+                        metacommunity_traits=metacommunity_traits,\
+                        verbose=verbose)
 
         try:
             ## Read in simulated data, split it into features and targets,
@@ -89,6 +89,74 @@ class Ensemble(object):
         return "{}: nsims - {}\n\tFeatures - {}\n\tTargets - {}".format(type(self), len(self._X), list(self.features), self.targets)
 
 
+    def set_data(self, empirical_df, metacommunity_traits=None, verbose=False):
+        """
+        A convenience function to allow using pre-trained models to make
+        predictions on new datasets without retraining the model. This will
+        calculate summary statistics on input data (recycling metacommunity
+        traits if these were previously input), and reshape the statistics
+        to match the features selected during initial model construction.
+
+        This is only sensible if the data from the input community consists
+        of identical axes as the data used to build the model. This will be
+        useful if you have community data from mutiple islands in the same
+        archipelago, different communities that share a common features,
+        and share a metacommunity.
+
+        :param pandas.DataFrame empirical_df: A DataFrame containing the empirical
+            data. This df has a very specific format which is documented here.
+        :param array-like metacommunity_traits: A list or np.array of the trait values
+            from the metacommunity. Used for calculating some of the trait based
+            summary statistics.
+        :param bool verbose: Print progress information.
+        """
+        ## Fetch empirical data and calculate the sumstats for the datatypes passed in
+        self.empirical_df = empirical_df
+
+        if metacommunity_traits is None:
+            try:
+                metacommunity_traits = self.metacommunity_traits
+            except AttributeError:
+                ## If you don't pass it in, and it isn't already set on the
+                ## on the model, then just keep on truckin'.
+                pass
+
+        try:
+            self.empirical_sumstats = MESS.stats.calculate_sumstats(empirical_df, metacommunity_traits=metacommunity_traits)
+            if verbose: print("Got empirical summary statistics:\n{}".format(self.empirical_sumstats))
+        except Exception as inst:
+            raise MESSError("  Malformed input dataframe: {}".format(inst))
+
+        try:
+            ## Reshape the input sumstats to fit the previously trained model
+            ## if there is one. If self.features is unset (on Ensemble.__init__)
+            ## this will raise, which is fine.
+            self.empirical_sumstats = self.empirical_sumstats[self.features]
+        except AttributeError:
+            if verbose: print("No features previously selected, using all.")
+
+
+    def dump(self, outfile):
+        """
+        Save the model to a file on disk. Useful for saving trained models
+        to prevent having to retrain them.
+
+        :param str outfile: The file to save the model to.
+        """
+        joblib.dump(self, outfile)
+
+
+    @staticmethod
+    def load(infile):
+        """
+        Load a MESS.inference model from disk. This is complementary to the
+        MESS.inference.Ensemble.dump() method.
+
+        :param str infile: The file to load a trained model from.
+        """
+        return joblib.load(infile)
+
+
     def set_features(self, feature_list=''):
         """
         Specify the feature list to use for classification/regression. By
@@ -106,12 +174,13 @@ class Ensemble(object):
             self.features = feature_list
         try:
             self.X = self._X[self.features]
-        except exception as inst:
+        except Exception as inst:
             print("  Failed setting features: {}".format(inst))
             raise
 
 
     def set_targets(self, target_list=''):
+
         """
         Specify the target (parameter) list to use for classification/regression. By
         default the classifier will only consider :ref:`community_assembly_model`
@@ -123,6 +192,7 @@ class Ensemble(object):
             correspond exactly to parameters in the simulations or
             else it will complain.
         """
+
         ## If just one target then convert it to a list for compatibility
         if isinstance(target_list, str) and target_list:
             target_list = [target_list]
@@ -147,11 +217,11 @@ class Ensemble(object):
     ## take the union of the results.
     def feature_selection(self, quick=False, verbose=False):
         """
-        Access to the feature selection routine. Uses BorutaPy, 
-        an all-relevant feature selection method:  
+        Access to the feature selection routine. Uses BorutaPy,
+        an all-relevant feature selection method:
         https://github.com/scikit-learn-contrib/boruta_py
         http://danielhomola.com/2015/05/08/borutapy-an-all-relevant-feature-selection-method/
-        
+
         :hint: Normally you will not run this on your own, but will use it indirectly through the predict() methods.
 
         :param bool quick: Run fast but do a bad job.
@@ -177,7 +247,7 @@ class Ensemble(object):
                 max_iter=10
             else:
                 tmpX = self.X.values
-                tmpy = self.y[t].values 
+                tmpy = self.y[t].values
                 max_iter=100
 
             # define Boruta feature selection method
@@ -202,7 +272,7 @@ class Ensemble(object):
         selected_features = self.features[mask]
         if verbose: print("All selected features: {}".format(" ".join(selected_features)))
         ## Filter on the selected features
-        self.X = self.X[selected_features]   
+        self.X = self.X[selected_features]
         ## Also filter the empirical sumstats
         self.empirical_sumstats = self.empirical_sumstats[selected_features]
 
@@ -231,7 +301,6 @@ class Ensemble(object):
             for t in self.targets:
                 ## Munge the tmpX to fit the features selected for each target.
                 ## This is annoying housekeeping.
-                #import pdb; pdb.set_trace()
                 tmpX_filt = tmpX[self.model_by_target[t]["features"]]
                 if verbose: print("\t{} - Finding best params using features: {}".format(t, list(tmpX_filt.columns)))
                 cvsearch.fit(tmpX_filt, tmpy[t])
@@ -250,7 +319,16 @@ class Ensemble(object):
 
 
     ## The magic method to just do-it-all
-    def predict(self, select_features=True, param_search=True, by_target=False, quick=False, verbose=False):
+    def predict(self, select_features=True, param_search=True, by_target=False, quick=False, force=False, verbose=False):
+
+        try:
+            _ = self.best_model
+            if not force:
+                if verbose: "Model already trained. Use 'force' to retrain."
+                return
+        except AttributeError:
+            pass
+
         ## Select relevant features
         if select_features:
             self.feature_selection(quick=quick, verbose=verbose)
@@ -275,6 +353,8 @@ class Ensemble(object):
                     self.model_by_target[t]["model"] = self._base_model()
                     self.model_by_target[t]["model"].fit(self.X[self.model_by_target[t]["features"]], self.y[t])
                     self.model_by_target[t]["feature_importances"] = self.model_by_target[t]["model"].feature_importances_
+                ## Set the best_model variable just using the model for the first target
+                self.best_model = self.model_by_target[self.targets[0]]["model"]
             else:
                 ## TODO: Make default base_model params smarter
                 self.best_model = self._base_model(n_jobs=-1)
@@ -300,6 +380,67 @@ class Ensemble(object):
             importances = pd.DataFrame(self.best_model.feature_importances_, columns=["Feature importance"], index=self.features).T
         return importances
 
+
+    def _cv_check(self, quick=False, verbose=False):
+        try:
+            _ = self.best_model
+        except:
+            msg = """
+Estimator has not been optimized prior to CV. Performing estimator CV skipping
+feature selection and hyperparameter optimization. For better performance call
+predict() on the estimator prior to calling the cv_predict/cv_score methods.
+"""
+            if verbose: print(msg)
+            self.predict(select_features=(not quick), param_search=(not quick), quick=quick) 
+
+
+    def cross_val_predict(self, cv=5, quick=False, verbose=False):
+        """
+        Perform K-fold cross-validation prediction. For each of `cv` folds
+            simulations will be split into sets of `K - (1/K)` training
+            simulations and 1/K test simulations.
+
+        .. note:: CV predictions are not appropriate for evaluating model
+            generalizability, these should only be used for visualization and
+            exploration.
+
+        :param int cv: The number of K-fold cross-validation splits to perform.
+        :param bool quick: If `True` skip feature selection and
+            hyper-parameter tuning, and subset simulations. Runs fast but does
+            a bad job. For testing.
+        :param bool verbose: Report on progress. Depending on the number of CV
+            folds this will be more or less chatty (mostly useless except for
+            debugging).
+
+        :return: The array of predicted targets for each set of features when
+            it was a member of the held-out testing set. Also saves the results
+            in the Estimator.cv_preds variable.
+        """
+        self._cv_check(quick=quick, verbose=verbose)
+        self.cv_preds = cross_val_predict(self.best_model, self.X, self.y, cv=cv, n_jobs=-1)
+
+
+    def cross_val_score(self, cv=5, quick=False, verbose=False):
+        """
+        Perform K-fold cross-validation scoring. For each of `cv` folds
+            simulations will be split into sets of `K - (1/K)` training
+            simulations and 1/K test simulations.
+
+        :param int cv: The number of K-fold cross-validation splits to perform.
+        :param bool quick: If `True` skip feature selection and
+            hyper-parameter tuning, and subset simulations. Runs fast but does
+            a bad job. For testing.
+        :param bool verbose: Report on progress. Depending on the number of CV
+            folds this will be more or less chatty (mostly useless except for
+            debugging).
+
+        :return: The array of scores of the estimator for each K-fold. Also
+            saves the results in the Estimator.cv_scores variable.
+        """
+        self._cv_check(quick=quick, verbose=verbose)
+        self.cv_scores = cross_val_score(self.best_model, self.X, self.y, cv=cv, n_jobs=-1)
+
+        return self.cv_scores
 
     ####################################################################
     ## Plotting functions
@@ -355,14 +496,17 @@ class Classifier(Ensemble):
     :param string simfile: The path to the file containing all the simulations.
     :param string algorithm: One of the :ref:`ensemble_methods` to use for
         parameter estimation.
+    :param array-like metacommunity_traits: A list or np.array of the trait values
+        from the metacommunity. Used for calculating some of the trait based
+        summary statistics.
     :param bool verbose: Print detailed progress information.
     """
 
 
     _default_targets = ["community_assembly_model"]
 
-    def __init__(self, empirical_df, simfile, algorithm="rf", verbose=False):
-        super(Classifier, self).__init__(empirical_df, simfile, algorithm=algorithm, verbose=verbose)
+    def __init__(self, empirical_df, simfile, algorithm="rf", metacommunity_traits=None, verbose=False):
+        super(Classifier, self).__init__(empirical_df, simfile, algorithm=algorithm, metacommunity_traits=metacommunity_traits, verbose=verbose)
 
         if algorithm == "rf":
             self._base_model = RandomForestClassifier
@@ -376,25 +520,30 @@ class Classifier(Ensemble):
         self._param_grid = _get_param_grid(algorithm)
 
 
-    def predict(self, select_features=True, param_search=True, by_target=False, quick=False, verbose=False):
+    def predict(self, select_features=True, param_search=True, by_target=False, quick=False, force=False, verbose=False):
         """
         Predict the most likely community assembly model class.
-    
+
         :param bool select_features: Whether to perform relevant feature selection.
             This will remove features with little information useful for model
-            prediction. Should improve classification performance, but does take 
+            prediction. Should improve classification performance, but does take
             time.
         :param bool param_search: Whether to perform ML classifier hyperparameter
             tuning. If ``False`` then classification will be performed with default
             classifier options, which will almost certainly result in poor performance,
             but it will run really fast!.
-        :param bool by_target: Whether to predict multiple target variables 
+        :param bool by_target: Whether to predict multiple target variables
             simultaneously, or each individually and sequentially.
         :param bool quick: Reduce the number of retained simulations and the number
             of feature selection and hyperparameter tuning iterations to make the
             prediction step run really fast! Useful for testing.
+        :param bool force: Force re-running feature selection and hyper-parameter
+            tuning. This is basically here to prevent you from shooting yourself
+            in the foot inside a for loop with `select_features=True` when
+            really what you want (most of the time) is to just run this once,
+            and call predict() multiple times without redoing this. 
         :param bool verbose: Print detailed progress information.
-    
+
         :return: A tuple including the predicted model and the probabilities per model class.
         """
         super(Classifier, self).predict(select_features=select_features, param_search=param_search,\
@@ -435,6 +584,9 @@ class Regressor(Ensemble):
     :param string target_model: The community assembly model to specifically use.
         If you include this then the simulations will be read and then filtered
         for only this `community_assembly_model`.
+    :param array-like metacommunity_traits: A list or np.array of the trait values
+        from the metacommunity. Used for calculating some of the trait based
+        summary statistics.
     :param bool verbose: Print lots of status messages. Good for debugging,
         or if you're *really* curious about the process.
     """
@@ -443,8 +595,8 @@ class Regressor(Ensemble):
                         "trait_rate_meta", "ecological_strength", "J", "m",\
                         "generation", "speciation_prob", "_lambda"]
 
-    def __init__(self, empirical_df, simfile, target_model=None, algorithm="rfq", verbose=False):
-        super(Regressor, self).__init__(empirical_df, simfile, target_model=target_model, algorithm="rf", verbose=False)
+    def __init__(self, empirical_df, simfile, target_model=None, algorithm="rfq", metacommunity_traits=None, verbose=False):
+        super(Regressor, self).__init__(empirical_df, simfile, target_model=target_model, algorithm=algorithm, metacommunity_traits=metacommunity_traits, verbose=False)
 
         if algorithm == "rf":
             self._base_model = RandomForestRegressor
@@ -464,22 +616,21 @@ class Regressor(Ensemble):
         self.targets = list(self.y.columns)
         if verbose: print("Removed invariant targets. Retained: {}".format(list(self.y.columns)))
 
-
     def prediction_interval(self, interval=0.95, quick=False, verbose=False):
         """
         Add upper and lower prediction interval for algorithms that support
-        quantile regression (`rf`, `gb`). 
+        quantile regression (`rf`, `gb`).
 
         :hint: You normaly won't have to call this by hand, as it is incorporated automatically into the predict() methods. We allow access to in for experimental purposes.
 
-        :param float interval: The prediction interval to generate. 
+        :param float interval: The prediction interval to generate.
         :param bool quick: Subsample the data to make it run fast, for testing.
-            The `quick` parameter doesn't do anything for `rf` because it's 
+            The `quick` parameter doesn't do anything for `rf` because it's
             already really fast (the model doesn't have to be refit).
         :param bool verbose: Print information about progress.
 
         :return: A pandas.DataFrame containing the model predictions and the
-            prediction intervals.        
+            prediction intervals.
         """
         if verbose: print("Calculating prediction interval(s)")
         upper = 1.0 - ((1.0 - interval)/2.)
@@ -518,10 +669,10 @@ class Regressor(Ensemble):
         return self.empirical_pred
 
 
-    def predict(self, select_features=True, param_search=True, by_target=False, quick=False, verbose=False):
+    def predict(self, select_features=True, param_search=True, by_target=False, quick=False, force=True, verbose=False):
         """
         Predict parameter estimates for selected targets.
-    
+
         :param bool select_features: Whether to perform relevant feature selection.
             This will remove features with little information useful for parameter
             estimation. Should improve parameter estimation performance, but does
@@ -537,9 +688,14 @@ class Regressor(Ensemble):
         :param bool quick: Reduce the number of retained simulations and the number
             of feature selection and hyperparameter tuning iterations to make the
             prediction step run really fast! Useful for testing.
+        :param bool force: Force re-running feature selection and hyper-parameter
+            tuning. This is basically here to prevent you from shooting yourself
+            in the foot inside a for loop with `select_features=True` when
+            really what you want (most of the time) is to just run this once,
+            and call predict() multiple times without redoing this. 
         :param bool verbose: Print detailed progress information.
-    
-        :return: A pandas DataFrame including the predicted value per target 
+
+        :return: A pandas DataFrame including the predicted value per target
             parameter, and 95% prediction intervals if the ensemble method
             specified for this Regressor supports it.
         """
@@ -568,12 +724,48 @@ class Regressor(Ensemble):
         return self.empirical_pred
 
 
+#############################
+## Module methods
+#############################
+
+def parameter_estimation_cv(simfile, outdir='', target_model=None, data_axes='',
+                            algorithm="rf", quick=True, verbose=False):
+
+    ## Make outdir if it doesn't exist.
+    if not os.path.exists(model_outdir):
+        os.mkdir(model_outdir)
+    importance_out_df = pd.DataFrame([], index=feature_sets["all"])
+
+    if not data_axes:
+        data_axes = ["abundance", "pi", "dxy", "trait"]
+
+    ## Generate a synthetic community and filter only data axes specified.
+    synthetic_community = MESS.util.synthetic_community()[data_axes]
+
+    rgr = MESS.inference.Regressor(empirical_df=synthetic_community,\
+                                    simfile=simfile,\
+                                    target_model=target_model,\
+                                    verbose=verbose)
+
+    ## Feature selection is independent of the real data, so it doesn't matter
+    ## that we passed in synthetic empirical data here. It chooses features
+    ## that are only relevant for each summary statistic.
+    rgr.feature_selection(quick=quick, verbose=verbose)
+    ## Searching for the best model hyperparameters is the same, it is done
+    ## independently of the observed data.
+    rgr.param_search_cv(by_target=rgr._by_target, quick=quick, verbose=verbose)
+
+    
+    cv_preds = cross_val_predict(rgr.best_model, rgr.X, rgr.y, cv=5, n_jobs=-1)
+
+
 def posterior_predictive_check(empirical_df,\
                                 parameter_estimates,\
                                 ax='',\
                                 est_only=False,\
                                 nsims=100,\
                                 outfile='',\
+                                use_lambda=True,\
                                 verbose=False):
     """
     Perform posterior predictive simulations. This function will take
@@ -584,20 +776,25 @@ def posterior_predictive_check(empirical_df,\
     are a good fit to the data, then summary statistics generated using
     these parameters should resemble those of the real data.
 
-    :param bool empirical_df: 
-    :param bool parameter_estimats: 
+    :param pandas.DataFrame empirical_df: A DataFrame containing the empirical
+        data. This df has a very specific format which is documented here.
+    :param pandas.DataFrame parameter_estimates: A DataFrame containing the
+        the parameter estimates from a MESS.inference.Regressor.predict() call
+        and optional prediction interval upper and lower bounds.
     :param bool ax: The matplotlib axis to use for plotting. If not specified
         then a new axis will be created.
-    :param bool est_only: If True, drop the lower and upper prediction 
-        interval (PI) and just use the mean estimated parameters for generating 
+    :param bool est_only: If True, drop the lower and upper prediction
+        interval (PI) and just use the mean estimated parameters for generating
         posterior predictive simulations. If False, and PIs exist, then
         parameter values will be sampled uniformly between the lower and upper
         PI.
     :param bool nsims: The number of posterior predictive simulations to perform.
     :param bool outfile: A file path for saving the figure. If not specified
         the figure is simply not saved to the filesystem.
+    :param bool use_lambda: Whether to generated simulations using time
+        as measured in _lambda or in generations.
     :param bool verbose: Print detailed progress information.
-    
+
     :return: A matplotlib axis containing the plot.
     """
 
@@ -624,13 +821,19 @@ def posterior_predictive_check(empirical_df,\
     r.set_param("project_dir", "./ppc")
 
     if verbose: progressbar(nsims, 0, "Performing simulations")
+    ## FIXME: Oh boy, this is not parallelized at all. Fix this.
     for i in range(nsims):
         for param in parameter_estimates:
+            ## Only use one of either the estimated lambda values
+            ## or the time in generations, not both.
             if param == "_lambda":
-                #r.set_param("generations", est[param]["estimate"])
-                r.set_param("generations", param_df[param].iloc[i])
+                if use_lambda == True:
+                    r.set_param("generations", param_df[param].iloc[i])
+                else: pass
+            elif param == "generation":
+                if use_lambda == False:
+                    r.set_param("generations", param_df[param].iloc[i])
             else:
-                #r.set_param(param, est[param]["estimate"])
                 r.set_param(param, param_df[param].iloc[i])
         r.run(sims=1, quiet=True)
 
@@ -642,7 +845,7 @@ def posterior_predictive_check(empirical_df,\
     sim_df = pd.read_csv(simfile, sep="\t", header=0)
 
     ## Chop the sims down to only include ss contained in the observed data
-    obs_ss = MESS.util.calculate_sumstats(empirical_df)
+    obs_ss = MESS.stats.calculate_sumstats(empirical_df)
     sim_df = sim_df[obs_ss.columns]
 
     if not ax:

@@ -78,7 +78,7 @@ class LocalCommunity(object):
         ##  * mode: Whether to prepopulate the local community as a 'volcanic' or
         ##      'landbridge' style origin.
         self._hackersonly = dict([
-                        ("allow_empty", True),
+                        ("allow_empty", False),
                         ("outdir", []),
                         ("mig_clust_size", 1),
                         ("age", 100000),
@@ -247,13 +247,32 @@ class LocalCommunity(object):
 
 
     ## Update global death probabilities for the filtering model
-    def _filtering_update_death_probs(self):
+    def _filtering_update_death_probs(self, perturb=False):
+        """
+        Update environmental filtering death probabilities. In a model of zero
+        speciation these only ever need to get calculated once. With speciation
+        they need to get recalculated upon each speciation event. Also,
+        we add a subtle perturbation per generation to simulate shifting
+        environmental conditions.
+
+        :param bool perturb: Whether to perturb the filtering optimum by +/- a
+            small random value.
+        """
         fo = self.region.metacommunity._hackersonly["filtering_optimum"]
         es = self.region.metacommunity.paramsdict["ecological_strength"]
-        def dprob(trt):
-            return 1 - (np.exp(-((trt - fo) ** 2)/es))
-        self._filt_death_probs = {sp:dprob(trt) for sp, trt in self.region.metacommunity._get_species_traits().items()}
+        if perturb:
+            noise = np.random.normal(1, 0.05)
+            fo = fo * noise
+#            print("Upstate fo", fo, noise)
+            self.region.metacommunity._hackersonly["filtering_optimum"] = fo
 
+        def dprob(trt):
+            dp = 1 - (np.exp(-((trt - fo) ** 2)/es))
+## Set a minimum death prob?
+#            if dp < 0.75:
+#                dp = 0.75
+            return dp
+        self._filt_death_probs = {sp:dprob(trt) for sp, trt in self.region.metacommunity._get_species_traits().items()}
 
     ## Getting params header and parameter values drops the local
     ## community name (param 0), and adds a bunch of pseudo-parameters
@@ -606,7 +625,7 @@ class LocalCommunity(object):
         :param int nsteps: The number of generations to simulate.
         """
         ## Convert time in generations to timesteps (WF -> Moran)
-        for step in range(nsteps * self.paramsdict["J"] / 2):
+        for step in range(int(nsteps * self.paramsdict["J"]/2.)):
             chx = ''
             ## Check probability of an immigration event
             if np.random.random_sample() < self.paramsdict["m"]:
@@ -656,8 +675,12 @@ class LocalCommunity(object):
 
                self._speciate(chx)
 
+
             ## update current time
             self.current_time += 1
+
+        ## Perturb environmental optimum for filtering
+        self._filtering_update_death_probs(perturb=True)
 
 
     def get_abundances(self, octaves=False, raw_abunds=False):
@@ -958,6 +981,30 @@ class LocalCommunity(object):
         self.local_info = local_info_bak
 
 
+    def get_community_data(self):
+        """
+        Gather the community data and format it in such a way as to prepare it
+        for calling MESS.stats.calculate_sumstats(). This is a way of getting
+        simulated data that is in the exact format empirical data is required
+        to be in. Useful for degubbing and experimentation.
+
+        :return: A pandas.DataFrame with 4 columns: "pi", "dxy", "abundance",
+            and "trait", and one row per species.
+        """
+        abunds = np.array([x.stats["abundance"] for x in self.species])
+        pis = np.array([x.stats["pi_local"] for x in self.species])
+        dxys = np.array([x.stats["dxy"] for x in self.species])
+        traits = np.array([x.stats["trait"] for x in self.species])
+
+        dat = pd.DataFrame([], columns=["pi", "dxy", "abundance", "trait"])
+        dat["abundance"] = abunds
+        dat["pi"] = pis
+        dat["dxy"] = dxys
+        dat["trait"] = traits
+
+        return dat
+
+
     def get_stats(self):
         """
         Simulate genetic variation per species in the local community, then
@@ -971,16 +1018,7 @@ class LocalCommunity(object):
         self._simulate_seqs()
         LOGGER.debug("First 5 species - \n{}".format(self.species[:5]))
 
-        abunds = np.array([x.stats["abundance"] for x in self.species])
-        pis = np.array([x.stats["pi_local"] for x in self.species])
-        dxys = np.array([x.stats["dxy"] for x in self.species])
-        traits = np.array([x.stats["trait"] for x in self.species])
-
-        dat = pd.DataFrame([], columns=["pi", "dxy", "abundance", "trait"])
-        dat["abundance"] = abunds
-        dat["pi"] = pis
-        dat["dxy"] = dxys
-        dat["trait"] = traits
+        dat =  self.get_community_data()
 
         ss = calculate_sumstats(dat, sgd_bins=self.region._hackersonly["sgd_bins"],\
                                     sgd_dims=self.region._hackersonly["sgd_dimensions"],\

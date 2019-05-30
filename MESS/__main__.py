@@ -80,7 +80,7 @@ def getregion(args, region_params, meta_params, island_params):
         try:
             data = set_params(data, param, region_params[param], quiet=args.quiet)
         except Exception as inst:
-            print(inst)
+            print("Error in __main__.getregion(): {}".format(inst))
             sys.exit(-1)
 
     meta = MESS.Metacommunity()
@@ -88,7 +88,7 @@ def getregion(args, region_params, meta_params, island_params):
         try:
             meta = set_params(meta, param, meta_params[param], quiet=args.quiet)
         except Exception as inst:
-            print(inst)
+            print("Error in __main__.getregion(): {}".format(inst))
             sys.exit(-1)
     data._link_metacommunity(meta)
         
@@ -382,7 +382,7 @@ def main():
             tmpassembly.write_params("params-{}.txt".format(args.new), outdir="./", 
                                      force=args.force)
         except Exception as inst:
-            print(inst)
+            print("Error creating new params file: {}".format(inst))
             sys.exit(2)
 
         print("\n  New file 'params-{}.txt' created in {}\n".\

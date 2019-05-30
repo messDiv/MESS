@@ -42,20 +42,9 @@ class species(object):
             index=[ "name",
                     "trait",
                     "abundance",
-                    "tdiv",
-                    "migration_rate",
-                    "growth_rate",
                     "Ne_local",
                     "Ne_meta",
-                    "segsites_tot",
-                    "segsites_local",
-                    "segsites_meta",
-                    "pi_tot",
-                    "pi_local",
-                    "pi_meta",
-                    "da",
-                    "dxy",
-                    "tajd_local"]).astype(np.object)
+                    "tdiv"]).astype(np.object)
 
         self.stats["name"] = name
         self.stats["trait"] = trait_value
@@ -164,7 +153,7 @@ class species(object):
         return size_change_events
 
 
-    def _get_local_meta_split(self, source_idx = 1, dest_idx = 0):
+    def _get_local_meta_split(self, source_idx = 0, dest_idx = 1):
         ## Going backwards in time, at colonization time throw all lineages from
         ## the local community back into the metacommunity
 
@@ -177,24 +166,20 @@ class species(object):
                                             destination = dest_idx,\
                                             proportion = 1)
 
-        local_rate_change = msprime.PopulationParametersChange(\
-                                            time = self.stats["tdiv"],\
-                                            growth_rate = 0,\
-                                            population_id = 0)
-
         ## TODO: Could mess with 'initial_size' here, but you don't want
         ## to sample too much from the metacommunity or the local pi
         ## goes way up.
         local_size_change = msprime.PopulationParametersChange(\
                                             time = self.stats["tdiv"],\
                                             initial_size = .01,\
+                                            growth_rate = 0,
                                             population_id = source_idx)
 
         migrate_change = msprime.MigrationRateChange(
                                             time = self.stats["tdiv"],\
                                             rate = 0)
 
-        return [migrate_change, local_size_change, local_rate_change, split_event]
+        return [migrate_change, local_size_change, split_event]
 
 
     def simulate_seqs(self):
@@ -232,17 +217,17 @@ class species(object):
                                               demographic_events = split_events)
         self.get_sumstats()
 
-        tree = self.tree_sequence.first()
-        colour_map = {0:"red", 1:"blue"}
-        node_colours = {u: colour_map[tree.population(u)] for u in tree.nodes()}
-        node_labels = {
-            u: (str(u) if u < 8 else "{} (t={:.2f})".format(u, tree.time(u))) 
-            for u in tree.nodes()}
+        ## Dump a bunch of svg files to /tmp to validate that the model looks okay
+        #tree = self.tree_sequence.first()
+        #colour_map = {0:"red", 1:"blue"}
+        #node_colours = {u:colour_map[tree.population(u)] for u in tree.nodes()}
+        #node_labels = {
+        #    u: (str(u) if u < 8 else "{} (t={:.2f})".format(u, tree.time(u))) 
+        #    for u in tree.nodes()}
         #tree.draw(path="/tmp/{}.svg".format(self.name.replace(" ", "_")), height=500, width=1000, node_labels=node_labels, node_colours=node_colours)
 
 
-    def get_sumstats(self, samps=np.array([]), metasamps=np.array([])):
-
+    def get_sumstats(self, samps=np.array([]), metasamps=np.array([]), pooled=False):
         LOGGER.debug("Entering get_sumstats - {}".format(self.name))
 
         self.stats["segsites_tot"] = len(next(self.tree_sequence.haplotypes()))
@@ -291,8 +276,13 @@ class species(object):
                                         [len(set(mhaps_t[x])) for x in range(len(mhaps_t))])[2]
 
         ## Pass in the transposed arrays, since we already have them
-        self.stats["pi_local"] = get_pi(ihaps_t) / self.paramsdict["sequence_length"]
-        self.stats["pi_meta"] = get_pi(mhaps_t) / self.paramsdict["sequence_length"]
+        if pooled:
+            print("pooled")
+            self.stats["pi_local"] = Wattersons_theta(len(ihaps_t), self.stats["segsites_local"]) / self.paramsdict["sequence_length"]
+            self.stats["pi_meta"] = Wattersons_theta(len(mhaps_t), self.stats["segsites_meta"]) / self.paramsdict["sequence_length"]
+        else:
+            self.stats["pi_local"] = get_pi(ihaps_t) / self.paramsdict["sequence_length"]
+            self.stats["pi_meta"] = get_pi(mhaps_t) / self.paramsdict["sequence_length"]
 
         ## get pairwise differences between populations while ignoring differences
         ## within populations (Dxy)
@@ -300,14 +290,7 @@ class species(object):
 
         self.stats["da"] = self.stats["dxy"] - (self.stats["pi_local"] + self.stats["pi_meta"])/2
 
-        ## Forbid biologically unrealistic values of pi
-        ## TODO: This is dumb
-        if self.stats["pi_meta"] > 0.2 or self.stats["pi_local"] > 0.2:
-            LOGGER.error("Bad pi {}".format(self))
-            #self.simulate_seqs()
-            #self.get_sumstats()
-
-        self.stats["tajd_local"] = tajD_island(island_haps, self.stats["segsites_local"])
+        self.stats["TajimaD"] = Tajimas_D(island_haps, self.stats["segsites_local"])
 
 
     ## This is hackish and is used by the LocalCommunity.bottleneck() function
@@ -319,14 +302,14 @@ class species(object):
 #######################################
 ## Various summary statistics
 #######################################
-def tajD_island(haplotypes, S):
+def Tajimas_D(haplotypes, S):
     if len(haplotypes) == 0:
         return 0
     if not any(haplotypes):
         return 0
     if S == 0:
         return 0
-    d_num = pairwise_diffs(haplotypes) - watt_theta(len(haplotypes), S)
+    d_num = pairwise_diffs(haplotypes) - Wattersons_theta(len(haplotypes), S)
     ddenom = tajD_denom(len(haplotypes), S)
     if ddenom == 0:
         D = 0
@@ -344,8 +327,8 @@ def pairwise_diffs(haplotypes):
     return tot/float(count+1)
 
 
-def watt_theta(n, S):
-    return S/sum([1./x for x in range(1,n)])
+def Wattersons_theta(n, S):
+    return S/sum([1./x for x in range(1,n+1)])
 
 
 ## Fuckin helps if you do it right. This page has a nice worked example with values for each
