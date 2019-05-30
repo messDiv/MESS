@@ -194,7 +194,9 @@ def get_client(cluster_id, profile, engines, timeout, cores, quiet, **kwargs):
     return ipyclient
 
 def cluster_info(ipyclient):
-    """ reports host and engine info for an ipyclient """
+    """
+    Reports host and engine info for an ipyclient
+    """
     ## get engine data, skips busy engines.    
     hosts = []
     for eid in ipyclient.ids:
