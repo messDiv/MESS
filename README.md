@@ -1,5 +1,7 @@
 # MESS - Massive Eco-evolutionary Synthesis Simulations
 
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/messDiv/MESS/master)
+
 Adding traits and phylogenies to abundances and genetic diversity
 
 ## Introduction
@@ -12,5 +14,3 @@ Critical support for development of the MESS model was provided by the German Ce
 * `conda install conda-build anaconda-client`
 * `conda build conda.recipe/MESS -c conda-forge -c r -c mess`
 
-
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/messDiv/MESS/master)
