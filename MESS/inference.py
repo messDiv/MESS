@@ -561,7 +561,7 @@ class Classifier(Ensemble):
 
             proba = [self.model_by_target[t]["model"].predict_proba(self.empirical_sumstats[self.model_by_target[t]["features"]])[0] for t in self.targets]
             ## Somewhat annoying, but we grab the classes vector from the model of the first target
-            self.empirical_proba = pd.DataFrame(proba, columns=self.model_by_target.values()[0]["model"].classes_, index=self.targets)
+            self.empirical_proba = pd.DataFrame(proba, columns=list(self.model_by_target.values())[0]["model"].classes_, index=self.targets)
         else:
             ## Do all targets at once. Also, you don't get prediction intervls
             ## if you don't do by_target
