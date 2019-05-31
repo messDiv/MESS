@@ -35,8 +35,8 @@ def plot_rank_abundance_through_time(outdir, sp_through_time, equilibria,\
     if not os.path.exists(abund_out):
         os.mkdir(abund_out)
 
-    times = equilibria.keys()
-    equilibria = equilibria.values()
+    times = list(equilibria.keys())
+    equilibria = list(equilibria.values())
 
     ## If you only want to see extant species then prune all the extinct ones
     #if only_extant:
@@ -49,7 +49,7 @@ def plot_rank_abundance_through_time(outdir, sp_through_time, equilibria,\
                 max_n_bins, octave_bin_labels))
 
     ## Get a list of UUIDs of the extant species at time 0 (present)
-    extant = [x.stats["name"] for x in sp_through_time.values()[-1]]
+    extant = [x.stats["name"] for x in list(sp_through_time.values())[-1]]
 
     ## Make the abundance plots, one for each timeslice
     ## TODO: Should we include all species or just the ones that live to the end?
@@ -58,7 +58,7 @@ def plot_rank_abundance_through_time(outdir, sp_through_time, equilibria,\
     ## files in an order where we can cat them in numerical order w/o too much fuss
     file_index = 10**len(list(str(nslices)))
 
-    tot_plots = len(sp_through_time.values())
+    tot_plots = len(sp_through_time)
     for i, species in enumerate(sp_through_time.values()):
         progressbar(tot_plots, i+1)
         progressbar(tot_plots, i+1)
@@ -107,8 +107,8 @@ def plot_abundance_vs_colonization_time(outdir, sp_through_time, equilibria,\
     if not os.path.exists(abund_out):
         os.mkdir(abund_out)
 
-    times = equilibria.keys()
-    equilibria = equilibria.values()
+    times = list(equilibria.keys())
+    equilibria = list(equilibria.values())
 
     ## If you only want to see extant species then prune all the extinct ones
     if only_extant:
@@ -122,13 +122,13 @@ def plot_abundance_vs_colonization_time(outdir, sp_through_time, equilibria,\
                 max_n_bins, octave_bin_labels))
 
     ## Get a list of UUIDs of the extant species at time 0 (present)
-    extant = [x.stats["name"] for x in sp_through_time.values()[-1]]
+    extant = [x.stats["name"] for x in list(sp_through_time.values())[-1]]
     nslices = len(sp_through_time)
     ## Create a file index that is large enough so we can create all the abundance
     ## files in an order where we can cat them in numerical order w/o too much fuss
     file_index = 10**len(list(str(nslices)))
 
-    tot_plots = len(sp_through_time.values())
+    tot_plots = len(sp_through_time)
     for i, species in enumerate(sp_through_time.values()):
         progressbar(tot_plots, i+1)
 
@@ -185,8 +185,8 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
     if not os.path.exists(heat_out):
         os.mkdir(heat_out)
 
-    times = equilibria.keys()
-    equilibria = equilibria.values()
+    times = list(equilibria.keys())
+    equilibria = list(equilibria.values())
 
     ## If you only want to see extant species then prune all the extinct ones
     if only_extant:
@@ -194,7 +194,7 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
 
     ## GET MAX pi and dxy
     ## Get a list of UUIDs of the extant species at time 0 (present)
-    extant = [x.stats["name"] for x in sp_through_time.values()[-1]]
+    extant = [x.stats["name"] for x in list(sp_through_time.values())[-1]]
     ## find the max_pi and max_dxy for all extant species through all timepoints
     max_pi_local = 0
     max_dxy = 0
@@ -246,12 +246,12 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
     cbar_min, cbar_max = (0, max_bin_val)
     step = 1
     Z = [[0,0],[0,0]]
-    levels = range(cbar_min, cbar_max+step, step)
+    levels = list(range(cbar_min, cbar_max+step, step))
     my_colorbar = plt.contourf(Z, levels, cmap=plt.cm.jet)
     plt.clf()
 
 
-    tot_heatmaps = len(sp_through_time.values())
+    tot_heatmaps = len(sp_through_time)
     for i, sp_list in enumerate(sp_through_time.values()):
         progressbar(tot_heatmaps, i+1)
 
@@ -319,7 +319,10 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
 
         plt.colorbar(my_colorbar)
 
-        plt.xlabel(u"Nucleotide diversity (\u03c0)", fontsize=20)
+        ## Python 2to3 unicode printing incompatibilty that i don't feel
+        ## like figuring out because this is old code.
+        #plt.xlabel(u"Nucleotide diversity (\u03c0)", fontsize=20)
+        plt.xlabel("Nucleotide diversity (pi)", fontsize=20)
         plt.xticks(np.arange(len(pi_local_bins)), ["{0:.4f}".format(x) for x in pi_local_bins], rotation='vertical')
 
         if one_d:
@@ -392,16 +395,17 @@ def prep_normalized_plots(sp_through_time):
             max_octave = octave
         if class_count > max_class_count:
             max_class_count = class_count
-        if len(abund.keys()) > max_n_bins:
-            max_n_bins = len(abund.keys())
-            octave_bin_labels = abund.keys()
+        if len(abund) > max_n_bins:
+            max_n_bins = len(abund)
+            octave_bin_labels = list(abund.keys())
 
     return max_n_species, max_abundance, max_octave, max_class_count, max_n_bins, octave_bin_labels
 
 
 def plot_sad(abund, max_n_species, max_n_bins, max_class_count, octave_bin_labels, verbose):
     ax1 = plt.gca()
-    ab_class, count = zip(*abund.items())
+    ab_class = list(abund.keys())
+    count = list(abund.values())
     if verbose:
         print(ab_class, count)
     df = pd.DataFrame([x for x in count], index = [str(x) for x in ab_class])

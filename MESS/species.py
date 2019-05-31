@@ -261,8 +261,8 @@ class species(object):
         ## are the same by making a set from each row and checking if len > 1
         ## In the transposed array rows are bases and columns are individuals
         ## There's probably a much fucking smarter way to do this
-        ihaps_t = np.transpose(np.array([map(int, list(x)) for x in island_haps]))
-        mhaps_t = np.transpose(np.array([map(int, list(x)) for x in meta_haps]))
+        ihaps_t = np.transpose(np.array([list(map(int, list(x))) for x in island_haps]))
+        mhaps_t = np.transpose(np.array([list(map(int, list(x))) for x in meta_haps]))
 
         ## Counter makes a dict, so just get the counts for 2, which indicates
         ## sites segregating in the pop

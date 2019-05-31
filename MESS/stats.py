@@ -198,7 +198,7 @@ def SAD(community, from_abundances=False, octaves=False, raw_abunds=False):
     ## If raw_abunds then we just want to get the list of all abundances
     ## of all species as a list, don't do any SAD binning.
     if raw_abunds:
-        return abundances.values()
+        return list(abundances.values())
 
     ## Now for each abundance class you have to go through and
     ## count the number of species at that abundance.
@@ -274,7 +274,7 @@ def _hnum(N):
 
     :param int N: The harmonic number to calculate.
     """
-    return (N)*(1./hmean(range(1, N+1)))
+    return (N)*(1./hmean(list(range(1, N+1))))
 
 
 def _n_segsites_pooled(seq):
@@ -313,7 +313,7 @@ def Watterson(seqs, nsamples=0, per_base=True):
                 ## If seqs is a file just read in the data here and do the
                 ## calculation in the block below
                 seqs = open(seqs).readlines()
-            except IOError, TypeError:
+            except (IOError, TypeError) as inst:
                 ## Not a file
                 pass
 
@@ -325,7 +325,8 @@ def Watterson(seqs, nsamples=0, per_base=True):
         nsamples = seqs.shape[1]
         ## Count the number of non-unique bases (the -1 turns monomorphic sites
         ## into zeros.
-        segsites = np.count_nonzero(np.array(map(len, map(lambda x: set(x), seqs))) - 1)
+        #Py2 segsites = np.count_nonzero(np.array(map(len, map(lambda x: set(x), seqs))) - 1)
+        segsites = np.count_nonzero(np.array(list(map(len, [set(x) for x in seqs]))) - 1)
 
     if nsamples == 0:
         raise MESS.util.MESSError("If using pooled data you must include the `nsamples` parameter.")
@@ -543,7 +544,7 @@ def feature_sets(empirical_df=None):
     missing_axes = set(data_axes).difference(set(empirical_axes))
     if missing_axes:
         feature_sets.pop("all", '')
-        for k in feature_sets.keys():
+        for k in feature_sets:
             for m in missing_axes:
                 if m in k:
                     feature_sets.pop(k, '')
