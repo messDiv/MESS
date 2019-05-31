@@ -13,11 +13,6 @@ import time
 import sys
 import os
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from io import StringIO
-
 from MESS import MESSError
 
 
@@ -106,10 +101,11 @@ def get_client(cluster_id, profile, engines, timeout, cores, quiet, **kwargs):
     """
 
     ## save stds for later, we're gonna hide them to prevent external printing 
+    devnull = open(os.devnull, 'w')
     save_stdout = sys.stdout 
     save_stderr = sys.stderr
-    sys.stdout = StringIO()
-    sys.stderr = StringIO()
+    sys.stdout = devnull
+    sys.stderr = devnull
 
     ## get cluster_info print string
     connection_string = "  establishing parallel connection:"
@@ -159,31 +155,19 @@ def get_client(cluster_id, profile, engines, timeout, cores, quiet, **kwargs):
                         break
 
     except KeyboardInterrupt as inst:
-        ## ensure stdout is reset even if Exception was raised            
-        sys.stdout = save_stdout
-        sys.stderr = save_stderr
         raise inst
 
     ## This is raised if ipcluster is not running ------------
     except IOError as inst:
-        ## ensure stdout is reset even if Exception was raised
-        sys.stdout = save_stdout
-        sys.stderr = save_stderr
         if "mess-cli-" in cluster_id:
             raise MESSError(NO_IPCLUSTER_CLI)
         else:
             raise MESSError(NO_IPCLUSTER_API)
 
     except (ipp.TimeoutError, ipp.NoEnginesRegistered) as inst:
-        ## raised by ipp if no connection file is found for 'nwait' seconds
-        sys.stdout = save_stdout
-        sys.stderr = save_stderr
         raise inst
 
     except Exception as inst:
-        ## if any other exceptions were missed...
-        sys.stdout = save_stdout
-        sys.stderr = save_stderr
         raise inst
 
     finally:
