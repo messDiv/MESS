@@ -1,7 +1,6 @@
-#!/usr/bin/env python2
 """ the main CLI for calling MESS """
 
-from __future__ import print_function, division  # Requires Python 2.7+
+from __future__ import print_function, division
 
 import pkg_resources
 import argparse
@@ -36,21 +35,21 @@ def parse_params(args):
 
     ## Get Region params and make into a dict, ignore all blank lines
     items = [i.split("##")[0].strip() for i in plines[0].split("\n")[1:] if not i.strip() == ""]
-    keys = MESS.Region('null', quiet=True).paramsdict.keys()
+    keys = list(MESS.Region('null', quiet=True).paramsdict.keys())
     region_params = {str(i):j for i, j in zip(keys, items)}
 
     LOGGER.debug("Region params - {}".format(region_params))
 
     ## Get metacommunity params and make a dict
     items = [i.split("##")[0].strip() for i in plines[1].split("\n")[1:] if not i.strip() == ""]
-    keys = MESS.Metacommunity(meta_type="uniform", quiet=True).paramsdict.keys()
+    keys = list(MESS.Metacommunity(meta_type="uniform", quiet=True).paramsdict.keys())
     meta_params = {str(i):j for i, j in zip(keys, items)}
     LOGGER.debug("Metacommunity params - {}".format(meta_params))
 
     island_params = []
     for i, params in enumerate(plines[2:]):
         items = [i.split("##")[0].strip() for i in params.split("\n")[1:] if not i.strip() == ""]
-        keys = MESS.LocalCommunity('null', quiet=True).paramsdict.keys()
+        keys = list(MESS.LocalCommunity('null', quiet=True).paramsdict.keys())
         island_dict = {str(i):j for i, j in zip(keys, items)}
         island_params.append(island_dict)
 
@@ -108,13 +107,18 @@ def getregion(args, region_params, meta_params, island_params):
 
 def _check_version():
     """ Test if there's a newer version and nag the user to upgrade."""
-
     ## TODO: This doesn't actually work yet
-    import urllib2
+
+    ## Python 2/3 compat
+    try:
+        from urllib2 import urlopen
+    except Exception:
+        from urllib.request import urlopen
+
     from distutils.version import LooseVersion
 
     try:
-        htmldat = urllib2.urlopen("https://anaconda.org/MESS/mess").readlines()
+        htmldat = urlopen("https://anaconda.org/MESS/mess").readlines()
         curversion = next((x for x in htmldat if "subheader" in x), None).split(">")[1].split("<")[0]
         if LooseVersion(MESS.__version__) < LooseVersion(curversion):
             msg = """

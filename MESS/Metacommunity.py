@@ -1,5 +1,3 @@
-#!/usr/bin/env python2.7
-
 from __future__ import print_function
 
 from scipy.stats import lognorm
@@ -465,8 +463,8 @@ class Metacommunity(object):
 
     def get_migrants(self, nmigrants=1):
         """
-        Sample individuals from the Metacommunity. Each individual is uniformly
-        and independently sampled with replacement from the Metacommunity.
+        Sample individuals from the Metacommunity. Each individual is
+        independently sampled with replacement from the Metacommunity.
 
         :return: A tuple of lists of species IDs (str) and trait values (float).
         """

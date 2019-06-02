@@ -1,4 +1,3 @@
-#!/usr/bin/env python2.7 
 from __future__ import print_function
 
 from scipy.stats import logser
@@ -502,12 +501,12 @@ class LocalCommunity(object):
             mean_local_trait = self.region.get_trait_mean(self.local_community)
             ## Get local traits for all individuals in the community (remove None first)
             loc_inds = [x for x in self.local_community if x != None]
-            local_traits = map(self.region.get_trait, loc_inds)
+            local_traits = list(map(self.region.get_trait, loc_inds))
             ## Scale ecological strength for competition to be in the same units
             ## as for filtering
             es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
             ## Apply the competition equation to get fitness per individual
-            death_probs = map(lambda x: np.exp(-((x - mean_local_trait) ** 2)/es), local_traits)
+            death_probs = [np.exp(-((x - mean_local_trait) ** 2)/es) for x in local_traits]
             ## Scale all fitness values to proportions
             death_probs = np.array(death_probs)/np.sum(death_probs)
             ## Get the victim conditioning on unequal death probability
@@ -896,7 +895,7 @@ class LocalCommunity(object):
             ## Just get a slice of the local_info df that represents the species of interest
             dat = self.local_info[species_list]
             ## Dictionary mapping species names to 0-based index (where 0 is metacommunity)
-            sp_idxs = OrderedDict({x:ix for ix, x in zip(range(1, len(dat.columns)+1), dat.columns[::-1])})
+            sp_idxs = OrderedDict({x:ix for ix, x in zip(list(range(1, len(dat.columns)+1)), dat.columns[::-1])})
             sp_idxs[''] = 0
 
             pop_cfgs = []

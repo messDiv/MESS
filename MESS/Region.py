@@ -111,7 +111,7 @@ class Region(object):
     ## Housekeeping functions
     #########################
     def __str__(self):
-        return "<MESS.Region {}: {}>".format(self.paramsdict["simulation_name"], self.islands.keys())
+        return "<MESS.Region {}: {}>".format(self.paramsdict["simulation_name"], list(self.islands.keys()))
 
     ## Test assembly name is valid and raise if it contains any special characters
     def _check_name(self, name):
@@ -314,7 +314,7 @@ class Region(object):
                 self.metacommunity = set_params(self.metacommunity, param, value, quiet)
             except:
                 try:
-                    name, loc = self.islands.items()[0]
+                    name, loc = list(self.islands.items())[0]
                     self.islands[name] = set_params(loc, param, value, quiet)
                 except:
                     raise MESSError("Bad param/value {}/{}".format(param, value))
@@ -362,7 +362,7 @@ class Region(object):
             ## param value, the ordered dict index number. Also,
             ## get the short description from paramsinfo. Make it look pretty,
             ## pad nicely if at all possible.
-            for key, val in self.paramsdict.iteritems():
+            for key, val in self.paramsdict.items():
                 paramvalue = str(val)
 
                 ## If it's one of the params with a prior, and if the prior is not
@@ -378,7 +378,7 @@ class Region(object):
                             paramvalue = "-".join([str(i) for i in self._priors[key]])
 
                 padding = (" "*(20-len(paramvalue)))
-                paramkey = self.paramsdict.keys().index(key)
+                paramkey = list(self.paramsdict.keys()).index(key)
                 paramindex = " ## [{}] ".format(paramkey)
                 LOGGER.debug("{} {} {}".format(key, val, paramindex))
                 #name = "[{}]: ".format(paramname(paramkey))
@@ -646,7 +646,7 @@ class Region(object):
         ## Create an temp function to test whether we've reached the end of this simulation
         if _lambda > 0:
             ## In the absence of a better strategy just test for lambda in the first local community
-            done_func = lambda: self.islands.values()[0]._lambda() >= _lambda
+            done_func = lambda: list(self.islands.values())[0]._lambda() >= _lambda
         else:
             done_func = lambda: step >= nsteps
 
@@ -654,7 +654,7 @@ class Region(object):
             ## This is not ideal functionality, but it at least gives you a sense of progress
             ## Especially don't do this on ipyparallel engines, because it floods the pipe.
             if not quiet:
-                progressbar(100, 100, "{0:.4f}".format(self.islands.values()[0]._lambda()))
+                progressbar(100, 100, "{0:.4f}".format(list(self.islands.values())[0]._lambda()))
             for island in self.islands.values():
                 island.step()
             step += 1

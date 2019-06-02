@@ -1,4 +1,5 @@
 from __future__ import print_function
+
 import collections
 import glob
 import functools
@@ -29,7 +30,7 @@ def detect_cpus():
     """
     # Linux, Unix and MacOS:
     if hasattr(os, "sysconf"):
-        if os.sysconf_names.has_key("SC_NPROCESSORS_ONLN"):
+        if "SC_NPROCESSORS_ONLN" in os.sysconf_names:
             # Linux & Unix:
             ncpus = os.sysconf("SC_NPROCESSORS_ONLN")
             if isinstance(ncpus, int) and ncpus > 0:
@@ -37,7 +38,7 @@ def detect_cpus():
         else: # OSX:
             return int(os.popen2("sysctl -n hw.ncpu")[1].read())
     # Windows:
-    if os.environ.has_key("NUMBER_OF_PROCESSORS"):
+    if "NUMBER_OF_PROCESSORS" in os.environ:
         ncpus = int(os.environ["NUMBER_OF_PROCESSORS"])
         if ncpus > 0:
             return ncpus
@@ -145,7 +146,7 @@ def import_empirical(input_dir):
     abundfile = os.path.join(input_dir, "abunds.txt")
     if os.path.isfile(abundfile):
         dat = open(abundfile).read().strip().split(",")
-        dat = map(int, dat)
+        dat = list(map(int, dat))
         print("Got empirical abundance Hill_1 - {}".format(hill_number(SAD(dat, from_abundances=True, raw_abunds=True), order=1)))
 
     fastadir = os.path.join(input_dir, "spider-fasta")
@@ -189,9 +190,9 @@ def set_params(data, param, newvalue, quiet=True):
         in the documentation.
     """
     LOGGER.debug("set param: {} {} = {}".format(data, param, newvalue))
-    allowed_params = data.paramsdict.keys()
+    #allowed_params = list(data.paramsdict.keys())
     ## require parameter recognition
-    if not param in allowed_params:
+    if not param in data.paramsdict.keys():
         raise MESSError("Parameter key not recognized: {}"\
                                 .format(param))
     try:

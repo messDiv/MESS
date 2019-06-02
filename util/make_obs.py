@@ -1,5 +1,3 @@
-#!/usr/bin/env python2.7
-
 import argparse
 import glob
 import numpy as np
@@ -35,7 +33,7 @@ def pi(file):
                 ## ignore indels
                 del base_count["-"]
                 del base_count["N"]
-                for c in combinations(base_count.values(), 2):
+                for c in combinations(list(base_count.values()), 2):
                     #print(c)
                     n = c[0] + c[1]
                     n_comparisons = float(n) * (n - 1) / 2
@@ -103,14 +101,14 @@ if __name__ == "__main__":
     if args.abund_file:
         outfile.write("abund_h1\t")
     if args.fasta_files:
-        for row in xrange(10):
+        for row in range(10):
                 outfile.write("\tbin_{}".format(row))
     outfile.write("\n")
 
     ## Get shannon if abundances are provided
     if args.abund_file:
         dat = open(args.abund_file).read().strip().split(",")
-        dat = map(int, dat)
+        dat = list(map(int, dat))
         dat = Counter(dat)
         outfile.write(str(hill_number(dat, 1)) + "\t")
         
@@ -129,7 +127,7 @@ if __name__ == "__main__":
         with open(outpis, 'w') as out:
                 pis_df.to_csv(out)
 
-        dat = make_1D_heat(pis.values())
+        dat = make_1D_heat(list(pis.values()))
         outfile.write(dat)
         
 
