@@ -382,6 +382,11 @@ class Ensemble(object):
 
 
     def _cv_check(self, quick=False, verbose=False):
+        """
+        A convenience method for checking whether Ensemble.best_model exists
+        as this is what's used by both Ensemble.cross_val_* methods. If it
+        doesn't exist this method will call self.predict() to generate it.
+        """
         try:
             _ = self.best_model
         except:
@@ -397,8 +402,13 @@ predict() on the estimator prior to calling the cv_predict/cv_score methods.
     def cross_val_predict(self, cv=5, quick=False, verbose=False):
         """
         Perform K-fold cross-validation prediction. For each of `cv` folds
-            simulations will be split into sets of `K - (1/K)` training
-            simulations and 1/K test simulations.
+        simulations will be split into sets of `K - (1/K)` training simulations
+        and 1/K test simulations.
+
+        This method will also calculate mean absolute error and root mean
+        squared error between simulated and estimated targets if called on the
+        Regressor() class. These can be access by `Ensemble.Regressor.MAE`
+        `Ensemble.Regressor.RMSE`, respectively.
 
         .. note:: CV predictions are not appropriate for evaluating model
             generalizability, these should only be used for visualization and
@@ -419,12 +429,23 @@ predict() on the estimator prior to calling the cv_predict/cv_score methods.
         self._cv_check(quick=quick, verbose=verbose)
         self.cv_preds = cross_val_predict(self.best_model, self.X, self.y, cv=cv, n_jobs=-1)
 
+        try:
+            ## Calculate mean absolute error and root mean squared error of estimates
+            self.MAE = np.mean(np.abs((self.cv_preds - self.y)))
+            self.RMSE = np.sqrt(np.mean((self.cv_preds - self.y)**2)/len(self.y))
+        except:
+            ## Only valid for Ensemble.Regressor so fail silently for
+            ## Ensemble.Classifier. Maybe these should be methods?
+            pass
+
+        return self.cv_preds
+
 
     def cross_val_score(self, cv=5, quick=False, verbose=False):
         """
         Perform K-fold cross-validation scoring. For each of `cv` folds
-            simulations will be split into sets of `K - (1/K)` training
-            simulations and 1/K test simulations.
+        simulations will be split into sets of `K - (1/K)` training simulations
+        and 1/K test simulations.
 
         :param int cv: The number of K-fold cross-validation splits to perform.
         :param bool quick: If `True` skip feature selection and
@@ -441,6 +462,7 @@ predict() on the estimator prior to calling the cv_predict/cv_score methods.
         self.cv_scores = cross_val_score(self.best_model, self.X, self.y, cv=cv, n_jobs=-1)
 
         return self.cv_scores
+
 
     ####################################################################
     ## Plotting functions
