@@ -405,11 +405,6 @@ predict() on the estimator prior to calling the cv_predict/cv_score methods.
         simulations will be split into sets of `K - (1/K)` training simulations
         and 1/K test simulations.
 
-        This method will also calculate mean absolute error and root mean
-        squared error between simulated and estimated targets if called on the
-        Regressor() class. These can be access by `Ensemble.Regressor.MAE`
-        & `Ensemble.Regressor.RMSE`, respectively.
-
         .. note:: CV predictions are not appropriate for evaluating model
             generalizability, these should only be used for visualization and
             exploration.
@@ -428,15 +423,7 @@ predict() on the estimator prior to calling the cv_predict/cv_score methods.
         """
         self._cv_check(quick=quick, verbose=verbose)
         self.cv_preds = cross_val_predict(self.best_model, self.X, self.y, cv=cv, n_jobs=-1)
-
-        try:
-            ## Calculate mean absolute error and root mean squared error of estimates
-            self.MAE = np.mean(np.abs((self.cv_preds - self.y)))
-            self.RMSE = np.sqrt(np.mean((self.cv_preds - self.y)**2)/len(self.y))
-        except:
-            ## Only valid for Ensemble.Regressor so fail silently for
-            ## Ensemble.Classifier. Maybe these should be methods?
-            pass
+        self.cv_preds = pd.DataFrame(self.cv_preds, columns=self.targets)
 
         return self.cv_preds
 
@@ -594,6 +581,7 @@ class Classifier(Ensemble):
 
         return self.empirical_pred, self.empirical_proba
 
+
     def plot_confusion_matrix(self,\
                                 ax='',\
                                 figsize=(8, 8),\
@@ -667,6 +655,7 @@ class Classifier(Ensemble):
             plt.savefig(outfile)
 
         return ax
+
 
 class Regressor(Ensemble):
     """
@@ -817,6 +806,123 @@ class Regressor(Ensemble):
                                                 columns=self.targets, index=["estimate"])
 
         return self.empirical_pred
+
+
+    def cross_val_predict(self, cv=5, quick=False, verbose=False):
+        """
+        A thin wrapper around Ensemble.cross_val_predict() that basically just
+        calculates some Regressor specific statistics after the cross validation
+        prodecure. This function will calculate and populate class variables:
+
+        Regressor.MAE: Mean absolute error
+        Regressor.RMSE: Root mean squared error
+        Regressor.vscore: Explained variance score
+        Regressor.r2: Coefficient of determination regression score
+
+        :param int cv: The number of cross-validation folds to perform.
+        :param bool quick: Whether to downsample to run fast but do a bad job.
+        :param bool verbose: Whether to print progress messages.
+        """
+        super(Regressor, self).cross_val_predict(cv=cv, quick=quick, verbose=verbose)        
+
+        ## Calculate mean absolute error and root mean squared error of estimates
+        self.MAE = np.mean(np.abs((self.cv_preds - self.y)))
+        self.RMSE = np.sqrt(np.mean((self.cv_preds - self.y)**2)/len(self.y))
+
+        ## Here multioutput='raw_values' returns a score per target, rather
+        ## aggregating all scores into one value
+        self.vscore = metrics.explained_variance_score(self.y,\
+                                                        self.cv_preds,\
+                                                        multioutput='raw_values')
+        self.vscore = pd.Series(self.vscore, index=self.targets)
+
+        self.r2 = metrics.r2_score(self.y,\
+                                    self.cv_preds,\
+                                    multioutput='raw_values')
+        self.r2 = pd.Series(self.r2, index=self.targets)
+
+        if verbose:
+            print("MAE:\n{}\nRMSE:\n{}\nvscores:\n{}\nR2:\n{}".format(self.MAE,\
+                                                                        self.RMSE,\
+                                                                        self.vscore,\
+                                                                        self.r2))
+        return self.cv_preds
+
+
+    def plot_cv_predictions(self,\
+                                ax='',\
+                                figsize=(10, 5),\
+                                figdims=(2, 3),
+                                cmap=plt.cm.Greys,\
+                                title="",\
+                                outfile=''):
+        """
+        Plot the cross validation predictions for this Regressor. Assumes
+        `Regressor.cross_val_predict()` has been called. If not it complains
+        and tells you to do that first.
+
+        :param matplotlib.pyploat.axis ax: The matplotlib axis to draw the plot
+            on.
+        :param tuple figsize: If not passing in an axis, specify the size of
+            the figure to plot.
+        :param tuple figdims: The number of rows and columns (specified in that
+            order) of the output figure. There will be one plot per target 
+            parameter, so there should be at least as many available cells in
+            the specified grid.
+        :param matplotlib.pyplot.cm cmap: Specify the colormap to use.
+        :param str title: Add a title to the figure.
+        :param str outfile: Where to save the figure. This parameter should
+            include the desired output file format, e.g. `.png`, `.svg` or
+            `.svg`.
+
+        :return: The flattened list of matplotlib axes on which the scatter
+            plots were drawn, one per target.
+        """
+        try:
+            _ = self.cv_preds
+        except AttributeError:
+            msg = "No CV predictions. You must call `Regressor.cross_val_predict()` first"
+            raise MESSError(msg)
+
+        fig, axs = plt.subplots(figdims[0], figdims[1], figsize=figsize)
+        axs = axs.flatten()
+
+        for t, ax in zip(self.targets, axs):
+            self._plot_cv_prediction(t, ax)
+
+        fig.tight_layout()
+        plt.suptitle(title)
+
+        if outfile:
+            plt.savefig(outfile)
+
+        return axs
+
+
+    def _plot_cv_prediction(self,\
+                            target,\
+                            ax='',\
+                            ):
+        """
+        An internal function for plotting just one set of cv predictions
+        for one target parameter. Normally you'll want to use the
+        Regressor.plot_cv_predictions() method which wraps calls to this.
+
+        :param str target: The target parameter of the set of CVs to plot.
+        :param matplotlib.pyplot.axis ax: The axis to draw to, otherwise
+            create a new one.
+        """
+        if not ax:
+            fig, ax = plt.subplots()
+
+        if target == "ecological_strength":
+            ax.scatter(np.log(self.y[target]), self.cv_preds[target], c='black', marker='.', s=2)
+        else:
+            ax.scatter(self.y[target], self.cv_preds[target], c='black', marker='.', s=2)
+        ax.set_title(target)
+        if target in ["m", "speciation_prob"]:
+            ax.set_xlim(np.min(self.y[target]), np.max(self.y[target]))
+            ax.set_ylim(np.min(self.y[target]), np.max(self.y[target]))
 
 
 #############################
