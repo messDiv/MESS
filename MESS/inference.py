@@ -408,7 +408,7 @@ predict() on the estimator prior to calling the cv_predict/cv_score methods.
         This method will also calculate mean absolute error and root mean
         squared error between simulated and estimated targets if called on the
         Regressor() class. These can be access by `Ensemble.Regressor.MAE`
-        `Ensemble.Regressor.RMSE`, respectively.
+        & `Ensemble.Regressor.RMSE`, respectively.
 
         .. note:: CV predictions are not appropriate for evaluating model
             generalizability, these should only be used for visualization and
@@ -492,7 +492,7 @@ predict() on the estimator prior to calling the cv_predict/cv_score methods.
             setting this option to `False` will look insane.
         :param bool legend: Whether to plot the legend.
 
-        :return: Returns all the matplotlib axis
+        :return: Returns all the matplotlib axes
         """
         imps = self.feature_importances()
         ## Drop any features that are relatively unimportant
@@ -594,6 +594,78 @@ class Classifier(Ensemble):
 
         return self.empirical_pred, self.empirical_proba
 
+    def plot_confusion_matrix(self,\
+                                ax='',\
+                                figsize=(8, 8),\
+                                cmap=plt.cm.magma,\
+                                cbar=False,\
+                                title="",\
+                                normalize=False,
+                                outfile=''):
+        """
+        Plot the confusion matrix for CV predictions. Assumes
+        `Classifier.cross_val_predict()` has been called. If not it complains
+        and tells you to do that first.
+
+        :param matplotlib.pyploat.axis ax: The matplotlib axis to draw the plot
+            on.
+        :param tuple figsize: If not passing in an axis, specify the size of
+            the figure to plot.
+        :param bool cbar: Whether to add the colorbar to the figure.
+        :param str title: Add a title to the figure.
+        :param bool normalize: Whether to normalize the bin values (scale to
+            1/# simulations).
+        :param str outfile: Where to save the figure. This parameter should
+            include the desired output file format, e.g. `.png`, `.svg` or
+            `.svg`.
+        """
+        try:
+            _ = self.cv_preds
+        except AttributeError:
+            msg = "No CV predictions. You must call `Classifier.cross_val_predict()` first"
+            raise MESSError(msg)
+
+        if not ax:
+            fig, ax = plt.subplots(figsize=figsize)
+
+        ## By default the confusion_matrix() function lays out the matrix based
+        ## on the alpha-sorted order of labels found in the data.
+        labels = ["Competition", "Filtering", "Neutral"]
+
+        conf_matrix = metrics.confusion_matrix(self.y, self.cv_preds)
+
+        if normalize:
+            conf_matrix = conf_matrix.astype(float)/conf_matrix.sum(axis=1)
+
+        im = ax.imshow(conf_matrix, interpolation='nearest', cmap=cmap)
+        if cbar:
+            ax.figure.colorbar(im, ax=ax)
+
+        ax.set_xticks(np.arange(conf_matrix.shape[1]))
+        ax.set_yticks(np.arange(conf_matrix.shape[0]))
+        ax.set_xticklabels(labels, fontsize=15)
+        ax.set_yticklabels(labels, fontsize=15)
+        ax.set_title(title, fontsize=25)
+        ax.set_ylabel('True assembly model class', fontsize=20)
+        ax.set_xlabel('Predicted assembly model class', fontsize=20)
+
+        plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
+                rotation_mode="anchor")
+
+        fmt = '.2f' if normalize else 'd'
+        thresh = conf_matrix.max() / 2.
+        for i in range(conf_matrix.shape[0]):
+            for j in range(conf_matrix.shape[1]):
+                ax.text(j, i, format(conf_matrix[i, j], fmt),
+                        ha="center", va="center", fontsize=15,
+                        color="white" if conf_matrix[i, j] > thresh else "black")
+
+        fig.tight_layout()
+
+        if outfile:
+            plt.savefig(outfile)
+
+        return ax
 
 class Regressor(Ensemble):
     """
