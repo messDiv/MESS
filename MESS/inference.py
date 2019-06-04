@@ -20,6 +20,7 @@ from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier,\
                             GradientBoostingClassifier, GradientBoostingRegressor,\
                             AdaBoostRegressor, AdaBoostClassifier
 from sklearn.model_selection import train_test_split, cross_val_predict, cross_val_score, RandomizedSearchCV
+from sklearn.multioutput import MultiOutputRegressor
 from sklearn.decomposition import PCA
 from sklearn.pipeline import Pipeline
 
@@ -396,12 +397,13 @@ feature selection and hyperparameter optimization. For better performance call
 predict() on the estimator prior to calling the cv_predict/cv_score methods.
 """
             if verbose: print(msg)
-            self.predict(select_features=(not quick), param_search=(not quick), quick=quick) 
+            self.predict(select_features=(not quick), param_search=(not quick),\
+                        quick=quick, verbose=verbose) 
 
 
-    def cross_val_predict(self, cv=5, quick=False, verbose=False):
+    def cross_val_predict(self, cv=5, features='', quick=False, verbose=False):
         """
-        Perform K-fold cross-validation prediction. For each of `cv` folds
+        Perform K-fold cross-validation prediction. For each of the `cv` folds,
         simulations will be split into sets of `K - (1/K)` training simulations
         and 1/K test simulations.
 
@@ -422,7 +424,16 @@ predict() on the estimator prior to calling the cv_predict/cv_score methods.
             in the Estimator.cv_preds variable.
         """
         self._cv_check(quick=quick, verbose=verbose)
-        self.cv_preds = cross_val_predict(self.best_model, self.X, self.y, cv=cv, n_jobs=-1)
+
+        ## If using rf then you don't need to use the multioutputregressor
+        ## structure and in fact the RF regressor will take advantage of
+        ## correlations between the targets.
+        if self.algorithm != "rf":
+            best_model = MultiOutputRegressor(self.best_model)
+        else:
+            best_model = self.best_model
+
+        self.cv_preds = cross_val_predict(best_model, self.X, self.y, cv=cv, n_jobs=-1)
         self.cv_preds = pd.DataFrame(self.cv_preds, columns=self.targets)
 
         return self.cv_preds
@@ -819,6 +830,9 @@ class Regressor(Ensemble):
         Regressor.vscore: Explained variance score
         Regressor.r2: Coefficient of determination regression score
 
+        As well as Regressor.cv_stats which is just a pandas.DataFrame of the
+        above stats.
+
         :param int cv: The number of cross-validation folds to perform.
         :param bool quick: Whether to downsample to run fast but do a bad job.
         :param bool verbose: Whether to print progress messages.
@@ -826,20 +840,23 @@ class Regressor(Ensemble):
         super(Regressor, self).cross_val_predict(cv=cv, quick=quick, verbose=verbose)        
 
         ## Calculate mean absolute error and root mean squared error of estimates
-        self.MAE = np.mean(np.abs((self.cv_preds - self.y)))
-        self.RMSE = np.sqrt(np.mean((self.cv_preds - self.y)**2)/len(self.y))
+        self.MAE = pd.Series(np.mean(np.abs((self.cv_preds - self.y))), name="MAE")
+        self.RMSE = pd.Series(np.sqrt(np.mean((self.cv_preds - self.y)**2)/len(self.y)), name="RMSE")
 
         ## Here multioutput='raw_values' returns a score per target, rather
         ## aggregating all scores into one value
         self.vscore = metrics.explained_variance_score(self.y,\
                                                         self.cv_preds,\
                                                         multioutput='raw_values')
-        self.vscore = pd.Series(self.vscore, index=self.targets)
+        self.vscore = pd.Series(self.vscore, index=self.targets, name="vscore")
 
         self.r2 = metrics.r2_score(self.y,\
                                     self.cv_preds,\
                                     multioutput='raw_values')
-        self.r2 = pd.Series(self.r2, index=self.targets)
+        self.r2 = pd.Series(self.r2, index=self.targets, name="R2")
+
+        ## Write it all out as a DataFrame for convenience
+        self.cv_stats = pd.concat([self.MAE, self.RMSE, self.vscore, self.r2], axis=1)
 
         if verbose:
             print("MAE:\n{}\nRMSE:\n{}\nvscores:\n{}\nR2:\n{}".format(self.MAE,\
@@ -852,8 +869,8 @@ class Regressor(Ensemble):
     def plot_cv_predictions(self,\
                                 ax='',\
                                 figsize=(10, 5),\
-                                figdims=(2, 3),
-                                cmap=plt.cm.Greys,\
+                                figdims=(2, 3),\
+                                n_cvs=1000,\
                                 title="",\
                                 outfile=''):
         """
@@ -869,7 +886,8 @@ class Regressor(Ensemble):
             order) of the output figure. There will be one plot per target 
             parameter, so there should be at least as many available cells in
             the specified grid.
-        :param matplotlib.pyplot.cm cmap: Specify the colormap to use.
+        :param int n_cvs: The number of true/estimated points to plot on the
+            figure.
         :param str title: Add a title to the figure.
         :param str outfile: Where to save the figure. This parameter should
             include the desired output file format, e.g. `.png`, `.svg` or
@@ -888,7 +906,7 @@ class Regressor(Ensemble):
         axs = axs.flatten()
 
         for t, ax in zip(self.targets, axs):
-            self._plot_cv_prediction(t, ax)
+            self._plot_cv_prediction(t, ax, n_cvs=n_cvs)
 
         fig.tight_layout()
         plt.suptitle(title)
@@ -902,7 +920,7 @@ class Regressor(Ensemble):
     def _plot_cv_prediction(self,\
                             target,\
                             ax='',\
-                            ):
+                            n_cvs=1000):
         """
         An internal function for plotting just one set of cv predictions
         for one target parameter. Normally you'll want to use the
@@ -911,18 +929,22 @@ class Regressor(Ensemble):
         :param str target: The target parameter of the set of CVs to plot.
         :param matplotlib.pyplot.axis ax: The axis to draw to, otherwise
             create a new one.
+        :param int n_cvs: The number of true/estimated points to plot.
         """
         if not ax:
             fig, ax = plt.subplots()
 
         if target == "ecological_strength":
-            ax.scatter(np.log(self.y[target]), self.cv_preds[target], c='black', marker='.', s=2)
+            y_true = np.log(self.y[target])
         else:
-            ax.scatter(self.y[target], self.cv_preds[target], c='black', marker='.', s=2)
+            y_true = self.y[target]
+
+        ax.scatter(y_true[:n_cvs], self.cv_preds[target][:n_cvs], c='black', marker='.', s=2)
+
         ax.set_title(target)
         if target in ["m", "speciation_prob"]:
-            ax.set_xlim(np.min(self.y[target]), np.max(self.y[target]))
-            ax.set_ylim(np.min(self.y[target]), np.max(self.y[target]))
+            ax.set_xlim(np.min(y_true), np.max(y_true))
+            ax.set_ylim(np.min(y_true), np.max(y_true))
 
 
 #############################
