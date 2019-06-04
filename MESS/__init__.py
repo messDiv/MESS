@@ -25,13 +25,15 @@ import warnings
 with warnings.catch_warnings(record=True) as w:
     matplotlib.use("agg")
 
-from .util import *
 from .Region import Region
 from .LocalCommunity import LocalCommunity
 from .Metacommunity import Metacommunity
-from .inference import *
-from .stats import *
-
+#from .util import *
+#from .inference import *
+#from .stats import *
+import util
+import stats
+import inference
 
 ####################################################################
 ## create logger for debugging

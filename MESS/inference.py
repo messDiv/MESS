@@ -235,8 +235,11 @@ class Ensemble(object):
             try:
                 model = self._base_model(n_estimators=600, max_depth=5)
             except TypeError as inst:
-                msg = "Ensemble model must support max_depth parameter to enable feature selection. AdaBoost can't be run with feature_selection."
-                raise MESSError(msg)
+                msg = "Warning: Ensemble model must support max_depth parameter"\
+                    + " to enable feature selection. AdaBoost can't be run with"\
+                    + " feature_selection, so it's being skipped."
+                print(msg)
+                return
 
             if quick:
                 ## Random subset the data and run fewer iterations. If you don't have

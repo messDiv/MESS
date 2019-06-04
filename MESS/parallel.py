@@ -13,7 +13,7 @@ import time
 import sys
 import os
 
-from MESS import MESSError
+from MESS.util import MESSError
 
 
 import logging
