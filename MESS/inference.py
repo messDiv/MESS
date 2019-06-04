@@ -597,7 +597,7 @@ class Classifier(Ensemble):
     def plot_confusion_matrix(self,\
                                 ax='',\
                                 figsize=(8, 8),\
-                                cmap=plt.cm.magma,\
+                                cmap=plt.cm.Greys,\
                                 cbar=False,\
                                 title="",\
                                 normalize=False,
@@ -611,7 +611,8 @@ class Classifier(Ensemble):
             on.
         :param tuple figsize: If not passing in an axis, specify the size of
             the figure to plot.
-        :param bool cbar: Whether to add the colorbar to the figure.
+        :param matplotlib.pyplot.cm cmap: Specify the colormap to use.
+        :param bool cbar: Whether to add a colorbar to the figure.
         :param str title: Add a title to the figure.
         :param bool normalize: Whether to normalize the bin values (scale to
             1/# simulations).
