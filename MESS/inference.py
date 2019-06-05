@@ -986,14 +986,72 @@ class Regressor(Ensemble):
 ## Module methods
 #############################
 
-def parameter_estimation_cv(simfile, outdir='', target_model=None, data_axes='',
+def classification_cv(simfile, data_axes='', algorithm="rf",\
+                        quick=True, verbose=False):
+    """
+    A convenience function to make it easier and more straightforward to run
+    classification CV. This basically wraps the work of generating
+    the synthetic community (dummy data), selecting which input data axes
+    to retain (determines which summary statistics are used by the ML),
+    creates the Classifier and calls Classifier.cross_val_predict(), and
+    Classifier.cross_val_score().
+
+    Feature selection is independent of the real data, so it doesn't matter
+    that we passed in synthetic empirical data here. It chooses features
+    that are only relevant for each summary statistic. Searching for the 
+    best model hyperparameters is the same, it is done independently of the
+    observed data.
+
+    :param str simfile: The file containing copious simulations.
+    :param list data_axes: A list of the data axis identifiers to prune the
+        simulations with. One or more of 'abundance', 'pi', 'dxy', 'trait'.
+        If this parameter is left blank it will use all data axes.
+    :param str algorithm: One of the supported Ensemble.Regressor algorithm
+        identifier strings: 'ab', 'gb', 'rf', 'rfq'.
+    :param bool quick: Whether to run fast but do a bad job.
+    :param bool verbose: Whether to print progress information.
+    """
+    if not data_axes:
+        data_axes = ["abundance", "pi", "dxy", "trait"]
+
+    ## Generate a synthetic community and filter only data axes specified.
+    synthetic_community = MESS.util.synthetic_community()[data_axes]
+
+    cla = MESS.inference.Classifier(synthetic_community,\
+                                    simfile,\
+                                    algorithm=algorithm,\
+                                    verbose=verbose)
+
+    ## Do the prediction step to get the best_model (combination of features
+    ## and hyperparameter tuning). This would get done anyway during the
+    ## cross_validation, but here we do it up front and honor the `quick` flag.
+    ##
+    cla.predict(select_features=(not quick),\
+                param_search=(not quick),\
+                quick=quick,\
+                verbose=verbose)
+
+    ## For both cv_predict and cv_score, the investment in model training
+    ## is retained and is not redone (save a ton of time).
+    if verbose: print("Cross validation prediction")
+    cv_preds = cla.cross_val_predict(quick=quick, verbose=verbose)
+
+    if verbose: print("Cross validation scoring")
+    cv_scores = cla.cross_val_score(quick=quick, verbose=verbose)
+    if verbose: print("Cross validation scores\n{}".format(cv_scores))
+
+    return cla
+
+
+def parameter_estimation_cv(simfile, target_model=None, data_axes='',
                             algorithm="rf", quick=True, verbose=False):
     """
     A convenience function to make it easier and more straightforward to run
     parameter estimation CV. This basically wraps the work of generating
     the synthetic community (dummy data), selecting which input data axes
     to retain (determines which summary statistics are used by the ML),
-    creates the Regressor and calls Regressor.cross_val_predict().
+    creates the Regressor and calls Regressor.cross_val_predict() and
+    Regressor.cross_val.score().
 
     Feature selection is independent of the real data, so it doesn't matter
     that we passed in synthetic empirical data here. It chooses features
