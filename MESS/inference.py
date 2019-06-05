@@ -463,6 +463,14 @@ predict() on the estimator prior to calling the cv_predict/cv_score methods.
         ## and warns the user.
         best_model = self._cv_check(quick=quick, verbose=verbose)
 
+        ## TODO: It would be nice to get cv_scores per target here, but the
+        ## scikit-learn interface for cross_val_score doesn't support the
+        ## multioutput idea. For example it would be cool to do this:
+        ##
+        ## scorer = metrics.make_scorer(metrics.r2_score, multioutput='raw_values')
+        ##
+        ## and then pass in the scorer to the `scoring` parameter of cross_val_score
+        ## but it complains that the scoring function doesn't return a single value.
         self.cv_scores = cross_val_score(best_model, self.X, self.y, cv=cv, n_jobs=-1)
 
         return self.cv_scores
@@ -846,10 +854,10 @@ class Regressor(Ensemble):
         calculates some Regressor specific statistics after the cross validation
         prodecure. This function will calculate and populate class variables:
 
-        Regressor.MAE: Mean absolute error
-        Regressor.RMSE: Root mean squared error
-        Regressor.vscore: Explained variance score
-        Regressor.r2: Coefficient of determination regression score
+        - Regressor.MAE: Mean absolute error
+        - Regressor.RMSE: Root mean squared error
+        - Regressor.vscore: Explained variance score
+        - Regressor.r2: Coefficient of determination regression score
 
         As well as Regressor.cv_stats which is just a pandas.DataFrame of the
         above stats.
