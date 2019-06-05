@@ -619,7 +619,7 @@ class LocalCommunity(object):
     def step(self, nsteps=1):
         """
         Run one or more generations of birth/death/colonization timesteps. A
-        a generation is J/2 timesteps (convert from Moran to WF generations).
+        generation is J/2 timesteps (convert from Moran to WF generations).
 
         :param int nsteps: The number of generations to simulate.
         """
