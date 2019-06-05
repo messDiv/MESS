@@ -985,7 +985,7 @@ class LocalCommunity(object):
         Gather the community data and format it in such a way as to prepare it
         for calling MESS.stats.calculate_sumstats(). This is a way of getting
         simulated data that is in the exact format empirical data is required
-        to be in. Useful for degubbing and experimentation.
+        to be in. Useful for debugging and experimentation.
 
         :return: A pandas.DataFrame with 4 columns: "pi", "dxy", "abundance",
             and "trait", and one row per species.
