@@ -426,6 +426,10 @@ predict() on the estimator prior to calling the cv_predict/cv_score methods.
             it was a member of the held-out testing set. Also saves the results
             in the Estimator.cv_preds variable.
         """
+
+        ## _cv_check() tests whether the model has been trained yet. If it has,
+        ## well then great, carry on. If it hasn't, it trains it in a crappy way
+        ## and warns the user.
         self._cv_check(quick=quick, verbose=verbose)
 
         ## If using rf then you don't need to use the multioutputregressor
@@ -459,6 +463,10 @@ predict() on the estimator prior to calling the cv_predict/cv_score methods.
         :return: The array of scores of the estimator for each K-fold. Also
             saves the results in the Estimator.cv_scores variable.
         """
+
+        ## _cv_check() tests whether the model has been trained yet. If it has,
+        ## well then great, carry on. If it hasn't, it trains it in a crappy way
+        ## and warns the user.
         self._cv_check(quick=quick, verbose=verbose)
         self.cv_scores = cross_val_score(self.best_model, self.X, self.y, cv=cv, n_jobs=-1)
 
@@ -956,10 +964,32 @@ class Regressor(Ensemble):
 
 def parameter_estimation_cv(simfile, outdir='', target_model=None, data_axes='',
                             algorithm="rf", quick=True, verbose=False):
+    """
+    A convenience function to make it easier and more straightforward to run
+    parameter estimation CV. This basically wraps the work of generating
+    the synthetic community (dummy data), selecting which input data axes
+    to retain (determines which summary statistics are used by the ML),
+    creates the Regressor and calls Regressor.cross_val_predict().
 
-    ## Make outdir if it doesn't exist.
-    if not os.path.exists(model_outdir):
-        os.mkdir(model_outdir)
+    Feature selection is independent of the real data, so it doesn't matter
+    that we passed in synthetic empirical data here. It chooses features
+    that are only relevant for each summary statistic. Searching for the 
+    best model hyperparameters is the same, it is done independently of the
+    observed data.
+
+    :param str simfile: The file containing copious simulations.
+    :param str target_model: The target community assembly model to subsample
+        the simulations with. If the parameter is blank it uses all simulations
+        in the simfile.
+    :param list data_axes: A list of the data axis identifiers to prune the
+        simulations with. One or more of 'abundance', 'pi', 'dxy', 'trait'.
+        If this parameter is left blank it will use all data axes.
+    :param str algorithm: One of the supported Ensemble.Regressor algorithm
+        identifier strings: 'ab', 'gb', 'rf', 'rfq'.
+    :param bool quick: Whether to run fast but do a bad job.
+    :param bool verbose: Whether to print progress information.
+    """
+
     importance_out_df = pd.DataFrame([], index=feature_sets["all"])
 
     if not data_axes:
@@ -973,17 +1003,25 @@ def parameter_estimation_cv(simfile, outdir='', target_model=None, data_axes='',
                                     target_model=target_model,\
                                     verbose=verbose)
 
-    ## Feature selection is independent of the real data, so it doesn't matter
-    ## that we passed in synthetic empirical data here. It chooses features
-    ## that are only relevant for each summary statistic.
-    rgr.feature_selection(quick=quick, verbose=verbose)
-    ## Searching for the best model hyperparameters is the same, it is done
-    ## independently of the observed data.
-    rgr.param_search_cv(by_target=rgr._by_target, quick=quick, verbose=verbose)
+    ## Do the prediction step to get the best_model (combination of features
+    ## and hyperparameter tuning). This would get done anyway during the
+    ## cross_validation, but here we do it up front and honor the `quick` flag.
+    ##
+    rgr.predict(select_features=(not quick),\
+                param_search=(not quick),\
+                quick=quick,\
+                verbose=verbose)
 
-    
-    cv_preds = cross_val_predict(rgr.best_model, rgr.X, rgr.y, cv=5, n_jobs=-1)
+    ## For both cv_predict and cv_score, the investment in model training
+    ## is retained and is not redone (save a ton of time).
+    if verbose: print("Cross validation prediction")
+    cv_preds = rgr.cross_val_predict(quick=quick, verbose=verbose)
 
+    if verbose: print("Cross validation scoring")
+    cv_scores = rgr.cross_val_score(quick=quick, verbose=verbose)
+    if verbose: print("Cross validation scores\n{}".format(cv_scores))
+
+    return rgr
 
 def posterior_predictive_check(empirical_df,\
                                 parameter_estimates,\
