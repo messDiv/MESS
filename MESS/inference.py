@@ -314,6 +314,16 @@ class Ensemble(object):
             if len(self.targets) == 1:
                 ## For convenience. If there's only one target then set self.best_model
                 self.best_model = self.model_by_target[self.targets[0]]["model"]
+
+            ## TODO: Set the best model as the model for the first target. This
+            ## is hax and should be fixed. It's to solve the mystery of how to
+            ## get a best_model for the cross_val_* methods for models that
+            ## don't handle multioutput prediction. Two ways of fixing this
+            ## would be to actually implement per target cross_val_* methods
+            ## (annoying) or to do some kind of hyperparameter averaging
+            ## here (also annoying).
+            self.best_model = self.model_by_target[self.targets[0]]["model"]
+
         else:
             cvsearch.fit(tmpX, tmpy)
             if verbose: print(cvsearch.best_params_)
