@@ -193,7 +193,6 @@ class Ensemble(object):
             correspond exactly to parameters in the simulations or
             else it will complain.
         """
-
         ## If just one target then convert it to a list for compatibility
         if isinstance(target_list, str) and target_list:
             target_list = [target_list]
@@ -536,7 +535,6 @@ class Classifier(Ensemble):
     :param bool verbose: Print detailed progress information.
     """
 
-
     _default_targets = ["community_assembly_model"]
 
     def __init__(self, empirical_df, simfile, algorithm="rf", metacommunity_traits=None, verbose=False):
@@ -689,10 +687,10 @@ class Regressor(Ensemble):
     :param pandas.DataFrame empirical_df: A DataFrame containing the empirical
         data. This df has a very specific format which is documented here.
     :param string simfile: The path to the file containing all the simulations.
-    :param string algorithm: The ensemble method to use for parameter estimation.
     :param string target_model: The community assembly model to specifically use.
         If you include this then the simulations will be read and then filtered
         for only this `community_assembly_model`.
+    :param string algorithm: The ensemble method to use for parameter estimation.
     :param array-like metacommunity_traits: A list or np.array of the trait values
         from the metacommunity. Used for calculating some of the trait based
         summary statistics.
