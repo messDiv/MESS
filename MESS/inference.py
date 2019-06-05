@@ -403,6 +403,8 @@ predict() on the estimator prior to calling the cv_predict/cv_score methods.
             self.predict(select_features=(not quick), param_search=(not quick),\
                         quick=quick, verbose=verbose) 
 
+        return self.best_model
+
 
     def cross_val_predict(self, cv=5, features='', quick=False, verbose=False):
         """
@@ -430,15 +432,7 @@ predict() on the estimator prior to calling the cv_predict/cv_score methods.
         ## _cv_check() tests whether the model has been trained yet. If it has,
         ## well then great, carry on. If it hasn't, it trains it in a crappy way
         ## and warns the user.
-        self._cv_check(quick=quick, verbose=verbose)
-
-        ## If using rf then you don't need to use the multioutputregressor
-        ## structure and in fact the RF regressor will take advantage of
-        ## correlations between the targets.
-        if self.algorithm != "rf":
-            best_model = MultiOutputRegressor(self.best_model)
-        else:
-            best_model = self.best_model
+        best_model = self._cv_check(quick=quick, verbose=verbose)
 
         self.cv_preds = cross_val_predict(best_model, self.X, self.y, cv=cv, n_jobs=-1)
         self.cv_preds = pd.DataFrame(self.cv_preds, columns=self.targets)
@@ -467,8 +461,9 @@ predict() on the estimator prior to calling the cv_predict/cv_score methods.
         ## _cv_check() tests whether the model has been trained yet. If it has,
         ## well then great, carry on. If it hasn't, it trains it in a crappy way
         ## and warns the user.
-        self._cv_check(quick=quick, verbose=verbose)
-        self.cv_scores = cross_val_score(self.best_model, self.X, self.y, cv=cv, n_jobs=-1)
+        best_model = self._cv_check(quick=quick, verbose=verbose)
+
+        self.cv_scores = cross_val_score(best_model, self.X, self.y, cv=cv, n_jobs=-1)
 
         return self.cv_scores
 
@@ -722,6 +717,7 @@ class Regressor(Ensemble):
         self.targets = list(self.y.columns)
         if verbose: print("Removed invariant targets. Retained: {}".format(list(self.y.columns)))
 
+
     def prediction_interval(self, interval=0.95, quick=False, verbose=False):
         """
         Add upper and lower prediction interval for algorithms that support
@@ -830,6 +826,20 @@ class Regressor(Ensemble):
         return self.empirical_pred
 
 
+    def _cv_check(self, quick=False, verbose=False):
+        """
+        If using rf then you don't need to use the MultiOutputRegressor
+        structure and in fact the RF regressor will take advantage of
+        correlations between the targets.
+        """
+        best_model = super(Regressor, self)._cv_check(quick=quick, verbose=verbose)
+
+        if self.algorithm != "rf":
+            best_model = MultiOutputRegressor(self.best_model)
+
+        return best_model
+
+
     def cross_val_predict(self, cv=5, quick=False, verbose=False):
         """
         A thin wrapper around Ensemble.cross_val_predict() that basically just
@@ -870,10 +880,8 @@ class Regressor(Ensemble):
         self.cv_stats = pd.concat([self.MAE, self.RMSE, self.vscore, self.r2], axis=1)
 
         if verbose:
-            print("MAE:\n{}\nRMSE:\n{}\nvscores:\n{}\nR2:\n{}".format(self.MAE,\
-                                                                        self.RMSE,\
-                                                                        self.vscore,\
-                                                                        self.r2))
+            print(self.cv_stats)
+
         return self.cv_preds
 
 
@@ -990,7 +998,7 @@ def parameter_estimation_cv(simfile, outdir='', target_model=None, data_axes='',
     :param bool verbose: Whether to print progress information.
     """
 
-    importance_out_df = pd.DataFrame([], index=feature_sets["all"])
+    #importance_out_df = pd.DataFrame([], index=feature_sets["all"])
 
     if not data_axes:
         data_axes = ["abundance", "pi", "dxy", "trait"]
@@ -1000,6 +1008,7 @@ def parameter_estimation_cv(simfile, outdir='', target_model=None, data_axes='',
 
     rgr = MESS.inference.Regressor(empirical_df=synthetic_community,\
                                     simfile=simfile,\
+                                    algorithm=algorithm,\
                                     target_model=target_model,\
                                     verbose=verbose)
 
@@ -1022,6 +1031,7 @@ def parameter_estimation_cv(simfile, outdir='', target_model=None, data_axes='',
     if verbose: print("Cross validation scores\n{}".format(cv_scores))
 
     return rgr
+
 
 def posterior_predictive_check(empirical_df,\
                                 parameter_estimates,\
