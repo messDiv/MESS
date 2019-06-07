@@ -45,6 +45,11 @@ Parameter Estimation (Regression)
 .. autoclass:: MESS.inference.Regressor
     :members:
 
+Classification Cross-Validation
++++++++++++++++++++++++++++++++
+
+.. autofunction:: MESS.inference.classification_cv
+
 Parameter Estimation Cross-Validation
 +++++++++++++++++++++++++++++++++++++
 
