@@ -154,6 +154,9 @@ class Ensemble(object):
         MESS.inference.Ensemble.dump() method.
 
         :param str infile: The file to load a trained model from.
+
+        :return: Returns the `MESS.inference.Ensemble` object loaded from the
+            input file.
         """
         return joblib.load(infile)
 
@@ -247,7 +250,7 @@ class Ensemble(object):
                 idxs = np.random.choice(len(self.y), nsamps, replace=False)
                 tmpX = self.X.iloc[idxs].values
                 tmpy = self.y[t].iloc[idxs].values
-                max_iter=10
+                max_iter = 10
             else:
                 tmpX = self.X.values
                 tmpy = self.y[t].values
@@ -335,6 +338,7 @@ class Ensemble(object):
     def predict(self, select_features=True, param_search=True, by_target=False, quick=False, force=False, verbose=False):
 
         try:
+            import pdb; pdb.set_trace()
             _ = self.best_model
             if not force:
                 if verbose: "Model already trained. Use 'force' to retrain."
@@ -445,8 +449,6 @@ predict() on the estimator prior to calling the cv_predict/cv_score methods.
 
         self.cv_preds = cross_val_predict(best_model, self.X, self.y, cv=cv, n_jobs=-1)
         self.cv_preds = pd.DataFrame(self.cv_preds, columns=self.targets)
-
-        return self.cv_preds
 
 
     def cross_val_score(self, cv=5, quick=False, verbose=False):
@@ -625,6 +627,9 @@ class Classifier(Ensemble):
         :param int cv: The number of cross-validation folds to perform.
         :param bool quick: Whether to downsample to run fast but do a bad job.
         :param bool verbose: Whether to print progress messages.
+
+        :return: A `numpy.array` of model class predictions for each simulation
+            when it was a member of the held-out test set.
         """
         super(Classifier, self).cross_val_predict(cv=cv, quick=quick, verbose=verbose)
 
@@ -632,6 +637,10 @@ class Classifier(Ensemble):
         self.classification_report = metrics.classification_report(y_true=self.y,\
                                                                     y_pred=self.cv_preds)
                                                                     #labels=labels)
+        if verbose:
+            print(self.classification_report)
+
+        return self.cv_preds
 
 
     def plot_confusion_matrix(self,\
@@ -659,6 +668,9 @@ class Classifier(Ensemble):
         :param str outfile: Where to save the figure. This parameter should
             include the desired output file format, e.g. `.png`, `.svg` or
             `.svg`.
+
+        :return: The `matplotlib.axis` on which the confusion matrix was
+            plotted.
         """
         try:
             _ = self.cv_preds
@@ -766,7 +778,7 @@ class Regressor(Ensemble):
             already really fast (the model doesn't have to be refit).
         :param bool verbose: Print information about progress.
 
-        :return: A pandas.DataFrame containing the model predictions and the
+        :return: A `pandas.DataFrame` containing the model predictions and the
             prediction intervals.
         """
         if verbose: print("Calculating prediction interval(s)")
@@ -832,7 +844,7 @@ class Regressor(Ensemble):
             and call predict() multiple times without redoing this. 
         :param bool verbose: Print detailed progress information.
 
-        :return: A pandas DataFrame including the predicted value per target
+        :return: A `pandas.DataFrame` including the predicted value per target
             parameter, and 95% prediction intervals if the ensemble method
             specified for this Regressor supports it.
         """
@@ -892,6 +904,9 @@ class Regressor(Ensemble):
         :param int cv: The number of cross-validation folds to perform.
         :param bool quick: Whether to downsample to run fast but do a bad job.
         :param bool verbose: Whether to print progress messages.
+
+        :return: A `numpy.array` of parameter estimates for each simulation
+            when it was a member of the held-out test set.
         """
         super(Regressor, self).cross_val_predict(cv=cv, quick=quick, verbose=verbose)        
 
