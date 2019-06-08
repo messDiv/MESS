@@ -605,14 +605,33 @@ class Classifier(Ensemble):
             ## Somewhat annoying, but we grab the classes vector from the model of the first target
             self.empirical_proba = pd.DataFrame(proba, columns=list(self.model_by_target.values())[0]["model"].classes_, index=self.targets)
         else:
-            ## Do all targets at once. Also, you don't get prediction intervls
-            ## if you don't do by_target
+            ## Do all targets at once.
             self.empirical_pred = pd.DataFrame(self.best_model.predict(self.empirical_sumstats),\
                                                 columns=self.targets, index=["estimate"])
             self.empirical_proba = pd.DataFrame(self.best_model.predict_proba(self.empirical_sumstats),\
                                                 columns=self.best_model.classes_, index=self.targets)
 
         return self.empirical_pred, self.empirical_proba
+
+
+    def cross_val_predict(self, cv=5, quick=False, verbose=False):
+        """
+        A thin wrapper around Ensemble.cross_val_predict() that basically just
+        calculates some Classifier specific statistics after the cross validation
+        prodecure. This function will calculate and populate class variables:
+
+        - Classifier.classification_report: Mean absolute error
+
+        :param int cv: The number of cross-validation folds to perform.
+        :param bool quick: Whether to downsample to run fast but do a bad job.
+        :param bool verbose: Whether to print progress messages.
+        """
+        super(Classifier, self).cross_val_predict(cv=cv, quick=quick, verbose=verbose)
+
+        labels = ["Competition", "Filtering", "Neutral"]
+        self.classification_report = metrics.classification_report(y_true=self.y,\
+                                                                    y_pred=self.cv_preds)
+                                                                    #labels=labels)
 
 
     def plot_confusion_matrix(self,\
@@ -1010,6 +1029,11 @@ def classification_cv(simfile, data_axes='', algorithm="rf",\
         identifier strings: 'ab', 'gb', 'rf', 'rfq'.
     :param bool quick: Whether to run fast but do a bad job.
     :param bool verbose: Whether to print progress information.
+
+    :return: Returns the trained `MESS.inference.Classifier` with the cross-
+        validation predictions for each simulation in the `cv_preds` member
+        variable and the cross-validation scores per K-fold in the `cv_scores`
+        member variable.
     """
     if not data_axes:
         data_axes = ["abundance", "pi", "dxy", "trait"]
@@ -1070,6 +1094,11 @@ def parameter_estimation_cv(simfile, target_model=None, data_axes='',
         identifier strings: 'ab', 'gb', 'rf', 'rfq'.
     :param bool quick: Whether to run fast but do a bad job.
     :param bool verbose: Whether to print progress information.
+
+    :return: Returns the trained `MESS.inference.Regressor` with the cross-
+        validation predictions for each simulation in the `cv_preds` member
+        variable and the cross-validation scores per K-fold in the `cv_scores`
+        member variable.
     """
 
     #importance_out_df = pd.DataFrame([], index=feature_sets["all"])
