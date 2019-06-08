@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 from boruta import BorutaPy
+from copy import deepcopy
 from MESS.util import progressbar, MESSError
 from skgarden import RandomForestQuantileRegressor
 from sklearn import metrics
@@ -338,7 +339,6 @@ class Ensemble(object):
     def predict(self, select_features=True, param_search=True, by_target=False, quick=False, force=False, verbose=False):
 
         try:
-            #import pdb; pdb.set_trace()
             _ = self.best_model
             if not force:
                 if verbose: "Model already trained. Use 'force' to retrain."
@@ -350,10 +350,10 @@ class Ensemble(object):
         if select_features:
             self.feature_selection(quick=quick, verbose=verbose)
 
-        ## If using either the RFQuantileRegressor or GradientBoosting, then
-        ## we force by_targets to be true, since they'll only do one target at at time
-        ## RandomForest can handle multi-target regression, but not rfq or gb, so we
-        ## allow plain rf to optionally do by_target
+        ## If using AdaBoost, RFQuantileRegressor, or GradientBoosting, then
+        ## we force by_targets to be true, since they'll only do one target at
+        ## at time RandomForest can handle multi-target regression, but not ab,
+        ## rfq or gb, so we allow plain rf to optionally do by_target.
         self._by_target = by_target
         if self.algorithm in ["rfq", "gb", "ab"]:
             self._by_target = True
@@ -361,10 +361,9 @@ class Ensemble(object):
         if param_search:
             self.param_search_cv(by_target=self._by_target, quick=quick, verbose=verbose)
         else:
-            ## If you don't want to do the param search, then just take the default param
-            ## Also, assuming if you don't care about setting model parameters, then you
-            ## won't care about feature selection, so just use all features for the
-            ## the by_target code
+            ## If you don't want to do the param search, then just take the
+            ## default params. This code will still honor subsets of features
+            ## if you have run reature selection.
             if self._by_target:
                 for t in self.targets:
                     self.model_by_target[t]["model"] = self._base_model()
@@ -768,13 +767,13 @@ class Regressor(Ensemble):
     def prediction_interval(self, interval=0.95, quick=False, verbose=False):
         """
         Add upper and lower prediction interval for algorithms that support
-        quantile regression (`rf`, `gb`).
+        quantile regression (`rfq`, `gb`).
 
         :hint: You normaly won't have to call this by hand, as it is incorporated automatically into the predict() methods. We allow access to in for experimental purposes.
 
         :param float interval: The prediction interval to generate.
         :param bool quick: Subsample the data to make it run fast, for testing.
-            The `quick` parameter doesn't do anything for `rf` because it's
+            The `quick` parameter doesn't do anything for `rfq` because it's
             already really fast (the model doesn't have to be refit).
         :param bool verbose: Print information about progress.
 
@@ -784,9 +783,15 @@ class Regressor(Ensemble):
         if verbose: print("Calculating prediction interval(s)")
         upper = 1.0 - ((1.0 - interval)/2.)
         lower = 1.0 - upper
+
         if self.algorithm == "rfq":
-            y_lower = [self.model_by_target[t]["model"].predict(self.empirical_sumstats[self.model_by_target[t]["features"]], lower*100) for t in self.targets]
-            y_upper = [self.model_by_target[t]["model"].predict(self.empirical_sumstats[self.model_by_target[t]["features"]], upper*100) for t in self.targets]
+            y_lower = [self.model_by_target[t]["model"].predict(\
+                    self.empirical_sumstats[self.model_by_target[t]["features"]],\
+                    lower*100) for t in self.targets]
+            y_upper = [self.model_by_target[t]["model"].predict(\
+                    self.empirical_sumstats[self.model_by_target[t]["features"]],\
+                    upper*100) for t in self.targets]
+
         elif self.algorithm == "gb":
             if quick:
                 nsamps = min(len(self.y), 1000)
@@ -800,12 +805,26 @@ class Regressor(Ensemble):
             y_upper = []
             for t in self.targets:
                 if verbose: print("\t{}".format(t))
-                tmp_gb = self.model_by_target[t]["model"].set_params(loss="quantile").set_params(alpha=lower)
+
+                ## Create a deep copy of the model so we can refit with
+                ## quantile loss function, without screwing up the training.
+                ## I had just done this with a shallow copy before
+                ## (unintentionally), and it took a while to debug. Very nasty
+                ## bug.
+                tmp_gb = deepcopy(self.model_by_target[t]["model"])
+
+                ## Prune only selected features.
+                tmpX = tmpX[self.model_by_target[t]["features"]]
+
+                ## Fit lower quantile using selected features.
+                tmp_gb.set_params(loss="quantile").set_params(alpha=lower)
                 tmp_gb.fit(tmpX, tmpy[t])
-                y_lower.append(tmp_gb.predict(self.empirical_sumstats))
-                tmp_gb = self.model_by_target[t]["model"].set_params(loss="quantile").set_params(alpha=upper)
+                y_lower.append(tmp_gb.predict(self.empirical_sumstats[self.model_by_target[t]["features"]]))
+
+                ## Fit upper quantile using selected features.
+                tmp_gb.set_params(loss="quantile").set_params(alpha=upper)
                 tmp_gb.fit(tmpX, tmpy[t])
-                y_upper.append(tmp_gb.predict(self.empirical_sumstats))
+                y_upper.append(tmp_gb.predict(self.empirical_sumstats[self.model_by_target[t]["features"]]))
         else:
             print("Unsupported algorithm for prediction intervals - {}".format(self.algorithm))
             return self.empirical_pred
@@ -1187,7 +1206,7 @@ def posterior_predictive_check(empirical_df,\
         as measured in _lambda or in generations.
     :param bool verbose: Print detailed progress information.
 
-    :return: A matplotlib axis containing the plot.
+    :return: A `matplotlib.pyplot.axis` containing the plot.
     """
 
     if est_only:
