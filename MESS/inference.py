@@ -338,7 +338,7 @@ class Ensemble(object):
     def predict(self, select_features=True, param_search=True, by_target=False, quick=False, force=False, verbose=False):
 
         try:
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             _ = self.best_model
             if not force:
                 if verbose: "Model already trained. Use 'force' to retrain."
