@@ -813,17 +813,19 @@ class Regressor(Ensemble):
                 ## bug.
                 tmp_gb = deepcopy(self.model_by_target[t]["model"])
 
-                ## Prune only selected features.
-                tmpX = tmpX[self.model_by_target[t]["features"]]
+                ## Prune only selected features. Create a new array here because
+                ## different targets have different best feature sets, and they
+                ## need to be allowed to vary independently.
+                tmpX_t = tmpX[self.model_by_target[t]["features"]]
 
                 ## Fit lower quantile using selected features.
                 tmp_gb.set_params(loss="quantile").set_params(alpha=lower)
-                tmp_gb.fit(tmpX, tmpy[t])
+                tmp_gb.fit(tmpX_t, tmpy[t])
                 y_lower.append(tmp_gb.predict(self.empirical_sumstats[self.model_by_target[t]["features"]]))
 
                 ## Fit upper quantile using selected features.
                 tmp_gb.set_params(loss="quantile").set_params(alpha=upper)
-                tmp_gb.fit(tmpX, tmpy[t])
+                tmp_gb.fit(tmpX_t, tmpy[t])
                 y_upper.append(tmp_gb.predict(self.empirical_sumstats[self.model_by_target[t]["features"]]))
         else:
             print("Unsupported algorithm for prediction intervals - {}".format(self.algorithm))
