@@ -12,11 +12,13 @@ import numpy as np
 import os
 import pandas as pd
 import shutil
+import subprocess
 
 import MESS
 from MESS.stats import SAD
 from MESS.util import *
 from sklearn.decomposition import PCA
+from sklearn.preprocessing import PowerTransformer, StandardScaler
 
 
 model_colors = {"neutral":"blue",\
@@ -32,7 +34,8 @@ def plot_simulations_pca(simfile, ax='',\
                             select='',\
                             tol='',\
                             title='',\
-                            outfile=''):
+                            outfile='',\
+                            verbose=False):
     """
     Plot summary statistics for simulations projected into PC space.
 
@@ -47,6 +50,7 @@ def plot_simulations_pca(simfile, ax='',\
     :param int/float tol:
     :param str title:
     :param str outfile:
+    :param bool verbose:
 
     :return: Return the `matplotlib.pyplot.axis` on which the simulations are
         plotted.
@@ -84,10 +88,18 @@ def plot_simulations_pca(simfile, ax='',\
     labels = sim_df["community_assembly_model"][:nsims]
     sim_df = sim_df[feature_set][:nsims]
 
+#    sim_df = StandardScaler().fit_transform(sim_df)
+    sim_df = PowerTransformer(method='yeo-johnson').fit_transform(sim_df)
+
     pca = PCA(n_components=2)
     dat = pca.fit_transform(sim_df)
 
     ax.scatter(dat[:, 0], dat[:, 1], color=[MESS.plotting.model_colors[x] for x in labels])
+
+    ## Remove a bunch of visual noise
+    ax.set_yticklabels([])
+    ax.set_xticklabels([])
+    ax.tick_params(top='off', bottom='off', left='off', right='off')
 
     if title:
         ax.set_title(title)
@@ -103,6 +115,7 @@ def plot_simulations_pca(simfile, ax='',\
     if outfile:
         try:
             plt.savefig(outfile)
+            if verbose: print("Wrote figure to: {}".format(outfile))
         except Exception as inst:
             raise Exception("Failed saving figure: {}".format(inst))
         plt.close()
@@ -131,6 +144,15 @@ def plots_through_time(simfile,\
     :param dict kwargs: Other parameters to pass to the plotting function.
     """
 
+    try:
+        subprocess.check_output("convert")
+    except OSError:
+        ## 'convert' doesn't exist. Warn and raise.
+        raise MESSError(REQUIRE_IMAGEMAGICK_ERROR)
+    except subprocess.CalledProcessError:
+        ## This is okay. 'convert' returns 1 when called with no args.
+        pass
+
     if not outdir:
         ## Clean up previous runs.
         outdir = "/tmp/MESS_plots"
@@ -145,7 +167,7 @@ def plots_through_time(simfile,\
     if not "tol" in kwargs: tol = tmax/ntimes/2
 
     for i, time in enumerate(np.linspace(0, tmax, ntimes)):
-        if verbose: MESS.util.progressbar(ntimes, i, "Generating animation") 
+        if verbose: MESS.util.progressbar(ntimes, i, "Generating PCA plots") 
         outfile = os.path.join(outdir, str(time) + ".png")
         _ = plot_fun(simfile,\
                         select=time,\
@@ -154,12 +176,14 @@ def plots_through_time(simfile,\
                         outfile=outfile,\
                         **kwargs)
 
+    if verbose: MESS.util.progressbar(ntimes, i, "Creating animation") 
+
     ## Actually generate the animation now.
     if not outgif:
         outgif = os.path.join(outdir, "{}.gif".format(plot_fun.__name__))
     _make_animated_gif(outdir, outgif)
 
-    if verbose: MESS.util.progressbar(100, 100, "Generating animation") 
+    if verbose: MESS.util.progressbar(100, 100, "Creating animation") 
  
     
 def _make_animated_gif(datadir, outfile, delay=50):
@@ -185,7 +209,7 @@ def _make_animated_gif(datadir, outfile, delay=50):
             + datadir + "/*.png "\
             + outfile
     try:
-        subprocess.Popen(cmd.split())
+        res = subprocess.check_output(cmd, shell=True)
     except Exception as inst:
         print("Trouble creating abundances through time animated gif - {}".format(inst))
         print("You probably don't have imagemagick installed")
@@ -706,6 +730,14 @@ def get_max_heat_bin(sp_through_time, max_pi_local, max_dxy):
             max_heat_bin = np.amax(heat)
 
     return max_heat_bin
+
+
+REQUIRE_IMAGEMAGICK_ERROR = """
+The plots_through_time() function requires the image-magick graphics
+processing package which may be installed with conda:
+
+    conda install -c conda-forge imagemagick -y
+"""
 
 
 if __name__ == "__main__":
