@@ -1,19 +1,195 @@
 
 from __future__ import print_function
 import matplotlib
-matplotlib.use("agg")
+import warnings
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    matplotlib.use("agg")
+import math
 import matplotlib.patheffects as PathEffects
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-import math
 import os
-
-plt.switch_backend('agg')
+import pandas as pd
+import shutil
 
 import MESS
 from MESS.stats import SAD
 from MESS.util import *
+from sklearn.decomposition import PCA
+
+
+model_colors = {"neutral":"blue",\
+                "filtering":"orange",\
+                "competition":"red"}
+
+
+def plot_simulations_pca(simfile, ax='',\
+                            figsize=(8, 8),\
+                            feature_set='',\
+                            loadings=False,\
+                            nsims=1000,\
+                            select='',\
+                            tol='',\
+                            title='',\
+                            outfile=''):
+    """
+    Plot summary statistics for simulations projected into PC space.
+
+    TODO: Need to zero center and scale to unit variance for the PCA to work.
+    :param str simfile: 
+    :param matplotlib.pyplot.axis ax:
+    :param tuple figsize:
+    :param list feature_set:
+    :param bool loadings: BROKEN! Whether to plot the loadings in the figure.
+    :param int nsims:
+    :param int/float select: 
+    :param int/float tol:
+    :param str title:
+    :param str outfile:
+
+    :return: Return the `matplotlib.pyplot.axis` on which the simulations are
+        plotted.
+    """
+    if not ax:
+        fig, ax = plt.subplots(figsize=figsize)
+
+    ## Load the simulations
+    sim_df = pd.read_csv(simfile, sep="\t", header=0)
+
+    ## Wether to select only specific timepoints bracketed by `tol` or
+    ## just plot everything.
+    if select is '':
+        pass
+    else:
+        ## Switch on whether to plot based on lambda or based on generations
+        ## Set default tolerance to be pretty small
+        if select > 1:
+            time = "generation"
+            if not tol: tol = 1
+        else:
+            time = "_lambda"
+            if not tol: tol = 0.01
+
+        ## Apply the filter +/- `tol`.
+        sim_df = sim_df[(sim_df[time] < (select + tol)) & (sim_df[time] > (select - tol))]
+
+    ## If feature_set is unspecified assume we're using all features.
+    if not feature_set:
+        feature_set = MESS.stats.feature_sets()["all"]
+
+    ## Prune the simulations based on selected features and number of
+    ## simulations to retain, also get the community assembly model label
+    ## for each simulation
+    labels = sim_df["community_assembly_model"][:nsims]
+    sim_df = sim_df[feature_set][:nsims]
+
+    pca = PCA(n_components=2)
+    dat = pca.fit_transform(sim_df)
+
+    ax.scatter(dat[:, 0], dat[:, 1], color=[MESS.plotting.model_colors[x] for x in labels])
+
+    if title:
+        ax.set_title(title)
+
+    ## TODO: Doesn't work how I'd like.
+    ##print("Explained variance", pca.explained_variance_ratio_)
+    ##if loadings:
+    ##    for i, comp in enumerate(pca.components_.T):
+    ##        plt.arrow(0, 0, pca.components_.T[i,0], pca.components_.T[i,1], color = 'r',alpha = 0.5)
+    ##        plt.text(pca.components_.T[i,0]* 1.5, pca.components_.T[i,1] * 1.5, dat[i+2], color = 'black', ha = 'center', va = 'center')
+
+    ## If writing to file then don't plot to screen.
+    if outfile:
+        try:
+            plt.savefig(outfile)
+        except Exception as inst:
+            raise Exception("Failed saving figure: {}".format(inst))
+        plt.close()
+
+    return ax
+
+
+def plots_through_time(simfile,\
+                        plot_fun,\
+                        tmax=1,\
+                        ntimes=100,\
+                        outdir='',\
+                        outgif='',\
+                        verbose=False,\
+                        **kwargs):
+    """
+    :param str simfile:
+    :param function plot_fun:
+    :param int/float tmax: The maximum time to consider when partitioning the
+        simulations. If `tmax` <=1 then we plot `_lambda`, and if > 1 we plot
+        `generation`.
+    :param int ntimes: The number of time slices to carve the simulations up into.
+    :param str outdir:
+    :param str outfile:
+    :param bool verbose: Whether to print progress information.
+    :param dict kwargs: Other parameters to pass to the plotting function.
+    """
+
+    if not outdir:
+        ## Clean up previous runs.
+        outdir = "/tmp/MESS_plots"
+        if os.path.exists(outdir):
+            shutil.rmtree(outdir)
+    if not os.path.exists(outdir):
+        os.mkdir(outdir)
+
+    ## If not specified, set the default tolerance to be inversely proportional
+    ## to the number of selected time slices. Divide the tolerance by 2 so the
+    ## spans of simulations don't overlap.
+    if not "tol" in kwargs: tol = tmax/ntimes/2
+
+    for i, time in enumerate(np.linspace(0, tmax, ntimes)):
+        if verbose: MESS.util.progressbar(ntimes, i, "Generating animation") 
+        outfile = os.path.join(outdir, str(time) + ".png")
+        _ = plot_fun(simfile,\
+                        select=time,\
+                        tol=tol,\
+                        title="{0:.2f}".format(time),\
+                        outfile=outfile,\
+                        **kwargs)
+
+    ## Actually generate the animation now.
+    if not outgif:
+        outgif = os.path.join(outdir, "{}.gif".format(plot_fun.__name__))
+    _make_animated_gif(outdir, outgif)
+
+    if verbose: MESS.util.progressbar(100, 100, "Generating animation") 
+ 
+    
+def _make_animated_gif(datadir, outfile, delay=50):
+    """
+    This function will take all png files in a directory and make them
+    into an animated gif. The inputs are the directory with all the images
+    and the full path including filename of the file to write out
+
+    :param str datadir: Directory that contains all the component files
+        for the animation. These should be .png, and should be alpha-sorted
+        in the order of the animation.
+    :param str outfile: The name of the file to write the animated gif to.
+    :param int delay: Time delay between frame changes in 1/100 second
+        increments.
+    """
+
+    ## Do the imagemagick conversion, if possible
+    ## `convert -delay 100 outdir/* anim.gif`
+    ## TODO: Define the total time to be 10 seconds, total available
+    ## timeslots is * 100 bcz convert flag is in 1/100 seconds
+    ## Default half second intervals
+    cmd = "convert -delay {} ".format(delay)\
+            + datadir + "/*.png "\
+            + outfile
+    try:
+        subprocess.Popen(cmd.split())
+    except Exception as inst:
+        print("Trouble creating abundances through time animated gif - {}".format(inst))
+        print("You probably don't have imagemagick installed")
+
 
 ###################################################################
 ## These are old, janky plotting methods imported from gimmeSAD
@@ -90,7 +266,7 @@ def plot_rank_abundance_through_time(outdir, sp_through_time, equilibria,\
         plt.close()
 
     progressbar(100, 100, "\n")
-    make_animated_gif(abund_out,\
+    _make_animated_gif(abund_out,\
                         os.path.join(outdir, "abundances_through_time.gif"))
 
 
@@ -159,7 +335,7 @@ def plot_abundance_vs_colonization_time(outdir, sp_through_time, equilibria,\
         plt.close()
 
     progressbar(100, 100, "\n")
-    make_animated_gif(abund_out,\
+    _make_animated_gif(abund_out,\
                         os.path.join(outdir, "abundances_vs_coltime.gif"))
 
 
@@ -373,7 +549,7 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
 
     progressbar(100, 100, "\n")
 
-    make_animated_gif(heat_out,\
+    _make_animated_gif(heat_out,\
                         os.path.join(outdir, outfile))
 
 
@@ -530,27 +706,6 @@ def get_max_heat_bin(sp_through_time, max_pi_local, max_dxy):
             max_heat_bin = np.amax(heat)
 
     return max_heat_bin
-
-
-def make_animated_gif(datadir, outfile):
-    """ This function will take all png files in a directory and make them
-    into an animated gif. The inputs are the directory with all the images
-    and the full path including filename of the file to write out"""
-
-    ## Do the imagemagick conversion, if possible
-    ## `convert -delay 100 outdir/* anim.gif`
-    ## TODO: Define the total time to be 10 seconds, total available
-    ## timeslots is * 100 bcz convert flag is in 1/100 seconds
-    ## Default half second intervals
-    delay = 50
-    cmd = "convert -delay {} ".format(delay)\
-            + datadir + "/*.png "\
-            + outfile
-    try:
-        subprocess.Popen(cmd.split())
-    except Exception as inst:
-        print("Trouble creating abundances through time animated gif - {}".format(inst))
-        print("You probably don't have imagemagick installed")
 
 
 if __name__ == "__main__":
