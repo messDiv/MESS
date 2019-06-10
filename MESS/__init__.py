@@ -31,9 +31,10 @@ from .Metacommunity import Metacommunity
 #from .util import *
 #from .inference import *
 #from .stats import *
-import util
-import stats
 import inference
+import util
+import plotting
+import stats
 
 ####################################################################
 ## create logger for debugging

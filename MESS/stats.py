@@ -9,6 +9,10 @@ from scipy.stats import entropy, kurtosis, hmean, iqr, skew, spearmanr
 from sklearn.metrics import pairwise_distances
 from MESS.SGD import SGD
 
+import MESS
+
+data_axes = ["abundance", "pi", "dxy", "trait"]
+
 
 def generalized_hill_number(abunds, vals=None, order=1, scale=True, verbose=False):
     """
@@ -519,7 +523,6 @@ def feature_sets(empirical_df=None):
         key that will give summary statistics relevant for all three of these
         data axes.
     """
-    data_axes = ["abundance", "pi", "dxy", "trait"]
     empirical_axes = ["abundance", "pi", "dxy", "trait"]
     if empirical_df is not None:
         empirical_axes = empirical_df.columns
@@ -541,7 +544,7 @@ def feature_sets(empirical_df=None):
 
     feature_sets["all"] = sumstats
 
-    missing_axes = set(data_axes).difference(set(empirical_axes))
+    missing_axes = set(MESS.stats.data_axes).difference(set(empirical_axes))
     if missing_axes:
         feature_sets.pop("all", '')
         for k in feature_sets:
@@ -550,6 +553,15 @@ def feature_sets(empirical_df=None):
                     feature_sets.pop(k, '')
 
     return feature_sets
+
+
+def get_feature_set(data_axes=''):
+    """
+    TODO: This doesn't exactly work how I want yet.
+    """
+    if not data_axes:
+        data_axes = MESS.stats.data_axes
+    return feature_sets()[data_axes]
 
 
 if __name__ == "__main__":
