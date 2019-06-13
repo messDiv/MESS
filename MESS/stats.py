@@ -527,13 +527,14 @@ def feature_sets(empirical_df=None):
     if empirical_df is not None:
         empirical_axes = empirical_df.columns
 
-    sumstats = _get_sumstats_header()
+    ## Pass in a dummy list of metacommnity traits, or else the call to
+    ## _get_sumstats_header won't return metacommunity traits.
+    sumstats = _get_sumstats_header(metacommunity_traits=np.random.rand(10))
     feature_sets = OrderedDict({})
     feature_sets["abundance"] = ["S"] + [x for x in sumstats if "abund" in x and "_cor" not in x]
     feature_sets["pi"] = [x for x in sumstats if ("pi" in x or "SGD" in x) and "_cor" not in x]
     feature_sets["dxy"] = [x for x in sumstats if "dxy" in x and "_cor" not in x and "_cor" not in x]
     feature_sets["trait"] = [x for x in sumstats if "trait" in x and "_cor" not in x]
-    
 
     feature_sets["abundance+pi"] =  feature_sets["abundance"] + feature_sets["pi"] + ["abundance_pi_cor"]
     feature_sets["pi+dxy"] = feature_sets["pi"] + feature_sets["dxy"] + ["dxy_pi_cor"]
