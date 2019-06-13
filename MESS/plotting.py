@@ -26,37 +26,31 @@ model_colors = {"neutral":"blue",\
                 "competition":"red"}
 
 
-def plot_simulations_pca(simfile, ax='',\
-                            figsize=(8, 8),\
-                            feature_set='',\
-                            loadings=False,\
-                            nsims=1000,\
-                            select='',\
-                            tol='',\
-                            title='',\
-                            outfile='',\
-                            verbose=False):
+def _filter_sims(simfile,\
+                    feature_set='',\
+                    nsims=1000,\
+                    normalize_hills=False,\
+                    select='',\
+                    tol='',\
+                    verbose=False):
     """
-    Plot summary statistics for simulations projected into PC space.
+    Load simulation data and perform filtering and downsampling that's common
+    across many plotting routines. Normally you won't call this directly.
 
-    TODO: Need to zero center and scale to unit variance for the PCA to work.
     :param str simfile: 
-    :param matplotlib.pyplot.axis ax:
-    :param tuple figsize:
     :param list feature_set:
-    :param bool loadings: BROKEN! Whether to plot the loadings in the figure.
     :param int nsims:
+    :param bool normalize_hills: Whether to divide all Hill numbers by `S` to
+        normalize them to a proportion and promote comparison across
+        communities of different sizes.
     :param int/float select: 
     :param int/float tol:
-    :param str title:
-    :param str outfile:
-    :param bool verbose:
+    :param bool verbose: Whether to print progress messages.
 
-    :return: Return the `matplotlib.pyplot.axis` on which the simulations are
-        plotted.
+    :return: Returns a tuple of pd.DataFrame containing the community assembly
+        model class labels for retained simulations and a pd.DataFrame of 
+        filtered and pruned simulation summary statistics.
     """
-    if not ax:
-        fig, ax = plt.subplots(figsize=figsize)
 
     ## Load the simulations
     sim_df = pd.read_csv(simfile, sep="\t", header=0)
@@ -82,11 +76,137 @@ def plot_simulations_pca(simfile, ax='',\
     if not feature_set:
         feature_set = MESS.stats.feature_sets()["all"]
 
+    ## Normalize all Hill #s by dividing by S, so you can compare across
+    ## different sized communities.
+    if normalize_hills:
+        sim_df[[x for x in sim_df.columns if "_h" in x]] =\
+                sim_df[[x for x in sim_df.columns if "_h" in x]]\
+                .apply(lambda x: x/sim_df["S"])
+
     ## Prune the simulations based on selected features and number of
-    ## simulations to retain, also get the community assembly model label
-    ## for each simulation
+    ## simulations to retain.
     labels = sim_df["community_assembly_model"][:nsims]
     sim_df = sim_df[feature_set][:nsims]
+
+    ## Remove invariant targets (save time)
+    sim_df = sim_df.loc[:, (sim_df != sim_df.iloc[0]).any()]
+    retained = list(sim_df.columns)
+    if verbose: print("Removed invariant targets. Retained: {}".format(list(retained)))
+
+    return labels, sim_df
+
+
+def plot_simulations_hist(simfile,\
+                        ax='',\
+                        figsize=(20, 20),\
+                        feature_set='',\
+                        nsims=1000,\
+                        normalize_hills=False,\
+                        bins=20,\
+                        alpha=0.6,\
+                        select='',\
+                        tol='',\
+                        title='',\
+                        outfile='',\
+                        verbose=False):
+    """
+    Simple histogram for each summary statistic. Useful for inspecting model
+    performance. Invariant summary statistics will be removed.
+
+    :param str simfile: 
+    :param tuple figsize:
+    :param list feature_set:
+    :param int nsims:
+    :param bool normalize_hills: Whether to divide all Hill numbers by `S` to
+        normalize them to a proportion and promote comparison across
+        communities of different sizes.
+    :param int bins: The number of bins per histogram.
+    :param float alpha: Set alpha value to determine transparency [0-1], larger
+        values increase opacity.
+    :param int/float select: 
+    :param int/float tol:
+    :param str title:
+    :param str outfile:
+    :param bool verbose:
+
+    :return: Return a list of `matplotlib.pyplot.axis` on which the simulated
+        summary statistics have been plotted. This list can be _long_ depending
+        on how many statistics you plot.
+    """
+
+    ## Filter and downsample the simulations
+    labels, sim_df = _filter_sims(simfile,\
+                            feature_set=feature_set,\
+                            nsims=nsims,\
+                            normalize_hills=normalize_hills,\
+                            select=select,\
+                            tol=tol,\
+                            verbose=verbose)
+
+    neut_df = sim_df[labels.values == "neutral"]
+    filt_df = sim_df[labels.values == "filtering"]
+    comp_df = sim_df[labels.values == "competition"]
+    if verbose: print("Nsims\n  neutral\t{}\n  filtering\t{}\n  competition\t{}"\
+                        .format(len(neut_df), len(filt_df), len(comp_df)))
+    
+    axs = neut_df.hist(figsize=figsize, label="neutral", alpha=alpha, bins=bins,
+                    color=MESS.plotting.model_colors["neutral"],  grid=False)
+
+    ## Flatten the list of axes and trim to make sure there's only exactly the
+    ## right number to match the number of summary stats retained.
+    axs = axs.flatten()[:len(sim_df.columns)]
+    _ = filt_df.hist(ax = axs, label="filtering", alpha=alpha, bins=bins,\
+                    color=MESS.plotting.model_colors["filtering"], grid=False)
+    _ = comp_df.hist(ax = axs, label="competition", alpha=alpha, bins=bins,\
+                    color=MESS.plotting.model_colors["competition"], grid=False)
+
+    plt.tight_layout()
+    return axs
+
+
+def plot_simulations_pca(simfile, ax='',\
+                            figsize=(8, 8),\
+                            feature_set='',\
+                            loadings=False,\
+                            nsims=1000,\
+                            normalize_hills=False,\
+                            select='',\
+                            tol='',\
+                            title='',\
+                            outfile='',\
+                            verbose=False):
+    """
+    Plot summary statistics for simulations projected into PC space.
+
+    :param str simfile: 
+    :param matplotlib.pyplot.axis ax:
+    :param tuple figsize:
+    :param list feature_set:
+    :param bool loadings: BROKEN! Whether to plot the loadings in the figure.
+    :param int nsims:
+    :param bool normalize_hills: Whether to divide all Hill numbers by `S` to
+        normalize them to a proportion and promote comparison across
+        communities of different sizes.
+    :param int/float select: 
+    :param int/float tol:
+    :param str title:
+    :param str outfile:
+    :param bool verbose:
+
+    :return: Return the `matplotlib.pyplot.axis` on which the simulations are
+        plotted.
+    """
+    if not ax:
+        fig, ax = plt.subplots(figsize=figsize)
+
+    ## Filter and downsample the simulations
+    labels, sim_df = _filter_sims(simfile,\
+                            feature_set=feature_set,\
+                            nsims=nsims,\
+                            normalize_hills=normalize_hills,\
+                            select=select,\
+                            tol=tol,\
+                            verbose=verbose)
 
 #    sim_df = StandardScaler().fit_transform(sim_df)
     sim_df = PowerTransformer(method='yeo-johnson').fit_transform(sim_df)

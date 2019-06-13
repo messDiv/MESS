@@ -6,6 +6,7 @@
 
 from __future__ import print_function
 
+import datetime
 import MESS.stats
 import matplotlib.pyplot as plt
 import joblib
@@ -337,6 +338,7 @@ class Ensemble(object):
 
     ## The magic method to just do-it-all
     def predict(self, select_features=True, param_search=True, by_target=False, quick=False, force=False, verbose=False):
+        if verbose: print("Predict() started: {}".format(datetime.datetime.now()))
 
         try:
             _ = self.best_model
@@ -375,6 +377,7 @@ class Ensemble(object):
                 ## TODO: Make default base_model params smarter
                 self.best_model = self._base_model(n_jobs=-1)
                 self.best_model.fit(self.X, self.y)
+        if verbose: print("Predict() finished: {}".format(datetime.datetime.now()))
 
 
     def feature_importances(self):
