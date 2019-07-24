@@ -68,3 +68,13 @@ Stats
 .. autofunction:: MESS.stats.feature_sets
 
 .. autofunction:: MESS.stats.Watterson
+
+Plotting
+++++++++
+
+.. autofunction:: plot_simulations_hist
+
+.. autofunction:: plot_simulations_pca
+
+.. autofunction:: plots_through_time
+
