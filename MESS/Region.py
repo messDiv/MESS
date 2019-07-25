@@ -754,7 +754,7 @@ def simulate(data, _lambda=0, nsteps=0, quiet=True):
 REGION_PARAMS = {
     "simulation_name" : "The name of this simulation scenario",\
     "project_dir" : "Where to save files",\
-    "generations" : "Duration of simulations. Values/ranges Int for genrations, or float [0-1] for lambda.",\
+    "generations" : "Duration of simulations. Values/ranges Int for generations, or float [0-1] for lambda.",\
     "community_assembly_model" : "Model of Community Assembly: neutral, filtering, competition",\
     "speciation_model" : "Type of speciation process: none, point_mutation, protracted, random_fission",\
     "mutation_rate" : "Mutation rate scaled per base per generation",\
