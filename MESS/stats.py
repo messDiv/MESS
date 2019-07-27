@@ -478,8 +478,8 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=1, metacommunity_trai
         ## local trait mean. Should see positive correlation in filtering and
         ## negative in competition.
         if "trait" in pair:
-            idx = pair.index("trait")
-            tmp_df[pair[idx]] = np.abs(tmp_df[pair[idx]] - tmp_df["trait"].mean())
+            #idx = pair.index("trait")
+            tmp_df["trait"] = np.abs(tmp_df["trait"] - tmp_df["trait"].mean())
         cor = spearmanr(tmp_df[pair[0]], tmp_df[pair[1]])[0]
         if np.isnan(cor): cor = 0
         stat_dict["{}_{}_cor".format(pair[0], pair[1])] = cor
