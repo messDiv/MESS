@@ -21,9 +21,31 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import PowerTransformer, StandardScaler
 
 
-model_colors = {"neutral":"blue",\
-                "filtering":"orange",\
-                "competition":"red"}
+## Defaults
+#model_colors = {"neutral":"blue",\
+#                "filtering":"orange",\
+#                "competition":"red"}
+
+
+## Blue/Orange/Red but custom. A little dark.
+#model_colors = {"neutral":"#009FE8",\
+#                "filtering":"#F5B700",\
+#                "competition":"#FC5130"}
+
+## B/O/R but a little Electric
+#model_colors = {"neutral":"#7744AE",\
+#                "filtering":"#FFDE19",\
+#                "competition":"#FF1E57"}
+
+## B/O/R but Too Neon
+#model_colors = {"neutral":"#00A4CC",\
+#                "filtering":"#EDFF00",\
+#                "competition":"#FF3EA5"}
+
+## Miami Dolphins
+model_colors = {"neutral":"#FF8800",\
+                "filtering":"#00B7C4",\
+                "competition":"#005679"}
 
 
 def _filter_sims(simfile,\
@@ -51,7 +73,6 @@ def _filter_sims(simfile,\
         model class labels for retained simulations and a pd.DataFrame of 
         filtered and pruned simulation summary statistics.
     """
-
     ## Load the simulations
     sim_df = pd.read_csv(simfile, sep="\t", header=0)
 
@@ -149,8 +170,20 @@ def plot_simulations_hist(simfile,\
     if verbose: print("Nsims\n  neutral\t{}\n  filtering\t{}\n  competition\t{}"\
                         .format(len(neut_df), len(filt_df), len(comp_df)))
     
-    axs = neut_df.hist(figsize=figsize, label="neutral", alpha=alpha, bins=bins,
-                    color=MESS.plotting.model_colors["neutral"],  grid=False)
+    ## TODO: Would be cool to have an option to plot kde instead of hist.
+    ## i.e. neut_df.plot(kind='kde'). Here it is, but it's untested-ish.
+    #bw_method=.5
+    #axs = neut_df.plot(kind='kde', figsize=figsize, label="neutral", alpha=alpha,
+    #                color=MESS.plotting.model_colors["neutral"],  grid=False, bw_method=bw_method)
+
+    #axs = axs.flatten()[:len(sim_df.columns)]
+    #_ = filt_df.plot(kind='kde', ax = axs, label="filtering", alpha=alpha,\
+    #                color=MESS.plotting.model_colors["filtering"], grid=False, bw_method=bw_method)
+    #_ = comp_df.plot(kind='kde', ax = axs, label="competition", alpha=alpha,\
+    #                color=MESS.plotting.model_colors["competition"], grid=False, bw_method=bw_method)
+
+    #axs = neut_df.hist(figsize=figsize, label="neutral", alpha=alpha, bins=bins,
+    #                color=MESS.plotting.model_colors["neutral"],  grid=False)
 
     ## Flatten the list of axes and trim to make sure there's only exactly the
     ## right number to match the number of summary stats retained.
