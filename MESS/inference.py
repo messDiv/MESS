@@ -11,6 +11,7 @@ import MESS.stats
 import matplotlib.pyplot as plt
 import joblib
 import numpy as np
+import os
 import pandas as pd
 
 from boruta import BorutaPy
@@ -18,13 +19,14 @@ from copy import deepcopy
 from MESS.util import progressbar, MESSError
 from skgarden import RandomForestQuantileRegressor
 from sklearn import metrics
+from sklearn.dummy import DummyClassifier, DummyRegressor
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier,\
                             GradientBoostingClassifier, GradientBoostingRegressor,\
                             AdaBoostRegressor, AdaBoostClassifier
 from sklearn.model_selection import train_test_split, cross_val_predict, cross_val_score, RandomizedSearchCV
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.decomposition import PCA
-from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import PowerTransformer
 
 import logging
 LOGGER = logging.getLogger(__name__)
@@ -568,7 +570,7 @@ class Classifier(Ensemble):
 
     def predict(self, select_features=True, param_search=True, by_target=False, quick=False, force=False, verbose=False):
         """
-        Predict the most likely community assembly model class.
+        Predict the community assembly model class probabilities.
 
         :param bool select_features: Whether to perform relevant feature selection.
             This will remove features with little information useful for model
@@ -1034,6 +1036,11 @@ class Regressor(Ensemble):
 
         ax.scatter(y_true[:n_cvs], self.cv_preds[target][:n_cvs], c='black', marker='.', s=2)
 
+        ## TODO: Add an optional identity line here. This is close but doesn't work.
+        ##xmin, xmax = ax.get_xbound()
+        ##ymin, ymax = ax.get_ybound()
+        ##ax.plot([xmin, ymin], [xmax, ymax], c='red')
+
         ax.set_title(target)
         if target in ["m", "speciation_prob"]:
             ax.set_xlim(np.min(y_true), np.max(y_true))
@@ -1182,6 +1189,7 @@ def posterior_predictive_check(empirical_df,\
                                 nsims=100,\
                                 outfile='',\
                                 use_lambda=True,\
+                                force=False,\
                                 verbose=False):
     """
     Perform posterior predictive simulations. This function will take
@@ -1209,6 +1217,8 @@ def posterior_predictive_check(empirical_df,\
         the figure is simply not saved to the filesystem.
     :param bool use_lambda: Whether to generated simulations using time
         as measured in _lambda or in generations.
+    :param bool force: Force overwrite previously generated simulations. If not
+        force then re-running will append new simulations to previous ones.
     :param bool verbose: Print detailed progress information.
 
     :return: A `matplotlib.pyplot.axis` containing the plot.
@@ -1232,6 +1242,10 @@ def posterior_predictive_check(empirical_df,\
                                                 size=nsims)
     else:
         raise Exception("Shape of parameter estimate df not understood: {}".format(parameter_estimates.shape))
+
+    if os.path.exists("ppc"):
+        print("New simulations will be appended to SIMOUT.txt in './ppc'. "\
+                + "Use `force=True` to overwrite.")
 
     r = MESS.Region("ppc")
     r.set_param("project_dir", "./ppc")
@@ -1267,8 +1281,11 @@ def posterior_predictive_check(empirical_df,\
     if not ax:
         fig, ax = plt.subplots(figsize=(5, 5))
 
+    dat = pd.concat([obs_ss, sim_df])
+    dat = PowerTransformer(method='yeo-johnson').fit_transform(sim_df)
+
     pca = PCA(n_components=2)
-    pcs = pca.fit_transform(pd.concat([obs_ss, sim_df]))
+    pcs = pca.fit_transform(dat)
 
     ax.scatter(pcs[:, 0], pcs[:, 1])
     ## Plot the observed ss in red
