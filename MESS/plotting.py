@@ -20,6 +20,21 @@ from MESS.util import *
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import PowerTransformer, StandardScaler
 
+## A dictionary mapping mModel parameters in params/SIMOUT file format
+## to unicode/prettier versions for plotting
+target_labels = {"mutation_rate":u"\u03BC",\
+                "alpha":u"\u03B1",\
+                "S_m":r"$S_M$",\
+                "J_m":r"$J_M$",\
+                "speciation_rate":u"\u03BB",\
+                "death_proportion":u"\u03B5",\
+                "trait_rate_meta":r"$\sigma^2_M",\
+                "ecological_strength":r"$s_E$",\
+                "J":r"$J$",\
+                "m":r"$m$",\
+                "speciation_prob":u"\u03BD",\
+                "_lambda":u"\u039B",\
+                "generation":"generations"}
 
 ## Defaults
 #model_colors = {"neutral":"blue",\

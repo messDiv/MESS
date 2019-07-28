@@ -967,6 +967,7 @@ class Regressor(Ensemble):
                                 figdims=(2, 3),\
                                 n_cvs=1000,\
                                 title="",\
+                                targets="",\
                                 outfile=''):
         """
         Plot the cross validation predictions for this Regressor. Assumes
@@ -984,6 +985,7 @@ class Regressor(Ensemble):
         :param int n_cvs: The number of true/estimated points to plot on the
             figure.
         :param str title: Add a title to the figure.
+        :param list targets: Specify which of the targets to include in the plot.
         :param str outfile: Where to save the figure. This parameter should
             include the desired output file format, e.g. `.png`, `.svg` or
             `.svg`.
@@ -1000,7 +1002,11 @@ class Regressor(Ensemble):
         fig, axs = plt.subplots(figdims[0], figdims[1], figsize=figsize)
         axs = axs.flatten()
 
-        for t, ax in zip(self.targets, axs):
+        ## Allow user to specify which of the targets to plot
+        if not targets:
+            targets = self.targets
+
+        for t, ax in zip(targets, axs):
             self._plot_cv_prediction(t, ax, n_cvs=n_cvs)
 
         fig.tight_layout()
@@ -1015,7 +1021,8 @@ class Regressor(Ensemble):
     def _plot_cv_prediction(self,\
                             target,\
                             ax='',\
-                            n_cvs=1000):
+                            n_cvs=1000,\
+                            id_line=True):
         """
         An internal function for plotting just one set of cv predictions
         for one target parameter. Normally you'll want to use the
@@ -1030,18 +1037,25 @@ class Regressor(Ensemble):
             fig, ax = plt.subplots()
 
         if target == "ecological_strength":
-            y_true = np.log(self.y[target])
+            y_true = self.y[target]
+            ## At one time I toyed with log'ing ES, but it makes it look
+            ## weird in the plots.
+            #y_true = np.log(self.y[target])
         else:
             y_true = self.y[target]
 
         ax.scatter(y_true[:n_cvs], self.cv_preds[target][:n_cvs], c='black', marker='.', s=2)
 
-        ## TODO: Add an optional identity line here. This is close but doesn't work.
-        ##xmin, xmax = ax.get_xbound()
-        ##ymin, ymax = ax.get_ybound()
-        ##ax.plot([xmin, ymin], [xmax, ymax], c='red')
+        ## Optionally add an identity line
+        if id_line:
+            xmin = np.amin(y_true[:n_cvs])
+            xmax = np.amax(y_true[:n_cvs])
+            ymin = np.amin(self.cv_preds[target][:n_cvs])
+            ymax = np.amax(self.cv_preds[target][:n_cvs])
+            xs = np.linspace(min(xmin, ymin), max(xmax, ymax), 100)
+            ax.plot(xs, xs, c='red')
 
-        ax.set_title(target)
+        ax.set_title(MESS.plotting.target_labels[target], fontsize=25)
         if target in ["m", "speciation_prob"]:
             ax.set_xlim(np.min(y_true), np.max(y_true))
             ax.set_ylim(np.min(y_true), np.max(y_true))
