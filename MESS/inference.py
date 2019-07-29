@@ -43,7 +43,7 @@ class Ensemble(object):
 
     :attention: Ensemble objects should never be created directly. It is a base class that provides functionality to Classifier() and Regressor().
     """
-    def __init__(self, empirical_df, simfile, target_model=None, algorithm="rf", metacommunity_traits=None, verbose=False):
+    def __init__(self, empirical_df, simfile='', sim_df='', target_model=None, algorithm="rf", metacommunity_traits=None, verbose=False):
         self.empirical_df = empirical_df
         self.simfile = simfile
         self.algorithm = algorithm
@@ -56,14 +56,19 @@ class Ensemble(object):
         try:
             ## Read in simulated data, split it into features and targets,
             ## and prune the features to correspond to the loaded empirical data
+            if sim_df is not '':
+                self.sim_df = sim_df
+            elif simfile is not '':
+                self.sim_df = pd.read_csv(simfile, sep="\t", header=0)
+            else:
+                raise MESSError("Classifier/Regressor constructor must pass in either `simfile` or `sim_df`.")
+
             ## If target_model is passed in then prune out all other sims. This
             ## is only used by the Regressor code, but it's here because this
             ## is where the data splitting happens.
             if target_model:
-                self.sim_df = pd.read_csv(simfile, sep="\t", header=0)
                 self.sim_df = self.sim_df[self.sim_df["community_assembly_model"] == target_model]
-            else:
-                self.sim_df = pd.read_csv(simfile, sep="\t", header=0)
+
             ## Species richness is the first summary statistic, so split to
             ## features and targets here. We're keeping all features and
             ## targets in the _X and _y variables, and can selectively prune
@@ -553,8 +558,8 @@ class Classifier(Ensemble):
 
     _default_targets = ["community_assembly_model"]
 
-    def __init__(self, empirical_df, simfile, algorithm="rf", metacommunity_traits=None, verbose=False):
-        super(Classifier, self).__init__(empirical_df, simfile, algorithm=algorithm, metacommunity_traits=metacommunity_traits, verbose=verbose)
+    def __init__(self, empirical_df, simfile='', sim_df='', algorithm="rf", metacommunity_traits=None, verbose=False):
+        super(Classifier, self).__init__(empirical_df, simfile=simfile, sim_df='', algorithm=algorithm, metacommunity_traits=metacommunity_traits, verbose=verbose)
 
         if algorithm == "rf":
             self._base_model = RandomForestClassifier
@@ -717,7 +722,9 @@ class Classifier(Ensemble):
                         ha="center", va="center", fontsize=15,
                         color="white" if conf_matrix[i, j] > thresh else "black")
 
-        fig.tight_layout()
+        ## If you didn't pass in an axis to use then fix the layout
+        if fig:
+            fig.tight_layout()
 
         if outfile:
             plt.savefig(outfile)
@@ -747,8 +754,8 @@ class Regressor(Ensemble):
                         "trait_rate_meta", "ecological_strength", "J", "m",\
                         "generation", "speciation_prob", "_lambda"]
 
-    def __init__(self, empirical_df, simfile, target_model=None, algorithm="rfq", metacommunity_traits=None, verbose=False):
-        super(Regressor, self).__init__(empirical_df, simfile, target_model=target_model, algorithm=algorithm, metacommunity_traits=metacommunity_traits, verbose=False)
+    def __init__(self, empirical_df, simfile='', sim_df='', target_model=None, algorithm="rfq", metacommunity_traits=None, verbose=False):
+        super(Regressor, self).__init__(empirical_df, simfile=simfile, sim_df=sim_df, target_model=target_model, algorithm=algorithm, metacommunity_traits=metacommunity_traits, verbose=False)
 
         if algorithm == "rf":
             self._base_model = RandomForestRegressor
@@ -1095,14 +1102,14 @@ def classification_cv(simfile, data_axes='', algorithm="rf",\
         variable and the cross-validation scores per K-fold in the `cv_scores`
         member variable.
     """
-    if not data_axes:
+    if (not data_axes) or (data_axes == "all"):
         data_axes = ["abundance", "pi", "dxy", "trait"]
 
     ## Generate a synthetic community and filter only data axes specified.
     synthetic_community = MESS.util.synthetic_community()[data_axes]
 
     cla = MESS.inference.Classifier(synthetic_community,\
-                                    simfile,\
+                                    simfile=simfile,\
                                     algorithm=algorithm,\
                                     verbose=verbose)
 
