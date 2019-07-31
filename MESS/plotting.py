@@ -22,6 +22,9 @@ from sklearn.preprocessing import PowerTransformer, StandardScaler
 
 ## A dictionary mapping mModel parameters in params/SIMOUT file format
 ## to unicode/prettier versions for plotting
+##
+## Helpful matplotlib info for plotting unicode characters:
+## https://matplotlib.org/users/mathtext.html#subscripts-and-superscripts
 target_labels = {"mutation_rate":u"\u03BC",\
                 "alpha":u"\u03B1",\
                 "S_m":r"$S_M$",\
