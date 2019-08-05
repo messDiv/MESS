@@ -18,7 +18,7 @@ requirements:
     - ipyparallel >=6.0.2
     - scipy >=0.16
     - cython
-    - numpy >=1.16
+    - numpy {{ numpy }}
     - ipython
     - numpy
     - pandas
@@ -39,7 +39,7 @@ requirements:
     - jupyter
     - notebook >=5.0
     - pandas
-    - numpy >=1.16
+    - numpy {{ numpy }}
     - msprime
     - mpmath
     - rpy2
