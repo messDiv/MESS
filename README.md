@@ -9,6 +9,9 @@ A central challenge in understanding the origins of biodiversity is that, while 
 
 Critical support for development of the MESS model was provided by the German Centre for Integrative Biodiversity Research (iDiv) and the Santa Fe Institute.
 
+# Documentation
+Primary MESS documentation lives in the [MESS readthedocs page](https://pymess.readthedocs.io/en/latest/)
+
 ### Building the MESS conda package
 * Install conda
 * `conda install conda-build anaconda-client`
