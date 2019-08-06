@@ -14,3 +14,4 @@ params*
 *.swp
 *_MESS/
 docs/_build
+jupyter-notebooks/empirical/*/*.csv
