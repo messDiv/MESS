@@ -15,7 +15,7 @@ transparent to the user. The classic conda install goes like this:
 
 * Install [conda](https://docs.conda.io/en/latest/miniconda.html) for python 2.7 (I know.... I know... Soon for python 3)
 * Create a new conda environment: `conda create --name MESS` & `conda activate MESS`
-* Install MESS: `conda install -c conda-forge -c r -c mess mess`
+* Install MESS: `conda install -c conda-forge -c mess mess`
 
 **NB: Hackers only.** You can also install from a clean exported environment 
 file available in github repo conda.build directory:
