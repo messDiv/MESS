@@ -7,12 +7,12 @@ source:
   git_tag: master
 
 build:
-  number: 5
+  number: 6
   noarch: python
 
 requirements:
   build:
-    - python
+    - python =2.7
     - setuptools
     - msprime
     - ipyparallel >=6.0.2
@@ -28,6 +28,7 @@ requirements:
     - boruta_py
     - scikit-garden
   run:
+    - python =2.7
     - setuptools
     - ipython >=5.0.0
     - ipyparallel >=6.0.2
