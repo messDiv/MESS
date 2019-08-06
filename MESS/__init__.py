@@ -59,6 +59,11 @@ _LOGGER = _logging.getLogger(__name__)
 if __loglevel__ == "DEBUG":
     _LOGGER.debug("Engine init")
 
+## Catch warnings and write them to the log file
+def warn(*args, **kwargs):
+    for arg in args:
+        _LOGGER.warn(arg)
+warnings.warn = warn
 
 def cluster_info(ipyclient, spacer=""):
     """ reports host and engine info for an ipyclient """    
