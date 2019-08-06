@@ -17,7 +17,8 @@ transparent to the user. The classic conda install goes like this:
 * Create a new conda environment: `conda create --name MESS` & `conda activate MESS`
 * Install MESS: `conda install -c conda-forge -c r -c mess mess`
 
-You can also install from a clean exported environment file available in github repo conda.build directory:
+**NB: Hackers only.** You can also install from a clean exported environment 
+file available in github repo conda.build directory:
 
 * Install conda
 * `wget https://raw.githubusercontent.com/messDiv/MESS/master/util/install/MESS_environment.yaml`
@@ -31,5 +32,5 @@ This is a "note to self", more than end user docs, so don't do this unless you
 really want to build the conda package yourself.
 * Install conda
 * `conda install conda-build anaconda-client`
-* `conda build conda.recipe/MESS -c conda-forge -c r -c mess`
+* `conda build conda.recipe/MESS -c conda-forge -c mess`
 
