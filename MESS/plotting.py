@@ -200,8 +200,8 @@ def plot_simulations_hist(simfile,\
     #_ = comp_df.plot(kind='kde', ax = axs, label="competition", alpha=alpha,\
     #                color=MESS.plotting.model_colors["competition"], grid=False, bw_method=bw_method)
 
-    #axs = neut_df.hist(figsize=figsize, label="neutral", alpha=alpha, bins=bins,
-    #                color=MESS.plotting.model_colors["neutral"],  grid=False)
+    axs = neut_df.hist(figsize=figsize, label="neutral", alpha=alpha, bins=bins,
+                    color=MESS.plotting.model_colors["neutral"],  grid=False)
 
     ## Flatten the list of axes and trim to make sure there's only exactly the
     ## right number to match the number of summary stats retained.
