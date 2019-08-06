@@ -5,6 +5,11 @@
 
 echo "Running ${PKG_NAME} post-link in PREFIX=${PREFIX}"
 
+## Fix a bug in R 3.6.0 package installs to fail like this:
+## mv: cannot move <somefile> to <somedir> file exists 
+## ERROR:   moving to final location failed 
+export R_INSTALL_STAGED=false
+
 Rcode="
 checkinstall <-function(package){\n
   if (!package %in% installed.packages()) {\n
