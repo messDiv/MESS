@@ -7,12 +7,12 @@ source:
   git_tag: master
 
 build:
-  number: 7
-#  noarch: python
+  number: 8
+  noarch: python
 
 requirements:
   build:
-    - python =2.7
+    - python
     - setuptools
     - msprime
     - ipyparallel >=6.0.2
@@ -28,7 +28,7 @@ requirements:
     - boruta_py
     - scikit-garden
   run:
-    - python =2.7
+    - python
     - setuptools
     - ipython >=5.0.0
     - ipyparallel >=6.0.2
@@ -39,7 +39,7 @@ requirements:
     - jupyter_client
     - jupyter
     - notebook >=5.0
-    - pandas
+    - pandas =0.23.4
     - msprime
     - mpmath
     - r >=3.5
