@@ -48,6 +48,7 @@ requirements:
     - dendropy
     - boruta_py
     - scikit-garden
+    - r-base >=3.5
 
   commands:
     - MESS -v

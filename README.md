@@ -9,10 +9,26 @@ A central challenge in understanding the origins of biodiversity is that, while 
 
 Critical support for development of the MESS model was provided by the German Centre for Integrative Biodiversity Research (iDiv) and the Santa Fe Institute.
 
+# Installation
+MESS is distributed as a conda package, which makes installing all the dependencies
+transparent to the user. The classic conda install goes like this:
+
+* Install [conda](https://docs.conda.io/en/latest/miniconda.html) for python 2.7 (I know.... I know... Soon for python 3)
+* Create a new conda environment: `conda create --name MESS` & `conda activate MESS`
+* Install MESS: `conda install -c conda-forge -c r -c mess mess`
+
+You can also install from a clean exported environment file available in github repo conda.build directory:
+
+* Install conda
+* `wget https://raw.githubusercontent.com/messDiv/MESS/master/util/install/MESS_environment.yaml`
+* `conda env create -f MESS_environment.yaml`
+
 # Documentation
 Primary MESS documentation lives in the [MESS readthedocs page](https://pymess.readthedocs.io/en/latest/)
 
 ### Building the MESS conda package
+This is a "note to self", more than end user docs, so don't do this unless you
+really want to build the conda package yourself.
 * Install conda
 * `conda install conda-build anaconda-client`
 * `conda build conda.recipe/MESS -c conda-forge -c r -c mess`
