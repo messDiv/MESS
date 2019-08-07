@@ -13,8 +13,8 @@ Critical support for development of the MESS model was provided by the German Ce
 MESS is distributed as a conda package, which makes installing all the dependencies
 transparent to the user. The classic conda install goes like this:
 
-* Install [conda](https://docs.conda.io/en/latest/miniconda.html) for python 2.7 (I know.... I know... Soon for python 3)
-* Create a new conda environment: `conda create --name MESS` & `conda activate MESS`
+* Install [conda](https://docs.conda.io/en/latest/miniconda.html) for python 3.7
+* Create a new conda environment: `conda create --name MESS python=3.7` & `conda activate MESS`
 * Install MESS: `conda install -c conda-forge -c mess mess`
 
 **NB: Hackers only.** You can also install from a clean exported environment 
