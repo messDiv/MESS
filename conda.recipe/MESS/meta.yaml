@@ -7,7 +7,7 @@ source:
   git_tag: master
 
 build:
-  number: 9
+  number: 10
   noarch: python
 
 requirements:
@@ -28,7 +28,7 @@ requirements:
     - boruta_py
     - scikit-garden
   run:
-    - python
+    - python >=3.7
     - setuptools
     - ipython >=5.0.0
     - ipyparallel >=6.0.2
@@ -48,6 +48,7 @@ requirements:
     - dendropy
     - boruta_py
     - scikit-garden
+    - tzlocal
 
   commands:
     - MESS -v

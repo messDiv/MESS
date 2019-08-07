@@ -28,10 +28,15 @@ with warnings.catch_warnings(record=True) as w:
 from .Region import Region
 from .LocalCommunity import LocalCommunity
 from .Metacommunity import Metacommunity
-from . import inference
 from . import util
 from . import plotting
 from . import stats
+
+## sklearn throws a DeprecationWarning: sklearn.externals.joblib
+## Will be fixed in 0.23: https://github.com/deephyper/deephyper/issues/12
+## Very annoying if you don't catch and ignore this.
+with warnings.catch_warnings(record=True) as w:
+    from . import inference
 
 ####################################################################
 ## create logger for debugging

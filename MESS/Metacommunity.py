@@ -10,6 +10,7 @@ import itertools
 import random
 import sys
 import os
+import warnings
 import MESS
 from MESS.util import tuplecheck, sample_param_range, MESSError, set_params
 
@@ -181,11 +182,17 @@ class Metacommunity(object):
           return(list(phylo = tre, traits = trt, abundance = abund))
         }"""
 
-        make_meta_func = robjects.r(make_meta)
-        res = pandas2ri.ri2py(make_meta_func(J, S_m, speciation_rate, death_proportion, trait_rate_meta))
-        tree = res[0][0]
-        traits = pandas2ri.ri2py(res[1])
-        abunds = pandas2ri.ri2py(res[2])
+        ## rpy2 raises "FutureWarning: from_items is deprecated"
+        ## This is fixed in rpy2 3.0 but this is not up on conda yet 
+        ## You can remove this catch_warnings block when 3.0 is out.
+        ## iao 8/2019
+        with warnings.catch_warnings(record=True) as w:
+            make_meta_func = robjects.r(make_meta)
+            res = pandas2ri.ri2py(make_meta_func(J, S_m, speciation_rate, death_proportion, trait_rate_meta))
+            tree = res[0][0]
+            traits = pandas2ri.ri2py(res[1])
+            abunds = pandas2ri.ri2py(res[2])
+
         return tree, abunds, traits
 
 
