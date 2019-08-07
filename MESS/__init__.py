@@ -28,13 +28,10 @@ with warnings.catch_warnings(record=True) as w:
 from .Region import Region
 from .LocalCommunity import LocalCommunity
 from .Metacommunity import Metacommunity
-#from .util import *
-#from .inference import *
-#from .stats import *
-import inference
-import util
-import plotting
-import stats
+from . import inference
+from . import util
+from . import plotting
+from . import stats
 
 ####################################################################
 ## create logger for debugging
@@ -80,7 +77,7 @@ def cluster_info(ipyclient, spacer=""):
     for hostname in set(hosts):
         result.append("{}host compute node: [{} cores] on {}"\
             .format(spacer, hosts.count(hostname), hostname))
-    print("\n".join(result))
+    print(("\n".join(result)))
 
 
 

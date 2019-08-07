@@ -1,5 +1,5 @@
 
-from __future__ import print_function
+
 import matplotlib
 import warnings
 with warnings.catch_warnings():
@@ -25,18 +25,18 @@ from sklearn.preprocessing import PowerTransformer, StandardScaler
 ##
 ## Helpful matplotlib info for plotting unicode characters:
 ## https://matplotlib.org/users/mathtext.html#subscripts-and-superscripts
-target_labels = {"mutation_rate":u"\u03BC",\
-                "alpha":u"\u03B1",\
+target_labels = {"mutation_rate":"\u03BC",\
+                "alpha":"\u03B1",\
                 "S_m":r"$S_M$",\
                 "J_m":r"$J_M$",\
-                "speciation_rate":u"\u03BB",\
-                "death_proportion":u"\u03B5",\
+                "speciation_rate":"\u03BB",\
+                "death_proportion":"\u03B5",\
                 "trait_rate_meta":r"$\sigma^2_M",\
                 "ecological_strength":r"$s_E$",\
                 "J":r"$J$",\
                 "m":r"$m$",\
-                "speciation_prob":u"\u03BD",\
-                "_lambda":u"\u039B",\
+                "speciation_prob":"\u03BD",\
+                "_lambda":"\u039B",\
                 "generation":"generations"}
 
 ## Defaults
@@ -579,7 +579,7 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
         print("max_n_species - {}\nmax_abundance - {}".format(max_n_species, max_abundance))
 
     ## Normalization routines
-    for sp_list in sp_through_time.values():
+    for sp_list in list(sp_through_time.values()):
 
         ## Get max pi and max dxy
         pis = np.array([(x.stats["dxy"], x.stats["pi_local"]) for x in sp_list if x.stats["name"] in extant])
@@ -750,15 +750,15 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
 
 def prep_normalized_plots(sp_through_time):
     ## GET MAX values for abundance and num species so we can normalize the plot axes
-    max_n_species = max([len(x) for x in sp_through_time.values()])
-    max_abundance = max([max([y.stats["Ne_local"]/y.paramsdict["alpha"] for y in sp]) for sp in sp_through_time.values()])
+    max_n_species = max([len(x) for x in list(sp_through_time.values())])
+    max_abundance = max([max([y.stats["Ne_local"]/y.paramsdict["alpha"] for y in sp]) for sp in list(sp_through_time.values())])
 
     ## Get max values for abundance class count and abundance octave
     max_octave = 0
     max_class_count = 0
     max_n_bins = 0
     octave_bin_labels = []
-    for sp in sp_through_time.values():
+    for sp in list(sp_through_time.values()):
         abund = SAD([x.stats["Ne_local"]/x.paramsdict["alpha"] for x in sp], from_abundances=True, octaves=True)
         octave = max(abund.keys())
         class_count = max(abund.values())
@@ -868,7 +868,7 @@ def plot_abund_vs_colon(species, max_coltime, max_abundance):
 def get_max_heat_bin(sp_through_time, max_pi_local, max_dxy):
     max_heat_bin = 0
 
-    for sp_list in sp_through_time.values():
+    for sp_list in list(sp_through_time.values()):
         ## Get the sumstats for this timeslice
         ## Only include extant species in plots
         #pis = np.array([(x.dxy, x.pi_local) for x in sp_list if x.uuid[0] in extant])

@@ -1,9 +1,7 @@
-#!/usr/bin/env python2
 
 """ functions to auto-launch an ipcluster instance """
 
 ## imports for running ipcluster
-from __future__ import print_function
 
 import ipyparallel as ipp
 import subprocess

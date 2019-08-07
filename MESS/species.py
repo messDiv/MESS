@@ -69,7 +69,7 @@ class species(object):
         ## Take the harmonic mean of the abundance trajectory through time
         elif growth == "harmonic":
             try:
-                harmonic = hmean(np.array(abundance_through_time.values()))
+                harmonic = hmean(np.array(list(abundance_through_time.values())))
                 self.stats["Ne_local"] = harmonic * self.paramsdict["alpha"]
                 self.stats["growth_rate"] = 0
 
@@ -142,7 +142,7 @@ class species(object):
     def _get_size_changes_through_time(self, pop_id = 0):
         size_change_events = []
 
-        for time, size in self.paramsdict["abundance_through_time"].items():
+        for time, size in list(self.paramsdict["abundance_through_time"].items()):
 
             local_size_change = msprime.PopulationParametersChange(\
                                             time = time,\

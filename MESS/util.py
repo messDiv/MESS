@@ -1,4 +1,3 @@
-from __future__ import print_function
 
 import collections
 import glob
@@ -192,7 +191,7 @@ def set_params(data, param, newvalue, quiet=True):
     LOGGER.debug("set param: {} {} = {}".format(data, param, newvalue))
     #allowed_params = list(data.paramsdict.keys())
     ## require parameter recognition
-    if not param in data.paramsdict.keys():
+    if not param in list(data.paramsdict.keys()):
         raise MESSError("Parameter key not recognized: {}"\
                                 .format(param))
     try:

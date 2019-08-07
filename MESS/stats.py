@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 
 import numpy as np
 import pandas as pd
@@ -51,10 +51,10 @@ def generalized_hill_number(abunds, vals=None, order=1, scale=True, verbose=Fals
 
     ## Make sure vals is an np array or else order > 2 will act crazy
     vals = np.array(vals)
-    if verbose: print("sums:", "dij", np.sum(vals), "pij", np.sum(abunds))
+    if verbose: print(("sums:", "dij", np.sum(vals), "pij", np.sum(abunds)))
     ## sum of values weighted by abundance
     V_bar = np.sum(vals*abunds)
-    if verbose: print("vbar", V_bar)
+    if verbose: print(("vbar", V_bar))
 
     ## Use the special formula for order = 1
     if order == 1:
@@ -422,13 +422,13 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=1, metacommunity_trai
         for order in range(1,5):
             stat_dict["pi_h{}".format(order)] = hill_number(diversity_df["pi"], order=order)
 
-        for name, func in moments.items():
+        for name, func in list(moments.items()):
             stat_dict["{}_pi".format(name)] = func(diversity_df["pi"])
     except KeyError as inst:
         if verbose: print("  No pi data present")
 
     try:
-        for name, func in moments.items():
+        for name, func in list(moments.items()):
             stat_dict["{}_dxys".format(name)] = func(diversity_df["dxy"])
     except KeyError as inst:
         if verbose: print("  No dxy data present")
@@ -446,14 +446,14 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=1, metacommunity_trai
         if verbose: print("  Trait hill numbers ignored since abundances not present.")
     finally:
         try:
-            for name, func in moments.items():
+            for name, func in list(moments.items()):
                 stat_dict["{}_local_traits".format(name)] = func(diversity_df["trait"])
             if np.any(metacommunity_traits):
-                for name, func in moments.items():
+                for name, func in list(moments.items()):
                     val = func(metacommunity_traits)
                     stat_dict["{}_regional_traits".format(name)] = val
                 ## Double for-loop here so the traits stay together in the sumstats output
-                for name, func in moments.items():
+                for name, func in list(moments.items()):
                     val = func(metacommunity_traits)
                     stat_dict["reg_loc_{}_trait_dif".format(name)] = val - stat_dict["{}_local_traits".format(name)]
         except:
@@ -573,8 +573,8 @@ if __name__ == "__main__":
     sad_oct = SAD(dat, octaves=True)
     #assert(cmp(sad.values(), [2, 2, 1, 1, 1, 1, 1]))
     #assert(cmp(sad_oct.values(), [2, 2, 1, 1, 2, 0, 1])) 
-    print("SAD - {}".format(sad))
-    print("SAD octaves - {}".format(sad_oct))
+    print(("SAD - {}".format(sad)))
+    print(("SAD octaves - {}".format(sad_oct)))
 
     pis = np.random.random(10)/10
     dxys = np.random.random(10)/10
@@ -588,6 +588,6 @@ if __name__ == "__main__":
     dat["traits"] = trts
 
     ss = calculate_sumstats(dat, sgd_bins=10, sgd_dims=1)
-    print("sumstats", len(ss.values), ss)
+    print(("sumstats", len(ss.values), ss))
     header = _get_sumstats_header(sgd_bins=10, sgd_dims=1)
-    print("header", len(header), header)
+    print(("header", len(header), header))

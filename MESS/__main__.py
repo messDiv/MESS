@@ -1,6 +1,6 @@
 """ the main CLI for calling MESS """
 
-from __future__ import print_function, division
+
 
 import pkg_resources
 import argparse
@@ -109,11 +109,7 @@ def _check_version():
     """ Test if there's a newer version and nag the user to upgrade."""
     ## TODO: This doesn't actually work yet
 
-    ## Python 2/3 compat
-    try:
-        from urllib2 import urlopen
-    except Exception:
-        from urllib.request import urlopen
+    from urllib.request import urlopen
 
     from distutils.version import LooseVersion
 
@@ -236,7 +232,7 @@ def parse_command_line():
     if args.very_quiet:
         args.quiet = True
 
-    if not any(x in ["params", "new"] for x in vars(args).keys()):
+    if not any(x in ["params", "new"] for x in list(vars(args).keys())):
         print("\nBad arguments: must include at least one of"\
                 +" `-p` or `-n`\n")
  
@@ -297,7 +293,7 @@ def do_sims(data, args):
                 try:
                     ipyclient.abort(block=False)
                     time.sleep(1)
-                    for engine_id, pid in data._ipcluster["pids"].items():
+                    for engine_id, pid in list(data._ipcluster["pids"].items()):
                         LOGGER.debug("  Cleaning up ipcluster engine/pid {}/{}".format(engine_id, pid))
                         if ipyclient.queue_status()[engine_id]["tasks"]:
                             os.kill(pid, 2)

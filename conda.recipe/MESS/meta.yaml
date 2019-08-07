@@ -7,7 +7,7 @@ source:
   git_tag: master
 
 build:
-  number: 8
+  number: 9
   noarch: python
 
 requirements:
@@ -42,14 +42,12 @@ requirements:
     - pandas =0.23.4
     - msprime
     - mpmath
-    - r >=3.5
     - rpy2
     - dill
     - matplotlib
     - dendropy
     - boruta_py
     - scikit-garden
-    - r-base >=3.5
 
   commands:
     - MESS -v

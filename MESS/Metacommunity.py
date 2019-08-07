@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 
 from scipy.stats import lognorm
 from collections import OrderedDict
@@ -98,7 +98,7 @@ class Metacommunity(object):
         Parameters are sampled uniform, except ecological strength, which is
         sampled loguniform.
         """
-        for k,v in self._priors.items():
+        for k,v in list(self._priors.items()):
             if np.array(v).any():
                 loguniform = False
                 if k in ["ecological_strength"]:
@@ -256,7 +256,7 @@ class Metacommunity(object):
             header += ("-"*(80-len(header)))
             paramsfile.write(header)
 
-            for key, val in self.paramsdict.items():
+            for key, val in list(self.paramsdict.items()):
                 paramvalue = str(val)
 
                 ## If it's one of the params with a prior, and if the prior is not

@@ -83,8 +83,8 @@ if __name__ == "__main__":
     sgd2 = SGD(pis, dxys, nbins=5)
     print(sgd2)
 
-    print(sgd2.to_series())
+    print((sgd2.to_series()))
 
-    print(SGD([]))
-    print(SGD([], ndims=1))
-    print(sgd2.to_dict())
+    print((SGD([])))
+    print((SGD([], ndims=1)))
+    print((sgd2.to_dict()))
