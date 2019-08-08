@@ -551,7 +551,6 @@ class Region(object):
                     self._ipcluster["pids"][eid] = pid
 
             ## Magic to make the Region() object picklable
-#            ipyclient[:].use_dill()
             ipyclient[:].use_cloudpickle()
             lbview = ipyclient.load_balanced_view()
             for i in range(sims):
