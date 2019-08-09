@@ -43,7 +43,7 @@ requirements:
     - msprime
     - mpmath
     - rpy2
-    - dill
+    - cloudpickle
     - matplotlib
     - dendropy
     - boruta_py
