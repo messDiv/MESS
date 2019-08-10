@@ -4,6 +4,7 @@ import numpy as np
 import os
 import string
 import time
+import tempfile
 
 from collections import OrderedDict
 
@@ -318,6 +319,18 @@ class Region(object):
                     self.islands[name] = set_params(loc, param, value, quiet)
                 except:
                     raise MESSError("Bad param/value {}/{}".format(param, value))
+
+
+    def get_params(self):
+        """
+        A convenience function for getting nicely formatted params in API mode.
+
+        :return: A string of all the params ready to be printed.
+        """
+        tf = tempfile.NamedTemporaryFile()
+        self.write_params(outfile=tf.name, full=True, force=True)
+        dat = open(tf.name).read()
+        return dat
 
 
     def write_params(self, outfile=None, outdir=None, full=False, force=False):
