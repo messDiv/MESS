@@ -1304,7 +1304,6 @@ def posterior_predictive_check(empirical_df,\
     if not ax:
         fig, ax = plt.subplots(figsize=(5, 5))
 
-    import pdb; pdb.set_trace()
     dat = pd.concat([obs_ss, sim_df])
     dat = PowerTransformer(method='yeo-johnson').fit_transform(sim_df)
 
