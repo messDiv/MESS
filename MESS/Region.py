@@ -513,7 +513,7 @@ class Region(object):
                                                                     sgd_dims=self._hackersonly["sgd_dimensions"],
                                                                     metacommunity_traits=self.metacommunity._get_trait_values())) + "\n"
         LOGGER.debug("SIMOUT header - {}".format(header))
-        if len(open(simfile, 'a+').readline()) > 0 and not force:
+        if os.path.exists(simfile) and not force:
             header = ""
         SIMOUT = open(simfile, append)
         SIMOUT.write(header)
