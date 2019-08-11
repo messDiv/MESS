@@ -39,6 +39,7 @@ requirements:
     - jupyter_client
     - jupyter
     - notebook >=5.0
+    # pin pandas to 0.23.4 until rpy2 v3 comes out to fix a compatibility bug
     - pandas =0.23.4
     - msprime
     - mpmath
@@ -49,6 +50,7 @@ requirements:
     - boruta_py
     - scikit-garden
     - tzlocal
+    - matplotlib
 
   commands:
     - MESS -v
