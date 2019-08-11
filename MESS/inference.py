@@ -12,6 +12,7 @@ import joblib
 import numpy as np
 import os
 import pandas as pd
+import shutil
 
 from boruta import BorutaPy
 from copy import deepcopy
@@ -1266,6 +1267,8 @@ def posterior_predictive_check(empirical_df,\
     if os.path.exists("ppc"):
         print("New simulations will be appended to SIMOUT.txt in './ppc'. "\
                 + "Use `force=True` to overwrite.")
+        if force:
+           shutil.rmtree("ppc") 
 
     r = MESS.Region("ppc")
     r.set_param("project_dir", "./ppc")
@@ -1301,6 +1304,7 @@ def posterior_predictive_check(empirical_df,\
     if not ax:
         fig, ax = plt.subplots(figsize=(5, 5))
 
+    import pdb; pdb.set_trace()
     dat = pd.concat([obs_ss, sim_df])
     dat = PowerTransformer(method='yeo-johnson').fit_transform(sim_df)
 
