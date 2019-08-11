@@ -72,9 +72,9 @@ Stats
 Plotting
 ++++++++
 
-.. autofunction:: plot_simulations_hist
+.. autofunction:: MESS.plotting.plot_simulations_hist
 
-.. autofunction:: plot_simulations_pca
+.. autofunction:: MESS.plotting.plot_simulations_pca
 
-.. autofunction:: plots_through_time
+.. autofunction:: MESS.plotting.plots_through_time
 
