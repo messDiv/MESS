@@ -837,21 +837,6 @@ class LocalCommunity(object):
     ################################################
     ## Functions for driving the backward time model
     ################################################
-    ## I always forget how to do this in pandas: self.local_info.iloc[:, idxs]
-    def _get_singleton_species(self):
-        ## TODO: Unused. All lineages are handled with the _get_clades() function.
-        ##       Should just remove this.
-        ## A function to return any species that are not involved in a speciation
-        ## event. These are "easier" to handle individually, so we'll do them separately.
-        ## First get the candidate list of species.
-        idxs = np.where(self.local_info.loc["ancestor"] == "")[0]
-        names = self.local_info.columns[idxs]
-        ## Get just the species that don't occur as ancestors in the local community
-        singletons = set(names).difference(set(self.local_info.loc["ancestor"]))
-        ## Return the dataframe with just those individuals without
-        return self.local_info[list(singletons)]
-
-
     def _get_clades(self):
         ## We need to get all the groups of species that descended from a common
         ## local anscestor so we can run the backwards time model for all of them

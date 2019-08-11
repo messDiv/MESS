@@ -181,7 +181,9 @@ class species(object):
 
         return [migrate_change, local_size_change, split_event]
 
-
+    ## THIS IS NOT THE CODE USED DURING SIMULATIONS. THAT CODE LIVES IN
+    ## the Region. THIS IS FOR TESTING ONLY ITS BEHAVIOR MAY VARY SLIGHTLY
+    ## FROM HOW THE SIMS ACTUALLY WORK.
     def simulate_seqs(self):
         LOGGER.debug("Entering simulate_seqs - {}".format(self.name))
         ## TODO: Here we are assuming only one island and that the migration
