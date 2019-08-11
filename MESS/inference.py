@@ -793,8 +793,8 @@ class Regressor(Ensemble):
             prediction intervals.
         """
         if verbose: print("Calculating prediction interval(s)")
-        upper = 1.0 - ((1.0 - interval)/2.)
-        lower = 1.0 - upper
+        upper = round(1.0 - ((1.0 - interval)/2.), 3)
+        lower = round(1.0 - upper, 3)
 
         if self.algorithm == "rfq":
             y_lower = [self.model_by_target[t]["model"].predict(\
