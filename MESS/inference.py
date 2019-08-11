@@ -531,11 +531,11 @@ predict() on the estimator prior to calling the cv_predict/cv_score methods.
 
         ## Just do our best here to figure out a good layout. These should
         ## work in most normal cases, but you an fall
-        if not layout is None:
+        if layout is None:
             if len(imps) == 1:
                 layout = (1, 1)
             else:
-                layout = (2, len(imps)/2)
+                layout = (2, int(np.ceil(len(imps)/2)))
         axs = imps.T.plot.barh(figsize=figsize, subplots=subplots, legend=legend, width=0.9, layout=layout, sharey=True)
         return axs
 
