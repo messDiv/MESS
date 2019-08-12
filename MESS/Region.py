@@ -484,7 +484,7 @@ class Region(object):
         :param bool force: Whether to append to or overwrite results from
             previous simulations. Setting `force` to ``True`` will overwrite
             any previously generated simulation in the `project_dir/SIMOUT.txt`
-            file..
+            file.
         :para bool quiet: Whether to display progress of these simulations.
         """
         if not quiet: print("    Generating {} simulation(s).".format(sims))
@@ -642,6 +642,9 @@ class Region(object):
         if self._priors["community_assembly_model"]:
             self.paramsdict["community_assembly_model"] = np.random.choice(self._priors["community_assembly_model"])
 
+        if self._priors["generations"]:
+            self.paramsdict["generations"] = sample_param_range(self._priors["generations"])[0]
+            
         ## Flip the metacommunity per simulation so we get new draws of trait values.
         ## This is a little slow for logser, and also performance scales with metacommunity size
         self._reset_metacommunity()

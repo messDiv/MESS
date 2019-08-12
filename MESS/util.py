@@ -124,10 +124,14 @@ def tuplecheck(newvalue, dtype=str):
             newvalue = dtype(newvalue)
         except Exception as inst:
             ## Failed to cast to dtype, so this is probably a prior range
+            ## In some cases you may get string representations of float
+            ## values that _should_ be int. Here we first cast the string
+            ## to a float, and then cast to dtype.
+            ## https://stackoverflow.com/questions/1841565/valueerror-invalid-literal-for-int-with-base-10
             try:
                 newvalue = newvalue.rstrip(")").strip("(")
-                minval = dtype(newvalue.split("-")[0].strip())
-                maxval = dtype(newvalue.split("-")[1].strip())
+                minval = dtype(float(newvalue.split("-")[0].strip()))
+                maxval = dtype(float(newvalue.split("-")[1].strip()))
                 newvalue = tuple([minval, maxval])
             except Exception as inst:
                 raise MESSError("{}\ttuplecheck() failed to cast to {} - {}"\

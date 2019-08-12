@@ -1248,50 +1248,36 @@ def posterior_predictive_check(empirical_df,\
     if est_only:
         parameter_estimates = pd.DataFrame(parameter_estimates.loc["estimate", :]).T
 
-    ## Pre-fetch nsims worth of  sampled parameters from the prediction interval
-    param_df = pd.DataFrame(data=np.zeros(shape=(nsims,len(parameter_estimates.columns))),\
-                            columns=parameter_estimates.columns)
-    ## You only have the point estimate that's all you can use
-    if len(parameter_estimates) == 1:
-        for param in parameter_estimates:
-            param_df[param] = [parameter_estimates[param].values[0]] * nsims
-    ## If you have prediction intervals sample uniform between them
-    elif len(parameter_estimates) == 3:
-        for param in parameter_estimates:
-            param_df[param] = np.random.uniform(low=parameter_estimates[param]["lower 0.025"],
-                                                high=parameter_estimates[param]["upper 0.975"],
-                                                size=nsims)
-    else:
-        raise Exception("Shape of parameter estimate df not understood: {}".format(parameter_estimates.shape))
-
     if os.path.exists("ppc"):
-        print("New simulations will be appended to SIMOUT.txt in './ppc'. "\
-                + "Use `force=True` to overwrite.")
         if force:
            shutil.rmtree("ppc") 
+        else:
+            print("New simulations will be appended to SIMOUT.txt in './ppc'. "\
+                + "Use `force=True` to overwrite.")
 
     r = MESS.Region("ppc")
     r.set_param("project_dir", "./ppc")
 
-    if verbose: progressbar(nsims, 0, "Performing simulations")
-    ## FIXME: Oh boy, this is not parallelized at all. Fix this.
-    for i in range(nsims):
-        for param in parameter_estimates:
-            ## Only use one of either the estimated lambda values
-            ## or the time in generations, not both.
-            if param == "_lambda":
-                if use_lambda == True:
-                    r.set_param("generations", param_df[param].iloc[i])
-                else: pass
-            elif param == "generation":
-                if use_lambda == False:
-                    r.set_param("generations", param_df[param].iloc[i])
-            else:
-                r.set_param(param, param_df[param].iloc[i])
-        r.run(sims=1, quiet=True)
+    for param in parameter_estimates:
+        ## Format the parameter for whether it is an exact value or a range
+        if len(parameter_estimates) == 1:
+            p = parameter_estimates[param]
+        elif len(parameter_estimates) == 3:
+            p = "{}-{}".format(parameter_estimates[param]["lower 0.025"],
+                                parameter_estimates[param]["upper 0.975"])
+        else:
+            raise Exception("Shape of parameter estimate df not understood: {}".format(parameter_estimates.shape))
+    
+        ## Only use one of either the estimated lambda values
+        ## or the time in generations, not both.
+        if param == "_lambda" and use_lambda == True:
+            r.set_param("generations", p)
+        elif param == "generation":
+            r.set_param("generations", p)
+        else:
+            r.set_param(param, p)
+    r.run(sims=nsims, quiet=False, force=force)
 
-        if verbose: progressbar(nsims, i, "Performing simulations")
-    if verbose: progressbar(nsims, nsims, "Performing simulations")
     if verbose: print("\nCalculating PCs and plotting")
 
     simfile = "./ppc/SIMOUT.txt"
