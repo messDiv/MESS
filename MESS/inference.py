@@ -1206,6 +1206,7 @@ def parameter_estimation_cv(simfile, target_model=None, data_axes='',
 def posterior_predictive_check(empirical_df,\
                                 parameter_estimates,\
                                 ax='',\
+                                ipyclient=None,\
                                 est_only=False,\
                                 nsims=100,\
                                 outfile='',\
@@ -1228,6 +1229,10 @@ def posterior_predictive_check(empirical_df,\
         and optional prediction interval upper and lower bounds.
     :param bool ax: The matplotlib axis to use for plotting. If not specified
         then a new axis will be created.
+    :param ipyparallel.Client ipyclient: Allow to pass in an ipyparallel client to
+        allow parallelization of the posterior predictive simulations. If no
+        ipyclient is specified then simulations will be performed serially (i.e.
+        SLOW).
     :param bool est_only: If True, drop the lower and upper prediction
         interval (PI) and just use the mean estimated parameters for generating
         posterior predictive simulations. If False, and PIs exist, then
@@ -1276,7 +1281,7 @@ def posterior_predictive_check(empirical_df,\
             r.set_param("generations", p)
         else:
             r.set_param(param, p)
-    r.run(sims=nsims, quiet=False, force=force)
+    r.run(sims=nsims, ipyclient=ipyclient, quiet=False, force=force)
 
     if verbose: print("\nCalculating PCs and plotting")
 
