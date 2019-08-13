@@ -51,6 +51,7 @@ requirements:
     - scikit-garden
     - tzlocal
     - matplotlib
+    - imagemagick
 
   commands:
     - MESS -v
