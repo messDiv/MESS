@@ -846,7 +846,7 @@ class Regressor(Ensemble):
         ## Concatenate lower and upper quartiles onto the prediction df and name the rows nicely
         self.y_lower = pd.DataFrame(y_lower, columns=["lower {}".format(lower)], index=self.targets).T
         self.y_upper = pd.DataFrame(y_upper, columns=["upper {}".format(upper)], index=self.targets).T
-        self.empirical_pred = pd.concat([pd.DataFrame(rgr.empirical_pred.loc["estimate"]).T,\
+        self.empirical_pred = pd.concat([pd.DataFrame(self.empirical_pred.loc["estimate"]).T,\
                                         self.y_lower, self.y_upper])
 
         return self.empirical_pred
