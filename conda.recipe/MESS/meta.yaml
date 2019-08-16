@@ -7,7 +7,7 @@ source:
   git_tag: master
 
 build:
-  number: 10
+  number: 11
   noarch: python
 
 requirements:
