@@ -387,7 +387,7 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=1, metacommunity_trai
         and simulated statistics are calculated identically.
 
 
-    :param pandas.DataFrame empirical_df: A DataFrame containing the empirical
+    :param pandas.DataFrame diversity_df: A DataFrame containing the empirical
         data. This df has a very specific format which is specified above.
     :param int sgd_bins: The number of bins per axis of the constructed SGD.
         This must match the number of bins specified for simulations.
@@ -403,6 +403,11 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=1, metacommunity_trai
     :return: Returns a pandas.Dataframe with one row containing all of the
         applicable summary statistic for the input dataframe.
     """
+    ## Check diversity_df formatting
+    axes = ["abundance", "pi", "dxy", "trait"]
+    if len(set(diversity_df.columns).intersection(set(axes))) == 0:
+        raise MESS.util.MESSError("\nColumn names must be one or more of exactly: {}\nYou had: {}".format(axes, list(diversity_df.columns)))
+
     moments = OrderedDict()
     for name, func in zip(["mean", "std", "skewness", "kurtosis", "median", "iqr"],\
                             [np.mean, np.std, skew, kurtosis, np.median, iqr]):
