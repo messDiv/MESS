@@ -559,7 +559,7 @@ class Classifier(Ensemble):
     _default_targets = ["community_assembly_model"]
 
     def __init__(self, empirical_df, simfile='', sim_df='', algorithm="rf", metacommunity_traits=None, verbose=False):
-        super(Classifier, self).__init__(empirical_df, simfile=simfile, sim_df='', algorithm=algorithm, metacommunity_traits=metacommunity_traits, verbose=verbose)
+        super(Classifier, self).__init__(empirical_df, simfile=simfile, sim_df=sim_df, algorithm=algorithm, metacommunity_traits=metacommunity_traits, verbose=verbose)
 
         if algorithm == "rf":
             self._base_model = RandomForestClassifier
