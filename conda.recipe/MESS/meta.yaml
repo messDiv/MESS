@@ -39,11 +39,10 @@ requirements:
     - jupyter_client
     - jupyter
     - notebook >=5.0
-    # pin pandas to 0.23.4 until rpy2 v3 comes out to fix a compatibility bug
-    - pandas =0.23.4
+    - pandas
     - msprime
     - mpmath
-    - rpy2
+    - rpy2 >=3.0
     - cloudpickle
     - matplotlib
     - dendropy

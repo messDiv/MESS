@@ -1,7 +1,4 @@
 
-
-from scipy.stats import lognorm
-from collections import OrderedDict
 import dendropy
 import collections
 import pandas as pd
@@ -12,7 +9,11 @@ import sys
 import os
 import warnings
 import MESS
+
+from collections import OrderedDict
 from MESS.util import tuplecheck, sample_param_range, MESSError, set_params
+from rpy2 import robjects
+from scipy.stats import lognorm
 
 import logging
 LOGGER = logging.getLogger(__name__)
@@ -112,8 +113,6 @@ class Metacommunity(object):
         Simulate the tree, evolve the traits on it and paste on abundances.
         Calls out to R code.
         """
-        import rpy2.robjects as robjects
-        from rpy2.robjects import r, pandas2ri
 
         make_meta = """## function to make the mainland meta community with a phylo, traits, and abundances
         ## required packages:
@@ -126,11 +125,11 @@ class Metacommunity(object):
         #' @param speciation_rate the speciation rate
         #' @param death_proportion the proportional extinction rate
         #' @param trait_rate_meta the rate of brownian motion
-
         makeMeta <- function(Jm, S, lambda, deathFrac, sigma2) {
           ## the tree
-          tre <- TreeSim::sim.bd.taxa(S, numbsim = 1, lambda = lambda, mu = lambda * deathFrac,
-                                      complete = FALSE)[[1]]
+          ## suppress an annoying message about geiger overwritting an ape method
+          tre <- suppressMessages(TreeSim::sim.bd.taxa(S, numbsim = 1, lambda = lambda, mu = lambda * deathFrac,
+                                      complete = FALSE)[[1]])
 
           ## the traits
           trt <- ape::rTraitCont(tre, sigma = sqrt(sigma2))
@@ -182,16 +181,16 @@ class Metacommunity(object):
           return(list(phylo = tre, traits = trt, abundance = abund))
         }"""
 
-        ## rpy2 raises "FutureWarning: from_items is deprecated"
-        ## This is fixed in rpy2 3.0 but this is not up on conda yet 
-        ## You can remove this catch_warnings block when 3.0 is out.
-        ## iao 8/2019
-        with warnings.catch_warnings(record=True) as w:
-            make_meta_func = robjects.r(make_meta)
-            res = pandas2ri.ri2py(make_meta_func(J, S_m, speciation_rate, death_proportion, trait_rate_meta))
-            tree = res[0][0]
-            traits = pandas2ri.ri2py(res[1])
-            abunds = pandas2ri.ri2py(res[2])
+        rmake_meta = robjects.r(make_meta)
+        res = rmake_meta(J,
+                        S_m,
+                        float(speciation_rate),
+                        float(death_proportion),
+                        float(trait_rate_meta))
+        tree = res[0][0]
+        traits = pd.DataFrame(np.array(res[1]).T,
+                                columns=["name", "value"])
+        abunds = np.array(res[2])
 
         return tree, abunds, traits
 
@@ -339,7 +338,7 @@ class Metacommunity(object):
             self.metacommunity_tree = handle
 
             abundances = abunds
-            ids = traits["name"].values
+            ids = traits["name"].values.astype(str)
             trait_values = traits["value"].values
 
             self._hackersonly["filtering_optimum"] = np.random.normal(loc=np.mean(trait_values), scale=np.std(trait_values), size=1)[0]
