@@ -18,6 +18,7 @@ requirements:
     - ipyparallel >=6.0.2
     - scipy >=0.16
     - cython
+    - cloudpickle
     - ipython
     - numpy
     - pandas
@@ -29,6 +30,7 @@ requirements:
     - scikit-garden
   run:
     - python >=3.7
+    - cloudpickle
     - setuptools
     - ipython >=5.0.0
     - ipyparallel >=6.0.2
@@ -43,7 +45,6 @@ requirements:
     - msprime
     - mpmath
     - rpy2 >=3.0
-    - cloudpickle
     - matplotlib
     - dendropy
     - boruta_py
