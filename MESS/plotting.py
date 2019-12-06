@@ -68,7 +68,7 @@ model_colors = {"neutral":"#FF8800",\
 
 def _filter_sims(simfile,\
                     feature_set='',\
-                    nsims=1000,\
+                    nsims=0,\
                     normalize_hills=False,\
                     select='',\
                     tol='',\
@@ -124,6 +124,8 @@ def _filter_sims(simfile,\
 
     ## Prune the simulations based on selected features and number of
     ## simulations to retain.
+    if not nsims:
+        nsims = len(sim_df)
     labels = sim_df["community_assembly_model"][:nsims]
     sim_df = sim_df[feature_set][:nsims]
 
