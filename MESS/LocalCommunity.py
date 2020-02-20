@@ -249,6 +249,24 @@ class LocalCommunity(object):
             raise Exception("unrecognized community assembly model in _set_death_step: {}".format(assembly_model))
 
 
+    ## Update global distance matrix (and its exp version)
+    ## for the pairwise competition model
+    def _distance_matrix(self, init=False, ind=None, idx=0):
+        loc_inds = [x for x in self.local_community if x != None]
+        local_traits = list(map(self.region.get_trait, loc_inds))
+        local_traits = [[x] for x in local_traits]
+        es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
+        if init:
+            nb_ind = len(loc_inds)
+            ## Change form to use cdist
+            dist_matrix = distance.cdist(local_traits,local_traits,'sqeuclidean')
+            self._exp_distance_matrix = np.exp(-(dist_matrix)/es)
+        else:
+            new_dist = distance.cdist(local_traits,[[self.region.get_trait(ind)]])[0]
+            self._exp_distance_matrix[idx] = np.exp(-(new_dist/es))
+            self._exp_distance_matrix[:,idx] = self._exp_distance_matrix[idx].T
+
+
     ## Update global death probabilities for the filtering model
     def _filtering_update_death_probs(self, perturb=False):
         """
@@ -491,6 +509,11 @@ class LocalCommunity(object):
             print("      N individuals = {}".format(len(self.local_community)))
         LOGGER.debug("Done prepopulating - {}".format(self))
 
+        ## Initialize distance matrix if we are in pairwise competition
+        if self.region.paramsdict["community_assembly_model"] == "pairwise_competition":
+            self._distance_matrix(init=True)
+
+
 
     def _neutral_death_step(self):
         victim = random.choice(self.local_community)
@@ -528,33 +551,18 @@ class LocalCommunity(object):
             ## Get local traits for all individuals in the community (remove None first)        
             loc_inds = [x for x in self.local_community if x != None]
             nb_ind = len(loc_inds)
-            local_traits = list(map(self.region.get_trait, loc_inds))
-            ## Change form to use cdist
-            local_traits = [[x] for x in local_traits]
-
-            ## Check whether this means something
-            es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
-            dist_matrix = distance.cdist(local_traits,local_traits,'sqeuclidean')
-            ## ALREADY squared !
-
-            #death_probs = [np.sum(np.exp(-(np.delete(dist_matrix[i],i))/es)) for i in range(nb_ind)]
-            ## Using the delete doubles the time : can we always calculate with it ? Bias the probability -> remove 1=exp(0) after computation ? (but assumed computation is exact)
-
-          # second methdod  
-            death_probs = np.sum(np.exp(-(dist_matrix)/es),axis=0)-1
-            ## A little more than twice as fast as previous method (almost like juste removing the delete). Careful : assume computation is exact
+          
+            death_probs = np.sum(self._exp_distance_matrix,axis=0)-np.diag(self._exp_distance_matrix)
 
             ## Scale all fitness values to proportions
             death_probs = np.array(death_probs)/np.sum(death_probs)
+
             ## Get the victim conditioning on unequal death probability
             vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
             victim = loc_inds[vic_idx]
         self._finalize_death(victim)
-        # TOTAL STEP TIME : ~13.5s (first method, with delete)
-        #                   ~9s (first methdod, without delete (with -1))
-        #                   ~8.5s (second method)
-        # FOR "NORMAL" COMPETITION : 1.2s
-        # Big computational time problem !!
+        ## Update the distance matrix with the new individual
+        self._distance_matrix(ind=victim,idx=vic_idx)
 
 
     def _filtering_death_step(self):
