@@ -251,20 +251,30 @@ class LocalCommunity(object):
 
     ## Update global distance matrix (and its exp version)
     ## for the pairwise competition model
-    def _distance_matrix(self, init=False, ind=None, idx=0):
+    def _distance_matrix_init(self):
         loc_inds = [x for x in self.local_community if x != None]
         local_traits = list(map(self.region.get_trait, loc_inds))
-        local_traits = [[x] for x in local_traits]
+        local_traits = [[x] for x in local_traits] ## For use in cdist
         es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
-        if init:
-            nb_ind = len(loc_inds)
-            ## Change form to use cdist
-            dist_matrix = distance.cdist(local_traits,local_traits,'sqeuclidean')
-            self._exp_distance_matrix = np.exp(-(dist_matrix)/es)
-        else:
-            new_dist = distance.cdist(local_traits,[[self.region.get_trait(ind)]])[0]
-            self._exp_distance_matrix[idx] = np.exp(-(new_dist/es))
-            self._exp_distance_matrix[:,idx] = self._exp_distance_matrix[idx].T
+        
+        nb_ind = len(loc_inds)
+        dist_matrix = distance.cdist(local_traits,local_traits,'sqeuclidean')
+        self._exp_distance_matrix = np.exp(-(dist_matrix)/es)
+        
+    def _distance_matrix_remove(self,idx):
+        self._exp_distance_matrix[idx:-1] = self._exp_distance_matrix[idx+1:]
+        self._exp_distance_matrix[:,idx:-1] = self._exp_distance_matrix[:,idx+1:]
+
+    def _distance_matrix_add(self):
+        loc_inds = [x for x in self.local_community if x != None]
+        local_traits = list(map(self.region.get_trait, loc_inds))
+        local_traits = [[x] for x in local_traits] ## For use in cdist
+        es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
+        new_dist = distance.cdist(local_traits,[local_traits[-1]])[0]
+        self._exp_distance_matrix[-1] = np.exp(-(new_dist/es))
+        self._exp_distance_matrix[:,-1] = self._exp_distance_matrix[-1].T
+        ## The new individual has been appended at the end of the local community
+
 
 
     ## Update global death probabilities for the filtering model
@@ -511,7 +521,7 @@ class LocalCommunity(object):
 
         ## Initialize distance matrix if we are in pairwise competition
         if self.region.paramsdict["community_assembly_model"] == "pairwise_competition":
-            self._distance_matrix(init=True)
+            self._distance_matrix_init()
 
 
 
@@ -562,7 +572,7 @@ class LocalCommunity(object):
             victim = loc_inds[vic_idx]
         self._finalize_death(victim)
         ## Update the distance matrix with the new individual
-        self._distance_matrix(ind=victim,idx=vic_idx)
+        self._distance_matrix_remove(idx=vic_idx)
 
 
     def _filtering_death_step(self):
@@ -715,6 +725,13 @@ class LocalCommunity(object):
                     LOGGER.error("Exception in step() - {}".format(inst))
                     raise inst
 
+            ## WARNING : Pairwise competition assumes that "mig_clust_size" is one !
+
+            if self.region.paramsdict["community_assembly_model"] == "pairwise_competition":
+                if self._hackersonly["mig_clust_size"] != 1:
+                    raise MESSError("Pairwise competition only handles migration cluster of size 1")
+                self._distance_matrix_add()
+
             ##############################################
             ## Speciation process
             ##############################################
@@ -731,7 +748,7 @@ class LocalCommunity(object):
         ## Perturb environmental optimum for filtering
         self._filtering_update_death_probs(perturb=True)
         t1=time()
-        print("timestep: ",t1-t0)
+        #print("timestep: ",t1-t0)
 
 
     def get_abundances(self, octaves=False, raw_abunds=False):
