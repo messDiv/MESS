@@ -528,9 +528,9 @@ class LocalCommunity(object):
             self._distance_matrix_init()
 
 
-
     def _neutral_death_step(self):
         victim = random.choice(self.local_community)
+        vic_idx = self.local_community.index(victim)
         self._finalize_death(victim,vic_idx)
 
 
