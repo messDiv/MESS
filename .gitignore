@@ -15,3 +15,5 @@ params*
 *_MESS/
 docs/_build
 jupyter-notebooks/empirical/*/*.csv
+MESS_environment.yaml
+test/
