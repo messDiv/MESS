@@ -254,7 +254,6 @@ class LocalCommunity(object):
     def _distance_matrix_init(self):
         loc_inds = [x for x in self.local_community if x != None]
         local_traits = list(map(self.region.get_trait, loc_inds))
-        print(len(local_traits))
         local_traits = [[x] for x in local_traits] ## For use in cdist
         es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
         
@@ -276,10 +275,10 @@ class LocalCommunity(object):
         local_traits = [[x] for x in local_traits] ## For use in cdist
         es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
         new_dist = np.reshape(distance.cdist(local_traits,[local_traits[-1]]),(nb_ind))
-        
         self._exp_distance_matrix[-1] = np.exp(-(new_dist/es))
         self._exp_distance_matrix[:,-1] = self._exp_distance_matrix[-1].T
         ## The new individual has been appended at the end of the local community
+
 
 
     ## Update global death probabilities for the filtering model
@@ -532,7 +531,7 @@ class LocalCommunity(object):
 
     def _neutral_death_step(self):
         victim = random.choice(self.local_community)
-        self._finalize_death(victim)
+        self._finalize_death(victim,vic_idx)
 
 
     def _competition_death_step(self):
@@ -555,7 +554,7 @@ class LocalCommunity(object):
             vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
             victim = loc_inds[vic_idx]
 
-        self._finalize_death(victim)
+        self._finalize_death(victim,vic_idx)
 
 
     def _pairwise_competition_death_step(self):
@@ -575,7 +574,8 @@ class LocalCommunity(object):
             ## Get the victim conditioning on unequal death probability
             vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
             victim = loc_inds[vic_idx]
-        self._finalize_death(victim)
+        self._finalize_death(victim, vic_idx)
+
         ## Update the distance matrix with the new individual
         self._distance_matrix_remove(idx=vic_idx)
 
@@ -594,11 +594,10 @@ class LocalCommunity(object):
             ## Get the victim conditioning on unequal death probability
             vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
             victim = loc_inds[vic_idx]
+        self._finalize_death(victim, vic_idx)
 
-        self._finalize_death(victim)
 
-
-    def _finalize_death(self, victim):
+    def _finalize_death(self, victim, vic_idx):
         ## More old invasiveness code. Should probably just get rid of it eventually.
         ## If no invasive has invaded then just do the normal sampling
         ##if self.invasive == -1:
@@ -612,9 +611,9 @@ class LocalCommunity(object):
         ##        victim = random.choice(self.local_community)
         try:
             ## Clean up local community list and founder flag list
-            idx = self.local_community.index(victim)
-            self.local_community.pop(idx)
-            self.founder_flags.pop(idx)
+            ## idx = self.local_community.index(victim)
+            self.local_community.pop(vic_idx)
+            self.founder_flags.pop(vic_idx)
 
             ## If the species of the victim went locally extinct then clean up local_info
             self._test_local_extinction(victim)
