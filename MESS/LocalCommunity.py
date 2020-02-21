@@ -3,7 +3,7 @@ from __future__ import print_function
 from scipy.stats import logser
 from collections import OrderedDict
 from scipy.spatial import distance
-from time import time
+from time import time, sleep
 import collections
 import pandas as pd
 import numpy as np
@@ -254,6 +254,7 @@ class LocalCommunity(object):
     def _distance_matrix_init(self):
         loc_inds = [x for x in self.local_community if x != None]
         local_traits = list(map(self.region.get_trait, loc_inds))
+        print(len(local_traits))
         local_traits = [[x] for x in local_traits] ## For use in cdist
         es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
         
@@ -261,20 +262,24 @@ class LocalCommunity(object):
         dist_matrix = distance.cdist(local_traits,local_traits,'sqeuclidean')
         self._exp_distance_matrix = np.exp(-(dist_matrix)/es)
         
+        
+        
     def _distance_matrix_remove(self,idx):
         self._exp_distance_matrix[idx:-1] = self._exp_distance_matrix[idx+1:]
         self._exp_distance_matrix[:,idx:-1] = self._exp_distance_matrix[:,idx+1:]
 
+
     def _distance_matrix_add(self):
         loc_inds = [x for x in self.local_community if x != None]
+        nb_ind = len(loc_inds)
         local_traits = list(map(self.region.get_trait, loc_inds))
         local_traits = [[x] for x in local_traits] ## For use in cdist
         es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
-        new_dist = distance.cdist(local_traits,[local_traits[-1]])[0]
+        new_dist = np.reshape(distance.cdist(local_traits,[local_traits[-1]]),(nb_ind))
+        
         self._exp_distance_matrix[-1] = np.exp(-(new_dist/es))
         self._exp_distance_matrix[:,-1] = self._exp_distance_matrix[-1].T
         ## The new individual has been appended at the end of the local community
-
 
 
     ## Update global death probabilities for the filtering model
