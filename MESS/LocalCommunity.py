@@ -402,10 +402,16 @@ class LocalCommunity(object):
         :param bool full: Dump a ton of stuff to the outdir. Normally only really
             used for fancy plotting.
         """
+        LOGGER.debug("Entering _log()")
         if full:
             self.lambda_through_time[self.current_time] = self._lambda()
             self._simulate_seqs()
             self.species_through_time[self.current_time] = self.species
+
+            # Write out and blank the extinction times list
+            with open(os.path.join(self._hackersonly["outdir"], "ext_times.txt"), 'a') as outfile:
+                outfile.write("{}:{}\n".format(self._lambda(), " ".join(map(str, self.extinction_times))))
+                self.extinction_times = []
 
         ## Every once in a while test to be sure our community is the same size
         ## as we think it should be.
