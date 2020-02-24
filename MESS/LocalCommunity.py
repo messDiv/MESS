@@ -2,6 +2,8 @@ from __future__ import print_function
 
 from scipy.stats import logser
 from collections import OrderedDict
+from scipy.spatial import distance
+from time import time, sleep
 import collections
 import pandas as pd
 import numpy as np
@@ -75,7 +77,7 @@ class LocalCommunity(object):
         ##      but by default we calculate from the trait rate meta divided by global
         ##      birth rate + death rate.
         ##  * mode: Whether to prepopulate the local community as a 'volcanic' or
-        ##      'landbridge' style origin.
+        ##      'continental' style origin.
         self._hackersonly = dict([
                         ("allow_empty", False),
                         ("outdir", []),
@@ -241,8 +243,43 @@ class LocalCommunity(object):
         elif assembly_model == "filtering":
             self.death_step = self._filtering_death_step
             self._filtering_update_death_probs()
+        elif assembly_model == "pairwise_competition":
+            self.death_step = self._pairwise_competition_death_step
         else:
             raise Exception("unrecognized community assembly model in _set_death_step: {}".format(assembly_model))
+
+
+    ## Update global distance matrix (and its exp version)
+    ## for the pairwise competition model
+    def _distance_matrix_init(self):
+        loc_inds = [x for x in self.local_community if x != None]
+        local_traits = list(map(self.region.get_trait, loc_inds))
+        print(len(local_traits))
+        local_traits = [[x] for x in local_traits] ## For use in cdist
+        es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
+        
+        nb_ind = len(loc_inds)
+        dist_matrix = distance.cdist(local_traits,local_traits,'sqeuclidean')
+        self._exp_distance_matrix = np.exp(-(dist_matrix)/es)
+        
+        
+        
+    def _distance_matrix_remove(self,idx):
+        self._exp_distance_matrix[idx:-1] = self._exp_distance_matrix[idx+1:]
+        self._exp_distance_matrix[:,idx:-1] = self._exp_distance_matrix[:,idx+1:]
+
+
+    def _distance_matrix_add(self):
+        loc_inds = [x for x in self.local_community if x != None]
+        nb_ind = len(loc_inds)
+        local_traits = list(map(self.region.get_trait, loc_inds))
+        local_traits = [[x] for x in local_traits] ## For use in cdist
+        es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
+        new_dist = np.reshape(distance.cdist(local_traits,[local_traits[-1]]),(nb_ind))
+        
+        self._exp_distance_matrix[-1] = np.exp(-(new_dist/es))
+        self._exp_distance_matrix[:,-1] = self._exp_distance_matrix[-1].T
+        ## The new individual has been appended at the end of the local community
 
 
     ## Update global death probabilities for the filtering model
@@ -440,13 +477,13 @@ class LocalCommunity(object):
         ## Clean up local_community if it already exists
         self.local_community = []
 
-        if self._hackersonly["mode"] == "landbridge":
+        if self._hackersonly["mode"] == "continental":
             ## prepopulate the island w/ a random sample from the metacommunity
             ## TODO: The underscore here is ignoring trait values
             self.local_community, _ = self.region._get_migrants(self.paramsdict["J"])
 
         elif self._hackersonly["mode"]  == "volcanic":
-            ## If not landbridge then doing volcanic, so sample just the most abundant
+            ## If not continental then doing volcanic, so sample just the most abundant
             ## from the metacommunity
             ## TODO: The _ is a standin for trait values, have to do something with them
 
@@ -487,6 +524,11 @@ class LocalCommunity(object):
             print("      N individuals = {}".format(len(self.local_community)))
         LOGGER.debug("Done prepopulating - {}".format(self))
 
+        ## Initialize distance matrix if we are in pairwise competition
+        if self.region.paramsdict["community_assembly_model"] == "pairwise_competition":
+            self._distance_matrix_init()
+
+
 
     def _neutral_death_step(self):
         victim = random.choice(self.local_community)
@@ -514,6 +556,28 @@ class LocalCommunity(object):
             victim = loc_inds[vic_idx]
 
         self._finalize_death(victim)
+
+
+    def _pairwise_competition_death_step(self):
+        victim = random.choice(self.local_community)
+        if victim == None:
+            pass
+        else:
+            ## Get local traits for all individuals in the community (remove None first)        
+            loc_inds = [x for x in self.local_community if x != None]
+            nb_ind = len(loc_inds)
+          
+            death_probs = np.sum(self._exp_distance_matrix,axis=0)-np.diag(self._exp_distance_matrix)
+
+            ## Scale all fitness values to proportions
+            death_probs = np.array(death_probs)/np.sum(death_probs)
+
+            ## Get the victim conditioning on unequal death probability
+            vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
+            victim = loc_inds[vic_idx]
+        self._finalize_death(victim)
+        ## Update the distance matrix with the new individual
+        self._distance_matrix_remove(idx=vic_idx)
 
 
     def _filtering_death_step(self):
@@ -617,6 +681,7 @@ class LocalCommunity(object):
 
 
     def step(self, nsteps=1):
+        t0 = time()
         """
         Run one or more generations of birth/death/colonization timesteps. A
         generation is J/2 timesteps (convert from Moran to WF generations).
@@ -665,6 +730,13 @@ class LocalCommunity(object):
                     LOGGER.error("Exception in step() - {}".format(inst))
                     raise inst
 
+            ## WARNING : Pairwise competition assumes that "mig_clust_size" is one !
+
+            if self.region.paramsdict["community_assembly_model"] == "pairwise_competition":
+                if self._hackersonly["mig_clust_size"] != 1:
+                    raise MESSError("Pairwise competition only handles migration cluster of size 1")
+                self._distance_matrix_add()
+
             ##############################################
             ## Speciation process
             ##############################################
@@ -680,6 +752,8 @@ class LocalCommunity(object):
 
         ## Perturb environmental optimum for filtering
         self._filtering_update_death_probs(perturb=True)
+        t1=time()
+        #print("timestep: ",t1-t0)
 
 
     def get_abundances(self, octaves=False, raw_abunds=False):
@@ -1038,7 +1112,7 @@ LOCAL_PARAMS = {
 ## Error messages
 #############################
 BAD_MODE_PARAMETER = """
-    Unrecognized local community mode. Options are 'landbridge' or'volcanic'.
+    Unrecognized local community mode. Options are 'continental' or'volcanic'.
     You put {}.
 """
 
@@ -1051,7 +1125,7 @@ if __name__ == "__main__":
     print(loc.local_info)
     ## Allow for either having or not having empty demes
     assert(len(collections.Counter(loc.local_community)) <= 2)
-    loc._hackersonly["mode"] = "landbridge"
+    loc._hackersonly["mode"] = "continental"
     loc._prepopulate()
     assert(len(collections.Counter(loc.local_community)) > 3)
     print(loc.get_abundances())
