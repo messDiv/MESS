@@ -249,8 +249,7 @@ class LocalCommunity(object):
             raise Exception("unrecognized community assembly model in _set_death_step: {}".format(assembly_model))
 
 
-    ## Update global distance matrix (and its exp version)
-    ## for the pairwise competition model
+    ## For the pairwise compeition model, a global matrix is used which summarize the competition interactions for all individuals
     def _distance_matrix_init(self):
         loc_inds = [x for x in self.local_community if x != None]
         local_traits = list(map(self.region.get_trait, loc_inds))
@@ -266,6 +265,7 @@ class LocalCommunity(object):
     def _distance_matrix_remove(self,idx):
         self._exp_distance_matrix[idx:-1] = self._exp_distance_matrix[idx+1:]
         self._exp_distance_matrix[:,idx:-1] = self._exp_distance_matrix[:,idx+1:]
+        ## Remove the dead individual from the matrix : leave place at the end of the matrix since the new individual will be inserted there.
 
 
     def _distance_matrix_add(self):
@@ -277,7 +277,8 @@ class LocalCommunity(object):
         new_dist = np.reshape(distance.cdist(local_traits,[local_traits[-1]]),(nb_ind))
         self._exp_distance_matrix[-1] = np.exp(-(new_dist/es))
         self._exp_distance_matrix[:,-1] = self._exp_distance_matrix[-1].T
-        ## The new individual has been appended at the end of the local community
+        ## The new individual has been appended at the end of the local community:
+        ## Its competition term has to be appended at the end of the matrix
 
 
 
@@ -567,6 +568,7 @@ class LocalCommunity(object):
             nb_ind = len(loc_inds)
           
             death_probs = np.sum(self._exp_distance_matrix,axis=0)-np.diag(self._exp_distance_matrix)
+            ## Sum all the interaction, expect ones with self
 
             ## Scale all fitness values to proportions
             death_probs = np.array(death_probs)/np.sum(death_probs)
@@ -576,7 +578,7 @@ class LocalCommunity(object):
             victim = loc_inds[vic_idx]
         self._finalize_death(victim, vic_idx)
 
-        ## Update the distance matrix with the new individual
+        ## Remove the dead individual from the distance matrix
         self._distance_matrix_remove(idx=vic_idx)
 
 
