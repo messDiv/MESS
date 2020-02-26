@@ -665,6 +665,7 @@ class LocalCommunity(object):
 
                 ## Grab the new colonizing species
                 new_species = self._migrate_step()
+                chx = new_species # for speciation
                 dead = self.last_dead_ind
                 ## The invasion code "works" in that it worked last time I tried it, but it's
                 ## not doing anything right now except slowing down the process. I don't want to dl
@@ -724,7 +725,7 @@ class LocalCommunity(object):
             self.current_time += 1
 
         ## Perturb environmental optimum for filtering
-        self._filtering_update_death_probs(perturb=True)
+        self._filtering_update_death_probs()
     
 
 
@@ -764,8 +765,9 @@ class LocalCommunity(object):
         """
         LOGGER.debug("Initiate speciation process - {}".format(chx))
 
-        #idx = self.local_community.index(chx)
-        idx = self.last_dead_ind
+        ## Take the first individual of chosen species
+        idx = np.argwhere(self.local_community==chx)[0][0]
+        ## The index could be directly passed to that function ?
         ## Construct the new species name.
         ## We want the new name to be globally unique but we don't
         ## want to waste a bunch of time keeping track of it in the
@@ -786,15 +788,11 @@ class LocalCommunity(object):
 
         self.region._record_local_speciation(sname, trt)
 
-        ## If filtering then update the death probabilities to record
-        ## death probability of the new species
-        if self.region.paramsdict["community_assembly_model"] == "filtering":
-            self._filtering_update_death_probs()
-
         if self.region.paramsdict["speciation_model"] == "point_mutation":
-
             ## Replace the individual in the local_community with the new species
             self.local_community[idx] = sname
+            ## Record new trait value
+            self.local_traits[idx] = trt
 
             ## If the new individual removes the last member of the ancestor
             ## species, then you need to do some housekeeping.
@@ -812,14 +810,10 @@ class LocalCommunity(object):
 
         elif self.region.paramsdict["speciation_model"] == "random_fission":
             ## TODO: This doesn't handle the founder_flag housekeeping AT ALL!
-## FLAG TOARRAY : new version of local_community does not support the random_fission option - should be entirely re-written
-            ## Remove all individuals of the target species from the local community.
-            ## We'll have to add some back as the original species, but doing it
-            ## this way simplifies the housekeeping.
-            self.local_community = [sp for sp in self.local_community if sp != chx]
+
             ## Get abundance of the target species so we can perform
             ## the random fission.
-            sp_abund = self.paramsdict["J"] - len(self.local_community)
+            sp_abund = np.count_nonzero(self.local_community == chx)
 
             ## Get the number of individuals to carve off for the new species.
             ## If sp_abund == 1, or if new_abund == sp_abund then this is
@@ -829,11 +823,10 @@ class LocalCommunity(object):
             ## so we need to allow for the case of new_abund == sp_abund.
             new_abund = np.random.randint(1, sp_abund+1)
 
-            ## Push the appropriate number of individuals of the original species
-            ## back into the local community. Don't bother testing for sp_abund > 0
-            ## here since the extend will happily ignore the empty list.
-            sp_abund = sp_abund - new_abund
-            self.local_community.extend([chx] * sp_abund)
+            self.local_community[np.where(self.local_community == chx)[0][:new_abund]] = sname
+
+            ## Also update the traits values
+            self.local_traits[np.where(self.local_community == chx)[0][:new_abund]] = trt
 
             ## Test local extinction after parent species is pushed back to
             ## local community. If no parent species remain at this time then
@@ -841,9 +834,6 @@ class LocalCommunity(object):
             ## new species.
             ancestor = self._test_local_extinction(chx)
 
-            ## Push the new appropriate number of new individuals of the new
-            ## species into the local community
-            self.local_community.extend([sname] * new_abund)
 
             ## Same as for point mutation, the new species inherits the abndance
             ## history of the parent, and also _test_local_extinction() handles
