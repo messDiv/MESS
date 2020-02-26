@@ -666,8 +666,8 @@ class Region(object):
         else:
             done_func = lambda: step >= nsteps
 
+        t0 = time.time()
         while not done_func():
-            t0 = time.time()
             ## This is not ideal functionality, but it at least gives you a sense of progress
             ## Especially don't do this on ipyparallel engines, because it floods the pipe.
             if not quiet:
@@ -678,8 +678,14 @@ class Region(object):
             if not step % self._hackersonly["recording_period"]:
                for island in self.islands.values():
                     island._log(full=log_full)
-            t1 = time.time()
-            print("timestep Region",t1-t0)
+        t1 = time.time()
+        print("duration:",t1-t0)
+        filename = 'speed_test_'+self.paramsdict["community_assembly_model"]+'.txt'
+        file = open(filename,'a') 
+        file.write(str(t1-t0)+'\n')
+        file.close()
+
+
         ## TODO: Combine stats across local communities if more than one
         for name, island in self.islands.items():
             statsdf = island.get_stats()
@@ -733,10 +739,9 @@ class Region(object):
             trt = self.metacommunity.trait_dict[loc_id]
             #trt = self.metacommunity.community['trait_values'][self.metacommunity.community["ids"] == loc_id][0]
         except Exception as inst:
-            return np.nan
-            #raise MESSError("Species has no trait value: {}".format(loc_id))
+            raise MESSError("Species has no trait value: {}".format(loc_id))
         return trt
-## FLAG TOARRAY
+
 
     def get_trait_mean(self, local_com):
         try:

@@ -474,12 +474,12 @@ class Metacommunity(object):
 
         :return: A tuple of lists of species IDs (str) and trait values (float).
         """
-        migrants = []
-        trait_vals = []
+        migrants = np.array((nmigrants), dtype = object)
+        trait_vals = np.array((nmigrants), dtype = float)
         for i in range(nmigrants):
             mig, trait = self._get_migrant()
-            migrants.append(mig)
-            trait_vals.append(trait)
+            migrants[i] = mig
+            trait_vals[i] = trait
         return migrants, trait_vals
 
 
