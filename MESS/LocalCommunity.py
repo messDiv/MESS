@@ -87,13 +87,6 @@ class LocalCommunity(object):
                         ("mode", "volcanic"),
         ])
 
-        ## list for storing the state of our local community. The list is much faster
-        ## than a numpy array, plus lists are mutable, which is convenient.
-        ## I have tried making the local community a numpy array twice, and both times
-        ## it turned out to suck both times.
-        #self.local_community = []
-        #self.founder_flags = []
-
         ## pandas Data Frame for storing info about each species in the local community. This is for
         ## info that would be annoying or impossible to keep track of "per individual".
         ## The column headers are species ids, and the dataframe is always of length ==
@@ -245,7 +238,6 @@ class LocalCommunity(object):
             self.death_step = self._competition_death_step
         elif assembly_model == "filtering":
             self.death_step = self._filtering_death_step
-            #self._filtering_init()
         elif assembly_model == "pairwise_competition":
             self.death_step = self._pairwise_competition_death_step
         else:
@@ -254,69 +246,38 @@ class LocalCommunity(object):
 
     ## For the pairwise compeition model, a global matrix is used which summarize the competition interactions for all individuals
     def _distance_matrix_init(self):
-        #self.local_traits = np.array(list(map(self.region.get_trait, self.local_community)))
-        #loc_inds = [x for x in self.local_community if x != None]
-        #local_traits = list(map(self.region.get_trait, loc_inds))
-        #local_traits = [[x] for x in self.local_traits] ## For use in cdist
+        ## Reshape local_traits for the cdist function
         local_traits = self.local_traits.reshape(self.paramsdict["J"],1)
         es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
-        #nb_ind = len(loc_inds)
+
         dist_matrix = distance.cdist(local_traits,local_traits,'sqeuclidean')
         self._exp_distance_matrix = np.exp(-(dist_matrix)/es)
-        
-        
-        
-    # def _distance_matrix_remove(self,idx):
-    #     self._exp_distance_matrix[idx:-1] = self._exp_distance_matrix[idx+1:]
-    #     self._exp_distance_matrix[:,idx:-1] = self._exp_distance_matrix[:,idx+1:]
-    #     ## Remove the dead individual from the matrix : leave place at the end of the matrix since the new individual will be inserted there.
 
 
+    ## Update the distance matrix using the position of the last dead individual
     def _distance_matrix_add(self):
-        # loc_inds = [x for x in self.local_community if x != None]
         nb_ind = self.paramsdict["J"]
         idx = self.last_dead_ind
-        # local_traits = list(map(self.region.get_trait, loc_inds))
-        #local_traits = [[x] for x in self.local_traits] ## For use in cdist
         self.local_traits[idx] = self.region.get_trait(self.local_community[idx])
+        ## Reshape local_traits for the cdist function
         local_traits = self.local_traits.reshape(nb_ind,1)
         es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
+
         new_dist = np.reshape(distance.cdist(local_traits,[local_traits[idx]]),(nb_ind))
         self._exp_distance_matrix[idx] = np.exp(-(new_dist/es))
         self._exp_distance_matrix[:,idx] = self._exp_distance_matrix[idx].T
-        ## The new individual has been appended at the end of the local community:
-        ## Its competition term has to be appended at the end of the matrix
-
 
 
     ## Update global death probabilities for the filtering model
-    def _filtering_update_death_probs(self, perturb=False):
+    def _filtering_update_death_probs(self):
         """
-        Update environmental filtering death probabilities. In a model of zero
-        speciation these only ever need to get calculated once. With speciation
-        they need to get recalculated upon each speciation event. Also,
-        we add a subtle perturbation per generation to simulate shifting
-        environmental conditions.
-
-        :param bool perturb: Whether to perturb the filtering optimum by +/- a
-            small random value.
+        Only used to perturb the environment by +/- a small random value
         """
         fo = self.region.metacommunity._hackersonly["filtering_optimum"]
-        #es = self.region.metacommunity.paramsdict["ecological_strength"]
-        if perturb:
-            noise = np.random.normal(1, 0.05)
-            fo = fo * noise
-#            print("Upstate fo", fo, noise)
-            self.region.metacommunity._hackersonly["filtering_optimum"] = fo
+        noise = np.random.normal(1, 0.05)
+        fo = fo * noise
+        self.region.metacommunity._hackersonly["filtering_optimum"] = fo
         
-
-#         def dprob(trt):
-#             dp = 1 - (np.exp(-((trt - fo) ** 2)/es))
-# ## Set a minimum death prob?
-# #            if dp < 0.75:
-# #                dp = 0.75
-#             return dp
-#         self._filt_death_probs = {sp:dprob(trt) for sp, trt in self.region.metacommunity._get_species_traits().items()}
 
     ## Getting params header and parameter values drops the local
     ## community name (param 0), and adds a bunch of pseudo-parameters
@@ -488,13 +449,11 @@ class LocalCommunity(object):
 
         if self._hackersonly["mode"] == "landbridge":
             ## prepopulate the island w/ a random sample from the metacommunity
-            ## TODO: The underscore here is ignoring trait values
             self.local_community, self.local_traits = self.region._get_migrants(self.paramsdict["J"])
 
         elif self._hackersonly["mode"]  == "volcanic":
             ## If not landbridge then doing volcanic, so sample just the most abundant
             ## from the metacommunity
-            ## TODO: The _ is a standin for trait values, have to do something with them
 
             try:
                 new_species, new_trait = self.region._get_most_abundant()
@@ -547,8 +506,6 @@ class LocalCommunity(object):
             pass
         vic_idx = random.randint(0,self.paramsdict["J"]-1)
         victim = self.local_community[vic_idx]
-        # victim = random.choice(self.local_community)
-        # vic_idx = self.local_community.index(victim)
         self._finalize_death(victim,vic_idx)
 
 
@@ -558,9 +515,7 @@ class LocalCommunity(object):
             pass
         else:
             mean_local_trait = self.region.get_trait_mean(self.local_community)
-            ## Get local traits for all individuals in the community (remove None first)
-            #loc_inds = [x for x in self.local_community if x != None]
-            #local_traits = list(map(self.region.get_trait, loc_inds))
+
             ## Scale ecological strength for competition to be in the same units
             ## as for filtering
             es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
@@ -570,7 +525,6 @@ class LocalCommunity(object):
             death_probs = np.nan_to_num(death_probs)/np.sum(death_probs)
             ## Get the victim conditioning on unequal death probability
             vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
-            #vic_idx = np.random.choice(len(loc_inds),death_probs)
             victim = self.local_community[vic_idx]
         self._finalize_death(victim,vic_idx)
 
@@ -580,16 +534,12 @@ class LocalCommunity(object):
         if victim == None:
             pass
         else:
-            ## Get local traits for all individuals in the community (remove None first)        
-            #loc_inds = [x for x in self.local_community if x != None]
-            #nb_ind = len(loc_inds)
+            ## Sum all the interaction, exept ones with self
             death_probs = np.nan_to_num(np.sum(self._exp_distance_matrix,axis=0))-np.nan_to_num(np.diag(self._exp_distance_matrix))
-            ## Sum all the interaction, expect ones with self
             ## Scale all fitness values to proportions
             death_probs = np.array(death_probs)/np.sum(death_probs)
             ## Get the victim conditioning on unequal death probability
             vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
-            #vic_idx = np.random.choice(len(loc_inds),death_probs)
             victim = self.local_community[vic_idx]
         self._finalize_death(victim, vic_idx)
 
@@ -602,19 +552,14 @@ class LocalCommunity(object):
         if victim == None:
             pass
         else:
-            # ## Get local traits for all individuals in the community (remove None first)
-            # loc_inds = [x for x in self.local_community if x != None]
-            # ## Fetch pre-calculated death probs for each individual
-            # death_probs = [self._filt_death_probs[x] for x in loc_inds]
-
             fo = self.region.metacommunity._hackersonly["filtering_optimum"]
             es = self.region.metacommunity.paramsdict["ecological_strength"]
+            ## Calculate probas based on traits values
             death_probs = np.nan_to_num(1 - np.exp(-((self.local_traits - fo)**2)/es))
             ## Scale all fitness values to proportions
             death_probs = death_probs/np.sum(death_probs)
             ## Get the victim conditioning on unequal death probability
             vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
-            #vic_idx = random.choice(len(loc_inds),death_probs)
             victim = self.local_community[vic_idx]
         self._finalize_death(victim, vic_idx)
 
@@ -633,14 +578,11 @@ class LocalCommunity(object):
         ##        victim = random.choice(self.local_community)
         try:
             ## Clean up local community list and founder flag list
-            ## idx = self.local_community.index(victim)
-            #self.local_community.pop(vic_idx)
             self.local_community[vic_idx] = None
-            #self.founder_flags.pop(vic_idx)
             self.founder_flags[vic_idx] = None
-#FLAG TOARRAY : code to clean here
             ## If the species of the victim went locally extinct then clean up local_info
             self._test_local_extinction(victim)
+            ## Record the new empty space
             self.last_dead_ind = vic_idx
 
         except Exception as inst:
@@ -648,7 +590,6 @@ class LocalCommunity(object):
 
 
     def _test_local_extinction(self, victim):
-        #print("_test_local_extinction")
         ## Record local extinction events
         ancestor = victim
         ## Don't clean up after emtpy niche space
@@ -682,7 +623,6 @@ class LocalCommunity(object):
             if victim[0] == self.invasive:
                 LOGGER.info("invasive went extinct")
                 self.invasive = -1
-            #print("_test_local_extinction ENDED")
         return ancestor
 
 
@@ -741,7 +681,6 @@ class LocalCommunity(object):
                 #self.local_community.extend([new_species] * self._hackersonly["mig_clust_size"])
                 ## FLAG TOARRAY : Works for multiple individual if an array is in last_dead_ind --> Death_step function has to be changed for that to work !
                 self.local_community[dead] = new_species
-                #self.founder_flags.extend([False] * self._hackersonly["mig_clust_size"])
                 self.founder_flags[dead] = False
                 self.colonizations += 1
                 self.local_traits[dead] = self.region.get_trait(new_species)
@@ -753,13 +692,13 @@ class LocalCommunity(object):
                     ## Don't allow empty space to reproduce
                     chx = random.choice([x for x in self.local_community if x != None])
                     dead = self.last_dead_ind
-                    #self.local_community.append(chx)
+                    ## Record new individual's species
                     self.local_community[dead] = chx
-                    #idx = self.local_community.index(chx)
+                    ## Take the index of the parent
                     idx = np.argwhere(self.local_community==chx)[0][0]
+                    ## Copy trait and founder flag from parent
                     self.founder_flags[dead] = self.founder_flags[idx]
                     self.local_traits[dead] = self.local_traits[idx]
-                    #self.founder_flags.append(self.founder_flags[idx])
                 except Exception as inst:
                     LOGGER.error("Exception in step() - {}".format(inst))
                     raise inst
