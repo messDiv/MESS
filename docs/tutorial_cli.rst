@@ -18,7 +18,6 @@ vary.
 -  `Equilibrium theory of island biogeography and ecological neutral theory`
 -  `Overview of MESS simulation and analysis workflow`
 -  `Installation <installation>`_
--  `TL;DR Run your first simulations <#TLDR-Simulations>`__
 -  `Getting started with the MESS CLI <#MESS-CLI-intro>`__
 -  `Create and edit a new params file <#Create-Params-File>`__
 -  `Run simulations using your edited params file <#Simulate>`__
@@ -57,6 +56,21 @@ and want to skip right to the good stuff, well here you go.
    ## Do 10 simulations using the default settings and 4 cores
    MESS -p params-new-sims.txt -s 10 -c 4
 
+   -------------------------------------------------------------
+    MESS [v.0.1.1]
+    Massive Eco-Evolutionary Synthesis Simulations
+   -------------------------------------------------------------
+    Project directory exists. Additional simulations will be appended.
+
+      <MESS.Region new-sims: ['island1']>
+    establishing parallel connection:
+    host compute node: [4 cores] on goatzilla
+      Generating 10 simulation(s).
+    [####################] 100%  Performing Simulations    | 0:00:28 | 
+    [####################] 100% 
+      Finished 10 simulations
+
+**BAM!**
 
 Equilibrium theory of island biogeography and ecological neutral theory
 -----------------------------------------------------------------------
@@ -66,6 +80,12 @@ provied `background and a brief introduction to the MESS model:
 <https://docs.google.com/presentation/d/1dbQOZ17RliFyRBzyLdDDn3SWCmaWwXcVD2h1muyixv8/edit?usp=sharing>`__
 
 .. figure:: images/Forward_Time_Neutral_Assembly.png
+
+    A classic individual based birth/death/colonization model of community
+    assembly. For each timestep one individual is randomly sampled to 'die'
+    and is replaced with some small probability by a colonizer from the
+    regional pool, and otherwise is replaced by the offspring of a random
+    individual sampled from the local community.
 
 Overview of MESS simulation and analysis workflow
 -------------------------------------------------
