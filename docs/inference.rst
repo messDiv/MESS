@@ -3,6 +3,101 @@
 MESS Machine Learning (ML) Inference
 ====================================
 
+Once you have performed a sufficient number of simulations you can now use
+these simulations to perform community assembly model selection and
+parameter estimation for observed community data. In this short tutorial
+we will demonstrate the fundamentals of how this works.
+
+The ``MESS.inference`` architecture is based on the powerful and
+extensive `scikit-learn <https://scikit-learn.org/>`_ python machine
+learning library. Another really amazing resource I highly recommend is
+the `Python Data Science Handbook
+<https://jakevdp.github.io/PythonDataScienceHandbook/>`_.
+
+-  `Download and examine example empirical data`
+-  `Fetch pre-baked simulations`
+
+Download and examine example empirical data
+-------------------------------------------
+We will be using as an example dataset of community-scale COI sequences (~500bp)
+and densely sampled abundances for the spider community on the island of La
+Reunion, an overseas department of France, which is the largest of the Mascarene
+islands, located in the Indian Ocean approximately 1000 km from Madagascar. The
+data we will be using was collected and published by Emerson et al (2017). For
+this exercise, we will just grab and use the formatted data from the MESS
+github repository. For further instruction on properly formatting and converting
+raw data into MESS-ready format see the `MESS raw data handling page
+<MESS_process_raw_data.html>`_.
+
+In a new cell in your notebook you can download the Reunion spider data
+like this:
+
+.. code:: bash
+
+   !wget https://raw.githubusercontent.com/messDiv/MESS/master/empirical_data/Reunion_spiders/spider.dat
+
+..
+
+   **NB:** The ``!`` prior to the command here indicates that the
+   jupyter notebook should interpret this as a bash command executed at
+   the command line. This is a handy way of executing bash commands from
+   within the notebook environment, rather than returning to a terminal
+   window on the cluster. It's just a nice shortcut.
+
+Now make a new cell and import MESS and pandas (which is a python
+structured data library providing the DataFrame class), and read in the
+data you just downloaded.
+
+.. code:: python
+
+   %matplotlib inline
+   import MESS
+   import pandas as pd
+   spider_df = pd.read_csv("spider.dat", index_col=0)
+   spider_df[:5]
+
+..
+
+   **Special Note:** The ``%matplotlib inline`` command tells jupyter to
+   draw the figures actually inside your notebook environment. If you
+   don't put this your figures won't show up!
+
+
+   **NB:** Importing pandas as ``pd`` is pretty cannonical. It makes
+   typing out pandas commands shorter because you can reference it as
+   ``pd`` rather than ``pandas``.
+
+   **NB:** The final line in the above command asks python to display
+   the first 5 rows of the ``spider_df`` dataframe. It should look like
+   this:
+
+.. figure:: images/Reunion_spider_df.png
+
+Fetch pre-baked simulations
+---------------------------
+
+Since it can take quite some time to run a number of simulations
+sufficient for model selection and parameter estimation we will use a
+suite of pre-baked simulations I generated ahead of time. Fetch them
+with ``wget`` from the `compphylo site <https://compphylo.github.io/>`_:
+
+::
+
+   !wget https://compphylo.github.io/Oslo2019/MESS_files/MESS_simulations/SIMOUT.txt
+   !wc -l SIMOUT.txt
+
+::
+
+   100%[======================================>] 14,234,338  50.0M/s   in 0.3s    
+   2019-08-11 01:25:27 (50.0 MB/s) - "SIMOUT.txt.1" saved [14234338/14234338]
+   24440 SIMOUT.txt
+
+..
+
+   **NB:** The ``wc`` command counts the number of lines if you pass it
+   the ``-l`` flag. You can see this series of ~25k simulations is about
+   14MB.
+
 .. _ensemble_methods:
 
 Supported Ensemble Methods
@@ -14,13 +109,9 @@ classification and parameter estimation:
 - GradientBoosting (`gb`):
 - AdaBoost (`ab`):
 
-The ``MESS.inference`` architecture is based on the powerful and
-extensive `scikit-learn <https://scikit-learn.org/>`__ python machine
-learning library. Another really amazing resource I highly recommend is
-the `Python Data Science
-Handbook <https://jakevdp.github.io/PythonDataScienceHandbook/>`__.
 
- ## ML assembly model classification
+ML assembly model classification
+--------------------------------
 
 The first step is now to assess the model of community assembly that
 best fits the data. The three models are ``neutral``, in which all
