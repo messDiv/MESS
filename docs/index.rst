@@ -17,7 +17,14 @@ approaches.
 
 What kind of data it requires
 -----------------------------
-MESS requires population-level sampling (5-10 individuals per species) from a local community or multiple local communities. This can be at a variety of scales ranging from a microbial community within a host individual, a locally sampled plot targeting everything from a taxonomic group, to a regional assemblage that emerged via disersal and/or local speciation. Currently only single locus data is supported, so community metabarcoding projects would be quite appropriate. Other data types can be included but are not required (abundances, per taxon trait metrics, and phylogenetic information).
+MESS requires sequence data from population-level sampling (5-10 individuals
+per species) from a local community or multiple local communities. This can be
+at a variety of scales ranging from a microbial community within a host
+individual, a locally sampled plot targeting everything from a taxonomic group,
+to a regional assemblage that emerged via disersal and/or local speciation.
+Currently only single locus data is supported, so community metabarcoding
+projects would be quite appropriate. Other data types can be included but are
+not required (abundances, per taxon trait metrics, and phylogenetic information).
 
 Software
 --------
@@ -40,15 +47,23 @@ The MESS manuscript is available on `bioarxiv <https://www.biorxiv.org/content/b
         diversity, and functional diversity reveals the mechanisms structuring
         ecological communities. BioRxiv.
 
-MESS is based on previous work on the gimmeSAD joint neutral model which can be
-found here::
+MESS is based on previous work on the gimmeSAD joint neutral model and the
+CAMI trait-mediated community assembly model which can be found here::
 
     Overcast I, Emerson BC, Hickerson MJ. (2019). An integrated model of
         population genetics and community ecology. Journal of Biogeography,
         46: 816-829. https://doi.org/10.1111/jbi.13541
 
+    Ruffley M, Peterson K, Week B, Tank DC, & Harmon LJ. (2019). Identifying
+        models of trait‐mediated community assembly using random forests and
+        approximate Bayesian computation. Ecology and Evolution, 9(23), 13218-
+        13230.
+
+
+
 .. toctree::
    :maxdepth: 1
+   :hidden:
 
    installation
    tutorial_cli
