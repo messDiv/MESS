@@ -570,13 +570,13 @@ class LocalCommunity(object):
         self._finalize_death(victim, vic_idx)
 
 
-    def _record_deaths_probs(self,death_probs=np.array((0))):
+    def _record_deaths_probs(self,death_probs=np.array(())):
         if len(death_probs) == 0: #Neutral
             n = self.paramsdict["J"]
             self._death_probs[self.current_time] = np.array([1/n]*n)
         else:
             self._death_probs[self.current_time] = death_probs
-        self._local_community_record[self.current_time] = self.local_community.copy()
+            self._local_community_record[self.current_time] = self.local_community.copy()
 
 
     def _finalize_death(self, victim, vic_idx):
@@ -937,7 +937,6 @@ class LocalCommunity(object):
             ## Dictionary mapping species names to 0-based index (where 0 is metacommunity)
             sp_idxs = OrderedDict({x:ix for ix, x in zip(list(range(1, len(dat.columns)+1)), dat.columns[::-1])})
             sp_idxs[''] = 0
-
             pop_cfgs = []
             split_events = []
             meta_abund = self.region._get_abundance(cname)

@@ -904,15 +904,14 @@ def get_max_heat_bin(sp_through_time, max_pi_local, max_dxy):
     return max_heat_bin
 
 
-def plot_death_probs(death_probs,local_community_record, outdir):
+def plot_death_probs(death_probs, outdir, model, local_community_record=None):
     """
     deaths_probs arg should be a dictionnary of time : death_probabilities
     This function aims at generating an animated gif of the distribution of death_probabilities through time
     """
     ## Create a directory to store the individual images
-    out_dir = outdir+"/plots_death_probs"
-    if not os.path.exists(out_dir):
-        os.mkdir(out_dir)
+    out_dir = outdir+"/plots_death_probs_"+model
+    os.mkdir(out_dir)
 
     maxtime = len(death_probs.keys())
     names = sorted([str(1000000000+i) for i in range(maxtime)])
@@ -922,7 +921,8 @@ def plot_death_probs(death_probs,local_community_record, outdir):
         fig = plt.figure(figsize=(12,5))
         plt.plot(sorted(death_probs[time]))
         plt.ylabel('Probability of death')
-        plt.ylim(0,maxprob+0.0001)
+        plt.ylim(10**-6,1)
+        plt.yscale('log')
         plt.xlabel('Rank')
         plt.title('Distribution of death probabilities at time '+str(time))
         fig.savefig(out_dir+'/'+names[i]+'.png')
@@ -930,29 +930,32 @@ def plot_death_probs(death_probs,local_community_record, outdir):
         
 
     # Actually generate the animation now.
-    outgif = os.path.join(out_dir, "death_probabilities.gif")
+    namegif = model + "_death_probabilities.gif"
+    outgif = os.path.join(out_dir,namegif)
     _make_animated_gif(out_dir, outgif)
 
-    out_dir = outdir+"/plots_death_probs_per_species"
-    if not os.path.exists(out_dir):
-        os.mkdir(out_dir)
+    if local_community_record != None:
+        out_dir2 = outdir+"/plots_death_probs_per_species_"+model
+        os.mkdir(out_dir2)
 
-    # Have a different view with death probs for species
-    for i,time in enumerate(death_probs.keys()):
-        fig = plt.figure(figsize=(12,5))
-        plt.scatter(local_community_record[time],death_probs[time])
-        plt.ylabel('Probability of death')
-        plt.ylim(0,maxprob+0.0001)
-        plt.xlabel('species')
-        plt.xlim(0,100)
-        plt.title('Distribution of death probabilities at time '+str(time))
-        fig.savefig(out_dir+'/'+names[i]+'.png')
-        plt.close()
-        
+        # Have a different view with death probs for species
+        for i,time in enumerate(death_probs.keys()):
+            fig = plt.figure(figsize=(12,5))
+            plt.scatter(local_community_record[time],death_probs[time])
+            plt.ylabel('Probability of death')
+            plt.ylim(10**-6,1)
+            plt.yscale('log')
+            plt.xlabel('species')
+            plt.title('Distribution of death probabilities at time '+str(time))
+            fig.savefig(out_dir2+'/'+names[i]+'.png')
+            plt.close()
+            
 
-    # Actually generate the animation now.
-    outgif = os.path.join(out_dir, "death_probabilities.gif")
-    _make_animated_gif(out_dir, outgif)
+        # Actually generate the animation now.
+
+        namegif = model + "_death_probabilities_persp.gif"
+        outgif = os.path.join(out_dir2,namegif)
+        _make_animated_gif(out_dir2, outgif)
 
 
 

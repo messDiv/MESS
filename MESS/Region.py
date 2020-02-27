@@ -691,10 +691,14 @@ class Region(object):
         for name, island in self.islands.items():
             statsdf = island.get_stats()
             deaths_probs = island._death_probs
-            local_community_record = island._local_community_record
-## This should be added to the fancy_plots but I can't make it work now
             outdir = self._get_simulation_outdir(prefix="deaths_probs-")
-            MESS.plotting.plot_death_probs(deaths_probs, local_community_record, outdir)
+            model = self.paramsdict["community_assembly_model"]
+            if model != "neutral":
+                local_community_record = island._local_community_record
+                MESS.plotting.plot_death_probs(deaths_probs, outdir, model, local_community_record)
+            else:
+                MESS.plotting.plot_death_probs(deaths_probs, outdir, model)
+## This should be added to the fancy_plots but I can't make it work now
 
         ## Paste regional parameters on the front of the local community
         ## parameters and simulations
