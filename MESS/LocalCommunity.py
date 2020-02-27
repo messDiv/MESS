@@ -144,6 +144,8 @@ class LocalCommunity(object):
         self.survived_invasives = 0
         self.invasion_time = -1
 
+        self._death_probs = OrderedDict({})
+        self._local_community_record = OrderedDict({})
 
 
     def _copy(self):
@@ -506,8 +508,9 @@ class LocalCommunity(object):
             pass
         vic_idx = random.randint(0,self.paramsdict["J"]-1)
         victim = self.local_community[vic_idx]
+        if not self.current_time % (self.paramsdict["J"]*2):
+            self._record_deaths_probs()
         self._finalize_death(victim,vic_idx)
-
 
     def _competition_death_step(self):
         victim = random.choice(self.local_community)
@@ -526,6 +529,8 @@ class LocalCommunity(object):
             ## Get the victim conditioning on unequal death probability
             vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
             victim = self.local_community[vic_idx]
+        if not self.current_time % (self.paramsdict["J"]*2):
+            self._record_deaths_probs(death_probs)
         self._finalize_death(victim,vic_idx)
 
 
@@ -541,10 +546,9 @@ class LocalCommunity(object):
             ## Get the victim conditioning on unequal death probability
             vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
             victim = self.local_community[vic_idx]
+        if not self.current_time % (self.paramsdict["J"]*2):
+            self._record_deaths_probs(death_probs)
         self._finalize_death(victim, vic_idx)
-
-        ## Remove the dead individual from the distance matrix
-        #self._distance_matrix_remove(idx=vic_idx)
 
 
     def _filtering_death_step(self):
@@ -561,7 +565,18 @@ class LocalCommunity(object):
             ## Get the victim conditioning on unequal death probability
             vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
             victim = self.local_community[vic_idx]
+        if not self.current_time % (self.paramsdict["J"]*2):
+            self._record_deaths_probs(death_probs)
         self._finalize_death(victim, vic_idx)
+
+
+    def _record_deaths_probs(self,death_probs=np.array((0))):
+        if len(death_probs) == 0: #Neutral
+            n = self.paramsdict["J"]
+            self._death_probs[self.current_time] = np.array([1/n]*n)
+        else:
+            self._death_probs[self.current_time] = death_probs
+        self._local_community_record[self.current_time] = self.local_community.copy()
 
 
     def _finalize_death(self, victim, vic_idx):

@@ -402,7 +402,6 @@ def plot_rank_abundance_through_time(outdir, sp_through_time, equilibria,\
     seaborn.set
     seaborn.set_style(style="white")
 
-    print("\nGenerating abundance distributions through time")
     ## Make the output directory for heatmaps inside the top level output directory
     abund_out = os.path.join(outdir, "abundance_plots")
     if not os.path.exists(abund_out):
@@ -903,6 +902,58 @@ def get_max_heat_bin(sp_through_time, max_pi_local, max_dxy):
             max_heat_bin = np.amax(heat)
 
     return max_heat_bin
+
+
+def plot_death_probs(death_probs,local_community_record, outdir):
+    """
+    deaths_probs arg should be a dictionnary of time : death_probabilities
+    This function aims at generating an animated gif of the distribution of death_probabilities through time
+    """
+    ## Create a directory to store the individual images
+    out_dir = outdir+"/plots_death_probs"
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
+
+    maxtime = len(death_probs.keys())
+    names = sorted([str(1000000000+i) for i in range(maxtime)])
+    values = [x for x in death_probs.values()]
+    maxprob = max(np.reshape(values,len(values[0])*len(values)))
+    for i,time in enumerate(death_probs.keys()):
+        fig = plt.figure(figsize=(12,5))
+        plt.plot(sorted(death_probs[time]))
+        plt.ylabel('Probability of death')
+        plt.ylim(0,maxprob+0.0001)
+        plt.xlabel('Rank')
+        plt.title('Distribution of death probabilities at time '+str(time))
+        fig.savefig(out_dir+'/'+names[i]+'.png')
+        plt.close()
+        
+
+    # Actually generate the animation now.
+    outgif = os.path.join(out_dir, "death_probabilities.gif")
+    _make_animated_gif(out_dir, outgif)
+
+    out_dir = outdir+"/plots_death_probs_per_species"
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
+
+    # Have a different view with death probs for species
+    for i,time in enumerate(death_probs.keys()):
+        fig = plt.figure(figsize=(12,5))
+        plt.scatter(local_community_record[time],death_probs[time])
+        plt.ylabel('Probability of death')
+        plt.ylim(0,maxprob+0.0001)
+        plt.xlabel('species')
+        plt.xlim(0,100)
+        plt.title('Distribution of death probabilities at time '+str(time))
+        fig.savefig(out_dir+'/'+names[i]+'.png')
+        plt.close()
+        
+
+    # Actually generate the animation now.
+    outgif = os.path.join(out_dir, "death_probabilities.gif")
+    _make_animated_gif(out_dir, outgif)
+
 
 
 REQUIRE_IMAGEMAGICK_ERROR = """
