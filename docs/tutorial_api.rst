@@ -15,10 +15,12 @@ if you like, the procedure will be identical although your results will
 vary.
 
 -  `Running and connecting to a Jupyter notebook`_
--  `Create and parameterize a new MESS Region`
--  `Run MESS serial simulations in API mode`
--  `Run MESS parallel simulations in API mode`
--  `References`
+-  `Create and parameterize a new MESS Region`_
+-  `Run MESS serial simulations in API mode`_
+-  `Run MESS parallel simulations in API mode`_
+-  `Adding more simulations to a region`_
+-  `Using simulations to perform statistical inference`_
+-  `References`_
 
 Running and connecting to a Jupyter notebook
 --------------------------------------------
@@ -125,9 +127,9 @@ Run MESS serial simulations in API mode
 ---------------------------------------
 
 Now we can run community assembly simulations given our new parameterization
-using the ``run()`` method. Run takes one argument (``nsims``) which
-indicates the number of independent community assembly realizations to
-perform.
+using the ``run()`` method. There is one required argument to this method
+(``nsims``) which indicates the number of independent community assembly
+realizations to perform.
 
 .. code:: python
 
@@ -136,23 +138,66 @@ perform.
 ::
 
       Generating 1 simulation(s).
-   [####################] 100%  Finished 0 simulations    | 0:00:00 |
+   [####################] 100%  Finished 0 simulations    | 0:01:02 |
 
 
 Run MESS parallel simulations in API mode
 -----------------------------------------
 
 Like the CLI, the MESS API can make use of all the cores you can throw at it
-thanks to integration with the very nice IPyparallel library. It is ``highly``
-recommended to take a moment to :ref:`launch an ipcluster instance <mess_parallelization>`.
+thanks to integration with the very nice :ref:`IPyparallel library <https://ipyparallel.readthedocs.io/>`.
+To take a moment to :ref:`launch an ipcluster instance <mess_parallelization>`.
 
-We will not do this now, but the ``run`` method can also accept an
-   ``ipyclient`` argument for specifying a connection to an ipyparallel
-   backend, allowing for massive parallelization. For more info see the
-   `MESS parallelization documentation <MESS_parallelization.html>`__.
+Now we assume you have an ``ipyclient`` object initialized in your notebook.
+The ``Region.run()`` method can also an optional argument (``ipyclient``) for
+specifying a connection to an ipyparallel backend, allowing for massive
+parallelization. Let's check to make sure how many cores our ipyclient is
+attached to:
 
+.. code:: python
 
-You can now proceed to the :ref:`MESS Machine Learning Tutorial <ml_inference>`.
+    len(ipyclient)
+
+::
+
+    40
+
+Now call run and generate 40 simulations on the 40 cores:
+
+.. code:: python
+
+    reunion.run(sims=40, ipyclient=ipyclient)
+
+::
+
+      Generating 40 simulation(s).
+    [####################] 100%  Performing Simulations    | 0:01:31 | 
+    [####################] 100% 
+      Finished 40 simulations
+
+Now we generated 40 simulations in the parallel in the (roughly) the same time
+it took to generate 1 simulation in serial. I say 'roughly' here for two
+reasons. First, The simulations are stochastic, and the amount of time any
+given simulation will take is Poisson distributed, so sometimes you'l get
+'unlucky' with one that takes much longer. Second, by default the
+``generations`` parameter is ``0``, which indicates to uniformly sample a
+``lambda`` value from the half-open interval [0-1). Small ``lambda`` will
+(on average) run faster than large ``lambda``, so again, another source of
+variability in runtime.
+
+Adding more simulations to a region
+-----------------------------------
+
+As with the CLI mode, if you find you need to add more simulations to a
+``Region``, for whatever reason, you can simply call ``run()`` again, and this
+will append the new simulations to what has already been run.
+
+Using simulations to perform statistical inference
+--------------------------------------------------
+
+You can now proceed to the :ref:`MESS Machine Learning Tutorial <ml_inference>`
+to learn how to use the simulations to perform model selection and parameter
+estimation on real data.
 
 References
 ----------

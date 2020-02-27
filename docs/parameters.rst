@@ -1,6 +1,6 @@
 .. _parameters:
 
-Community Assembly Parameters
+MESS Model Parameters
 =============================
 The parameters contained in a params file affect the behavior of various parts
 of the forward-time and backward-time assembly process. The defaults that we 
