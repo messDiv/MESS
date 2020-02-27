@@ -10,7 +10,7 @@ some of the parameters and terminology. We will use as an example in this
 tutorial the spider community data set from La Reunion published by
 Emerson et al (2017). However, you can follow along with one of the
 `other example
-datasets <https://github.com/messDiv/MESS/tree/master/jupyter-notebooks/empirical>`__
+datasets <https://github.com/messDiv/MESS/tree/master/jupyter-notebooks/empirical>`_
 if you like, the procedure will be identical although your results will
 vary.
 
@@ -29,7 +29,7 @@ inside a jupyter notebook running on your personal computer. For the most
 part we will be writing and executing python commands. Jupyter is already
 installed as a dependency of MESS, but if you need help getting a server
 running see the excellent `Jupyter notebook documentation
-<https://jupyter-notebook.readthedocs.io/en/stable/notebook.html#starting-the-notebook-server>`__.
+<https://jupyter-notebook.readthedocs.io/en/stable/notebook.html#starting-the-notebook-server>`_.
 
 
 Create and parameterize a new MESS Region
@@ -145,7 +145,7 @@ Run MESS parallel simulations in API mode
 -----------------------------------------
 
 Like the CLI, the MESS API can make use of all the cores you can throw at it
-thanks to integration with the very nice :ref:`IPyparallel library <https://ipyparallel.readthedocs.io/>`.
+thanks to integration with the very nice `IPyparallel library <https://ipyparallel.readthedocs.io/>`_.
 To take a moment to :ref:`launch an ipcluster instance <mess_parallelization>`.
 
 Now we assume you have an ``ipyclient`` object initialized in your notebook.
