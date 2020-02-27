@@ -16,6 +16,11 @@ the `Python Data Science Handbook
 
 -  `Download and examine example empirical data`
 -  `Fetch pre-baked simulations`
+-  `Supported ensemble methods`
+-  `ML assembly model classification`
+-  `ML parameter estimation`
+-  `Perform posterior predictive simulations`
+-  `Experiment with other example datasets`
 
 Download and examine example empirical data
 -------------------------------------------
@@ -100,15 +105,14 @@ with ``wget`` from the `compphylo site <https://compphylo.github.io/>`_:
 
 .. _ensemble_methods:
 
-Supported Ensemble Methods
+Supported ensemble methods
 --------------------------
-MESS currently supports three different scikit-learn ensemble methods for
+MESS currently supports three different ``scikit-learn`` ensemble methods for
 classification and parameter estimation:
 
 - RandomForest (`rf`):
 - GradientBoosting (`gb`):
 - AdaBoost (`ab`):
-
 
 ML assembly model classification
 --------------------------------
@@ -123,13 +127,13 @@ which there is an environmental optimum, and proximity of trait values
 to this optimum is positively correlated with survival probability.
 
 Basically we want to know, are individuals in the local community
-ecologically equivalent, and if not are they interacting more with each
+ecologically equivalent, and if not are, they interacting more with each
 other or more with the local environment.
 
 Here we create a ``MESS.inference.Classifier`` object and pass in the
-empirical dataframe, the simulations, and specify RandomForest (‘rf’) as
-the algorithm to use (other options are GradientBoosting (‘gb’) and
-AdaBoost (‘ab’)). Very thorough documentation of all the machine
+empirical dataframe, the simulations, and specify RandomForest (``rf``) as
+the algorithm to use (other options are GradientBoosting (``gb``) and
+AdaBoost (``ab``)). Very thorough documentation of all the machine
 learning inference architecture is available on the `MESS documentation
 site <https://pymess.readthedocs.io/en/latest/api.html#inference-procedure>`__.
 
@@ -140,17 +144,17 @@ site <https://pymess.readthedocs.io/en/latest/api.html#inference-procedure>`__.
 
 The ``Classifier.predict()`` method provides a very sophisticated suite
 of routines for automating machine learning performance tuning. Here we
-disable *all* of this in order for it to run quickly, trading
-performance for accuracy. The ``select_features`` argument controls
+disable **all** of this in order for it to run quickly, trading
+accuracy for performance. The ``select_features`` argument controls
 whether or not to prune summary statistics based on correlation and
 informativeness. The ``param_search`` argument controls whether or not
 to exhaustively search the space of parameters to maximize accuracy of
 the ML algorithm selected. Finally, the ``quick`` argument subsets the
-size of the simulation database to 1000 simulations. In normal
-conditions, when you want to investigate real data you should use
-``select_featers=True, param_search=True, quick=False``. This will
-result in much more accurate inference, yet will take *much* more time
-to run.
+size of the simulation database to 1000 simulations, again as a means of
+running quickly to check framework behavior. In normal conditions, when you
+want to investigate real data you should use ``select_featers=True,
+param_search=True, quick=False``. This will result in much more accurate
+inference, yet will take *much* more time to run.
 
 The call to ``cla.predict()`` returns both the most likely community
 assembly model (``est``) and the model probabilities (``proba``), which
@@ -187,7 +191,7 @@ of feature importances directly from the ``Classifier`` object with the
 
    **NB:** The ``figsize`` argument controls the size of the output
    figure. The default is ``(10, 10)``, so here we just make it a bit
-   smaller to fit better in the nb window.
+   smaller to fit better in the notebook window.
 
 .. figure:: images/MESSClassifier_feature_importance.png
 
@@ -199,13 +203,14 @@ hill numbers) and the standard deviation of nucleotide diversity (pi)
 within the local community are the most important summary statistics for
 differentiating between the different community assembly models.
 
- ## ML parameter estimation
+ML parameter estimation
+-----------------------
 
 Now that we have identified the neutral model as the most probable, we
 can estimate parameters of the emipirical data given this model.
-Essentially, we are asking the question “What are the parameters of the
+Essentially, we are asking the question "What are the parameters of the
 model that generate summary statistics most similar to those of the
-empirical data?”
+empirical data?"
 
 The ``MESS.inference`` module provides the ``Regressor`` class, which
 has a very similar API to the ``Classifier``. We create a ``Regressor``
@@ -226,12 +231,13 @@ do a bad job.
    **NB:** Note that here we ask for the ``rfq`` algorithm, which
    designates random forest quantile regression, and allows for
    constructing prediction intervals, something the stock ``rf``
-   algorithm doesn’t do. The gradient boosting method (``gb``) provides
+   algorithm doesn't do. The gradient boosting method (``gb``) provides
    prediction intervals natively.
 
 The return value ``est`` is a dataframe that contains predicted values
 for each model parameter and 95% prediction intervals, which are
-conceptually in the same ball park as confidence intervals and HPD.
+conceptually in the same ball park as maximum likelihood confidence intervals
+(CI) and and Bayesian highest posterior densities (HPD).
 
 .. code:: python
 
@@ -242,7 +248,7 @@ conceptually in the same ball park as confidence intervals and HPD.
 Similar to the classifier, you can also extract feature importances from
 the regressor, to get an idea about how each feature is contributing to
 parameter estimation. In this case, the feature importance plots are a
-little more useful than the giant table. Also note that we’re requesting
+little more useful than the giant table. Also note that we're requesting
 a slighly larger figure, because this time there will be much more
 information.
 
@@ -262,7 +268,8 @@ estimation of local community size (``J``), which makes sense. On the
 other hand, many more factors seem to contribute equally to estimation
 of migration rate (``m``).
 
- ## Perform posterior predictive simulations
+Perform posterior predictive simulations
+----------------------------------------
 
 Finally, a very important step in machine learning inference is to
 validate the parameter estimates by performing posterior predictive
@@ -314,15 +321,15 @@ minutes.
    an ``ipyclient`` parameter to specify to use an ipyparallel backend.
    For simplicity here we will not use this option, but in reality it
    would be a good idea to parallelize the posterior predictive
-   simulations. See the `MESS parallelization
-   docs <MESS_parallelization.md>`__ for more info about how to
-   implement the parallel backend.
+   simulations. See the :ref:`MESS parallelization docs
+   <arallelization.md>` for more info about how to implement the parallel
+    backend.
 
 This time the only thing we *have* to pass in is the empirical data and
-the dataframe of prediction values, but I’m showing a couple more
+the dataframe of prediction values, but I'm showing a couple more
 arguments here for the sake of completeness. Setting ``est_only`` to
-True will use only the exact parameter estimates for all simulations,
-whereas setting it to False will sample uniformly between the upper and
+``True`` will use only the exact parameter estimates for all simulations,
+whereas setting it to ``False`` will sample uniformly between the upper and
 lower prediction interval for each simulation. ``nsims`` should be
 obvious, the number of posterior predictive simulations to perform.
 ``force`` will overwrite any pre-existing simulations, thus preventing
@@ -341,16 +348,16 @@ And here is a nice example of a poor fit of parameters to the data:
 
 Quite a striking, and obvious difference.
 
- ## Free time to experiment with other example datasets
+Experiment with other example datasets
+--------------------------------------
 
-Assuming there is any time left you might want to experiment either with
-some of the other empirical datasets which are provided on the `MESS
-github
-repo <https://github.com/messDiv/MESS/tree/master/jupyter-notebooks/empirical>`__,
-or with exploring the substantial `MESS inference procedure
-documentation <https://pymess.readthedocs.io/en/latest/api.html#inference-procedure>`__
+Now you may wish to experiment  with some of the other empirical datasets
+which are provided on the `MESS github repo
+<https://github.com/messDiv/MESS/tree/master/jupyter-notebooks/empirical>`_,
+or with exploring the substantial `MESS inference procedure API
+documentation <https://pymess.readthedocs.io/en/latest/api.html#inference-procedure>`_
 where we show a ton of other cool stuff MESS is capable of that we just
-don’t have time to go over in this short workshop.
+don't have time to go over in this short tutorial.
 
 References
 ----------
