@@ -65,11 +65,9 @@ CAMI trait-mediated community assembly model which can be found here::
    :maxdepth: 1
    :hidden:
 
-   Intro CLI Tutorial <tutorial_cli.rst>
-   Intro API Tutorial & ML Inference <tutorial_api.rst>
    installation
-   tutorial_cli
-   tutorial_api
+   Intro CLI Tutorial <tutorial_cli.rst>
+   Intro API Tutorial <tutorial_api.rst>
    inference
    parameters
    api

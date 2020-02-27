@@ -1,7 +1,7 @@
 .. _tutorial_cli:
 
-MESS (Massive Eco-Evolutionary Synthesis Simulations) - Part I
-==============================================================
+MESS (Massive Eco-Evolutionary Synthesis Simulations) - CLI Tutorial
+====================================================================
 
 This is the first part of the full tutorial for the command line
 interface (**CLI**) for MESS. In this tutorial we’ll walk through the
@@ -14,9 +14,6 @@ Emerson et al (2017). However, you can follow along with one of the
 datasets <https://github.com/messDiv/MESS/tree/master/jupyter-notebooks/empirical>`__
 if you like, the procedure will be identical although your results will
 vary.
-
-MESS Part I Outline
--------------------
 
 -  `Equilibrium theory of island biogeography and neutral theory
    (individual based simulations) <#ETIB-NTIB-Intro>`__
