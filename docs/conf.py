@@ -69,7 +69,7 @@ exclude_patterns = [u'_build', 'Thumbs.db', '.DS_Store']
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
-autodoc_mock_imports = ["msprime", "dendropy", "sklearn", "boruta", "skgarden", "joblib"]
+autodoc_mock_imports = ["msprime", "dendropy", "sklearn", "boruta", "skgarden", "joblib", "rpy2"]
 
 # -- Options for HTML output -------------------------------------------------
 
