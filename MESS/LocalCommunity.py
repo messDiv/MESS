@@ -527,7 +527,11 @@ class LocalCommunity(object):
             ## Scale all fitness values to proportions
             death_probs = np.nan_to_num(death_probs)/np.sum(death_probs)
             ## Get the victim conditioning on unequal death probability
-            vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
+            try:
+                vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
+            except: 
+            ## vic_idx is nan because of too high values in the exponential
+                vic_idx = random.randint(0,self.paramsdict["J"]-1)
             victim = self.local_community[vic_idx]
         if not self.current_time % (self.paramsdict["J"]*2):
             self._record_deaths_probs(death_probs)
@@ -544,7 +548,11 @@ class LocalCommunity(object):
             ## Scale all fitness values to proportions
             death_probs = np.array(death_probs)/np.sum(death_probs)
             ## Get the victim conditioning on unequal death probability
-            vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
+            try:
+                vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
+            except: 
+            ## vic_idx is nan because of too high values in the exponential
+                vic_idx = random.randint(0,self.paramsdict["J"]-1)
             victim = self.local_community[vic_idx]
         if not self.current_time % (self.paramsdict["J"]*2):
             self._record_deaths_probs(death_probs)
@@ -577,6 +585,12 @@ class LocalCommunity(object):
         else:
             self._death_probs[self.current_time] = death_probs
             self._local_community_record[self.current_time] = self.local_community.copy()
+            # print("death probs at ",self.current_time)
+            # print(self._death_probs[self.current_time])
+            # print("loc comm at ", self.current_time)
+            # print(self._local_community_record[self.current_time])
+            # print("loc traits at ", self.current_time)
+            # print(self.local_traits)
 
 
     def _finalize_death(self, victim, vic_idx):
@@ -700,24 +714,42 @@ class LocalCommunity(object):
                 self.founder_flags[dead] = False
                 self.colonizations += 1
                 self.local_traits[dead] = self.region.get_trait(new_species)
+                # print("migration from species:",new_species)
+                # print("new trait:", self.region.get_trait(new_species))
+                # print(self.local_community)
+                # print(self.local_traits)
             else:
                 try:
+                    # print("no migration:")
                     self.death_step()
+                    # print(self.local_community)
                     ## Sample all available from local community (community grows slow in volcanic model)
                     ## This is the fastest way to sample from a list. >4x faster than np.random.choice
                     ## Don't allow empty space to reproduce
                     chx = random.choice([x for x in self.local_community if x != None])
                     dead = self.last_dead_ind
+                    idx = np.argwhere(self.local_community==chx)[0][0]
+                    # print(idx," (species:",self.local_community[idx]," trait:",self.local_traits[idx],") replaced ", dead," (species:",self.local_community[dead]," trait:",self.local_traits[dead],")")
                     ## Record new individual's species
                     self.local_community[dead] = chx
                     ## Take the index of the parent
-                    idx = np.argwhere(self.local_community==chx)[0][0]
                     ## Copy trait and founder flag from parent
                     self.founder_flags[dead] = self.founder_flags[idx]
+                    old_trait = self.local_traits[dead]
+                    new_trait = self.local_traits[idx]
                     self.local_traits[dead] = self.local_traits[idx]
+                    # print(self.local_community)
+                    # print(self.local_traits)
                 except Exception as inst:
                     LOGGER.error("Exception in step() - {}".format(inst))
                     raise inst
+                # for i,sp in enumerate(self.local_community):
+                #     for j,tr in enumerate((self.local_traits)):
+                #         if (self.local_community[j] == self.local_community[i] and self.local_traits[i] != self.local_traits[j]) or (self.local_community[j] != self.local_community[i] and self.local_traits[i] == self.local_traits[j]):
+                #             print("PROBLEM")
+                #             print("i:",i," j:",j)
+                #             print("sp_i:",self.local_community[i]," tr_i:",self.local_traits[i])
+                #             print("sp_j:",self.local_community[j],"tr_i:",self.local_traits[j])
 
             ## WARNING : Pairwise competition assumes that "mig_clust_size" is one !
             if self.region.paramsdict["community_assembly_model"] == "pairwise_competition":
