@@ -917,11 +917,13 @@ def plot_death_probs(death_probs, outdir, model, local_community_record=None):
     names = sorted([str(1000000000+i) for i in range(maxtime)])
     values = [x for x in death_probs.values()]
     maxprob = max(np.reshape(values,len(values[0])*len(values)))
+    minprob = min(np.reshape(values,len(values[0])*len(values)))
+
     for i,time in enumerate(death_probs.keys()):
         fig = plt.figure(figsize=(12,5))
         plt.plot(sorted(death_probs[time]))
         plt.ylabel('Probability of death')
-        plt.ylim(10**-6,1)
+        plt.ylim(minprob-minprob/100,maxprob+maxprob/100)
         plt.yscale('log')
         plt.xlabel('Rank')
         plt.title('Distribution of death probabilities at time '+str(time))
@@ -943,7 +945,7 @@ def plot_death_probs(death_probs, outdir, model, local_community_record=None):
             fig = plt.figure(figsize=(12,5))
             plt.scatter(local_community_record[time],death_probs[time])
             plt.ylabel('Probability of death')
-            plt.ylim(10**-6,1)
+            plt.ylim(minprob-minprob/100,maxprob+maxprob/100)
             plt.yscale('log')
             plt.xlabel('species')
             plt.title('Distribution of death probabilities at time '+str(time))
