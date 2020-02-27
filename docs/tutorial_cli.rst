@@ -1,3 +1,5 @@
+.. _tutorial_cli:
+
 MESS (Massive Eco-Evolutionary Synthesis Simulations) - Part I
 ==============================================================
 
