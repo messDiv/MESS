@@ -1,24 +1,23 @@
 .. _tutorial_cli:
 
-MESS (Massive Eco-Evolutionary Synthesis Simulations) - CLI Tutorial
+Massive Eco-Evolutionary Synthesis Simulations (MESS) - CLI Tutorial
 ====================================================================
 
 This is the first part of the full tutorial for the command line
-interface (**CLI**) for MESS. In this tutorial we’ll walk through the
-entire simulation and analysis process. This is meant as a broad
+interface (**CLI**) for MESS. In this tutorial we'll walk through the
+basics of the process of generating simulations. This is meant as a broad
 introduction to familiarize users with the general workflow, and some of
-the parameters and terminology. We will use as an example in this
-tutorial the spider community data set from La Reunion published by
-Emerson et al (2017). However, you can follow along with one of the
-`other example
-datasets <https://github.com/messDiv/MESS/tree/master/jupyter-notebooks/empirical>`__
+the parameters and terminology. We will use as a template example the
+the spider community dataset from La Reunion published by Emerson et al
+(2017). However, you can follow along with one of the `other example
+datasets <https://github.com/messDiv/MESS/tree/master/jupyter-notebooks/empirical>`_
 if you like, the procedure will be identical although your results will
 vary.
 
--  `Equilibrium theory of island biogeography and neutral theory
-   (individual based simulations) <#ETIB-NTIB-Intro>`__
--  `Overview of MESS Simulations <#MESS-Overview>`__
--  `Installation <#Installation>`__
+-  `Quickstart guide for the impatient`
+-  `Equilibrium theory of island biogeography and ecological neutral theory`
+-  `Overview of MESS simulation and analysis workflow`
+-  `Installation <installation>`_
 -  `TL;DR Run your first simulations <#TLDR-Simulations>`__
 -  `Getting started with the MESS CLI <#MESS-CLI-intro>`__
 -  `Create and edit a new params file <#Create-Params-File>`__
@@ -30,9 +29,9 @@ Each grey cell in this tutorial indicates a command line interaction.
 Lines starting with ``$`` indicate a command that should be executed in
 a terminal connected to the cluster, for example by copying and pasting
 the text into your terminal. Elements in code cells surrounded by angle
-brackets (e.g. ) are variables that need to be replaced by the user. All
-lines in code cells beginning with ## are comments and should not be
-copied and executed. All other lines should be interpreted as output
+brackets (e.g. ``<mystuffs>``) are variables that need to be replaced by
+the user. All lines in code cells beginning with ## are comments and should
+not be copied and executed. All other lines should be interpreted as output
 from the issued commands.
 
 .. code:: bash
@@ -45,14 +44,31 @@ from the issued commands.
    $ echo "wat"
    wat
 
-Equilibrium theory of island biogeography and neutral theory
-------------------------------------------------------------
-`Background and a brief introduction to the MESS
-model. <https://docs.google.com/presentation/d/1dbQOZ17RliFyRBzyLdDDn3SWCmaWwXcVD2h1muyixv8/edit?usp=sharing>`__
+Quickstart guide for the impatient
+----------------------------------
+
+**TL;DR:** Just show me how to do the simulations! Say you're impatient
+and want to skip right to the good stuff, well here you go.
+
+::
+
+   ## Create a parameters file
+   MESS -n new-sims
+   ## Do 10 simulations using the default settings and 4 cores
+   MESS -p params-new-sims.txt -s 10 -c 4
+
+
+Equilibrium theory of island biogeography and ecological neutral theory
+-----------------------------------------------------------------------
+Before we begin, if you are unfamiliar with community ecology theory it might
+be useful to review a brief google presentation given at a recent workshop to
+provied `background and a brief introduction to the MESS model:
+<https://docs.google.com/presentation/d/1dbQOZ17RliFyRBzyLdDDn3SWCmaWwXcVD2h1muyixv8/edit?usp=sharing>`__
 
 .. figure:: images/Forward_Time_Neutral_Assembly.png
 
- ## Overview of MESS simulation and analysis workflow
+Overview of MESS simulation and analysis workflow
+-------------------------------------------------
 
 The basic steps of this process are as follows:
 
@@ -64,27 +80,12 @@ The basic steps of this process are as follows:
 -  Step 5 - ???
 -  Step 6 - Profit!!
 
-MESS is distributed as a conda package so installation is simple and and
-straightforward. If you don’t already have conda installed, `do the
-conda install
-first. <https://compphylo.github.io/Oslo2019/UiO_Cluster_info.html#conda-install>`__
+Installation
+------------
 
-::
-
-   ## Install MESS using conda
-   $ conda install -c conda-forge -c mess mess
-
-**TL;DR:** Just show me how to do the simulations! Say you’re impatient
-and want to skip right to the good stuff, well here you go.
-
-::
-
-   ## Get an interactive session on the cluster
-   bash qlogin.sh
-   ## Create a parameters file
-   MESS -n new-sims
-   ## Do 10 simulations using the default settings and 4 cores
-   MESS -p params-new-sims.txt -s 10 -c 4
+MESS is distributed as a conda package so installation is simple and
+straightforward. If you don't already have conda and/or MESS installed,
+please take a moment to :ref:`install the software <installation>`:
 
 Getting started with the MESS CLI
 ---------------------------------

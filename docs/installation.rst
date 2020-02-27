@@ -1,4 +1,4 @@
-.. _sec-installation:
+.. _installation:
 
 ============
 Installation

@@ -1,6 +1,6 @@
 .. _tutorial_api:
 
-MESS (Massive Eco-Evolutionary Synthesis Simulations) - API Tutorial
+Massive Eco-Evolutionary Synthesis Simulations (MESS) - API Tutorial
 ====================================================================
 
 This is the second part of the MESS tutorial in which we introduce the
