@@ -1,5 +1,4 @@
 
-import dendropy
 import collections
 import pandas as pd
 import numpy as np
@@ -333,8 +332,7 @@ class Metacommunity(object):
                                                                 self.paramsdict["speciation_rate"],\
                                                                 self.paramsdict["death_proportion"],\
                                                                 self.paramsdict["trait_rate_meta"])
-            #handle = Phylo.read(StringIO(tree), "newick")
-            handle = dendropy.Tree.get(data=tree, schema="newick")
+            ## tree is newick format
             self.metacommunity_tree = handle
 
             abundances = abunds

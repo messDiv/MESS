@@ -46,7 +46,6 @@ requirements:
     - mpmath
     - rpy2 >=3.0
     - matplotlib
-    - dendropy
     - boruta_py
     - scikit-garden
     - tzlocal
