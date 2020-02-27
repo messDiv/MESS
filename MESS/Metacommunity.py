@@ -333,7 +333,7 @@ class Metacommunity(object):
                                                                 self.paramsdict["death_proportion"],\
                                                                 self.paramsdict["trait_rate_meta"])
             ## tree is newick format
-            self.metacommunity_tree = handle
+            self.metacommunity_tree = tree
 
             abundances = abunds
             ids = traits["name"].values.astype(str)
