@@ -5,7 +5,7 @@ Massive Eco-Evolutionary Synthesis Simulations (MESS) - API Tutorial
 
 This is the second part of the MESS tutorial in which we introduce the
 API mode using jupyter notebooks. This is meant as a broad introduction but
-does make the assumption you've already completed the :ref:`CLI tutorial <tutorial_cli>`.
+does make the assumption you've already completed the :ref:`CLI tutorial <tutorial_cli>`
 some of the parameters and terminology. We will use as an example in this
 tutorial the spider community data set from La Reunion published by
 Emerson et al (2017). However, you can follow along with one of the

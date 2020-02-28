@@ -12,6 +12,12 @@ parameters.
 Below is an explanation of each parameter setting, the eco-evolutionary process
 that it affects, and example entries for the parameter into a params.txt file.
 
+..
+
+    **NB:** Most parameters for which is it sensible to do so will accept a
+    prior range which will be sampled from uniformly for each simulation (e.g.
+    a value of ``1000-5000`` for parameter ``J`` will choose a new ``J`` for
+    each simulation inclusively bounded by these values).
 
 .. _simulation_name:
 
@@ -164,12 +170,15 @@ Example entries to params.txt file::
 
 J_m
 ---
-The total number of individuals in the metacommunity.
+The total number of individuals in the metacommunity. This value is divided up
+among all ``S_m`` species following a logseries distribution. ``J_m`` values
+which are smaller will produce more even abundances in the metacommunity, which
+will result in more equal probability of colonization among species.
 
 Example entries to params.txt::
 
-    0                  ## [9] allow zero low quality bases in a read
-    5                  ## [9] allow up to five low quality bases in a read
+    50000               ## [1] [J_m]: Total # of individuals in the regional pool
+    50000-500000        ## [1] [J_m]: Total # of individuals in the regional pool
 
 
 .. _speciation_rate:
