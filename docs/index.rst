@@ -18,8 +18,8 @@ approaches.
 What kind of data it requires
 -----------------------------
 MESS requires sequence data from population-level sampling (5-10 individuals
-per species) from a local community or multiple local communities. This can be
-at a variety of scales ranging from a microbial community within a host
+per species) from one or multiple ecological communities of organims. This can
+be at a variety of scales ranging from a microbial community within a host
 individual, a locally sampled plot targeting everything from a taxonomic group,
 to a regional assemblage that emerged via disersal and/or local speciation.
 Currently only single locus data is supported, so community metabarcoding

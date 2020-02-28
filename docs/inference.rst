@@ -14,23 +14,25 @@ learning library. Another really amazing resource I highly recommend is
 the `Python Data Science Handbook
 <https://jakevdp.github.io/PythonDataScienceHandbook/>`_.
 
--  `Download and examine example empirical data`
--  `Fetch pre-baked simulations`
--  `Supported ensemble methods`
--  `ML assembly model classification`
--  `ML parameter estimation`
--  `Perform posterior predictive simulations`
--  `Experiment with other example datasets`
+-  `Download and examine example empirical data`_
+-  `Fetch pre-baked simulations`_
+-  `Supported ensemble methods`_
+-  `ML assembly model classification`_
+-  `ML parameter estimation`_
+-  `Perform posterior predictive simulations`_
+-  `Experiment with other example datasets`_
+-  `References`_
 
 Download and examine example empirical data
 -------------------------------------------
 We will be using as an example dataset of community-scale COI sequences (~500bp)
 and densely sampled abundances for the spider community on the island of La
-Reunion, an overseas department of France, which is the largest of the Mascarene
+Reunion, an overseas department of France, and the largest of the Mascarene
 islands, located in the Indian Ocean approximately 1000 km from Madagascar. The
 data we will be using was collected and published by Emerson et al (2017). For
-this exercise, we will just grab and use the formatted data from the MESS
-github repository. For further instruction on properly formatting and converting
+this exercise, we will use the pre-processed summary statistics which were
+generated from the real data and which are available in the MESS github
+repository. For further instruction on properly formatting and converting
 raw data into MESS-ready format see the `MESS raw data handling page
 <MESS_process_raw_data.html>`_.
 
@@ -65,7 +67,7 @@ data you just downloaded.
 
    **Special Note:** The ``%matplotlib inline`` command tells jupyter to
    draw the figures actually inside your notebook environment. If you
-   don't put this your figures won't show up!
+   don't include this your figures won't show up!
 
 
    **NB:** Importing pandas as ``pd`` is pretty cannonical. It makes
@@ -83,8 +85,11 @@ Fetch pre-baked simulations
 
 Since it can take quite some time to run a number of simulations
 sufficient for model selection and parameter estimation we will use a
-suite of pre-baked simulations I generated ahead of time. Fetch them
-with ``wget`` from the `compphylo site <https://compphylo.github.io/>`_:
+suite of pre-baked simulations generated ahead of time. This dataset is
+composed of ~8k simulations under each of the community assembly models with
+a few of the parameters sampled from distributions and the rest set to fixed
+values. Fetch this dataset from the `compphylo site
+<https://compphylo.github.io/>`_ with ``wget``:
 
 ::
 
@@ -94,7 +99,7 @@ with ``wget`` from the `compphylo site <https://compphylo.github.io/>`_:
 ::
 
    100%[======================================>] 14,234,338  50.0M/s   in 0.3s    
-   2019-08-11 01:25:27 (50.0 MB/s) - "SIMOUT.txt.1" saved [14234338/14234338]
+   2019-08-11 01:25:27 (50.0 MB/s) - "SIMOUT.txt" saved [14234338/14234338]
    24440 SIMOUT.txt
 
 ..
@@ -116,7 +121,6 @@ classification and parameter estimation:
 
 ML assembly model classification
 --------------------------------
-
 The first step is now to assess the model of community assembly that
 best fits the data. The three models are ``neutral``, in which all
 individuals are ecologically equivalent; ``competition``, in which
@@ -133,16 +137,16 @@ other or more with the local environment.
 Here we create a ``MESS.inference.Classifier`` object and pass in the
 empirical dataframe, the simulations, and specify RandomForest (``rf``) as
 the algorithm to use (other options are GradientBoosting (``gb``) and
-AdaBoost (``ab``)). Very thorough documentation of all the machine
-learning inference architecture is available on the `MESS documentation
-site <https://pymess.readthedocs.io/en/latest/api.html#inference-procedure>`__.
+AdaBoost (``ab``)). Full documentation of all the machine learning inference
+architecture is available in the `MESS API specification
+<https://pymess.readthedocs.io/en/latest/api.html#inference-procedure>`__.
 
 .. code:: python
 
    cla = MESS.inference.Classifier(empirical_df=spider_df, simfile="SIMOUT.txt", algorithm="rf")
    est, proba = cla.predict(select_features=False, param_search=False, quick=True, verbose=True)
 
-The ``Classifier.predict()`` method provides a very sophisticated suite
+The ``Classifier.predict()`` method provides a sophisticated suite
 of routines for automating machine learning performance tuning. Here we
 disable **all** of this in order for it to run quickly, trading
 accuracy for performance. The ``select_features`` argument controls
@@ -151,10 +155,11 @@ informativeness. The ``param_search`` argument controls whether or not
 to exhaustively search the space of parameters to maximize accuracy of
 the ML algorithm selected. Finally, the ``quick`` argument subsets the
 size of the simulation database to 1000 simulations, again as a means of
-running quickly to check framework behavior. In normal conditions, when you
+running quickly to verify, for example, whether all the input data and
+simulations are formatted properly. In normal conditions, when you
 want to investigate real data you should use ``select_featers=True,
 param_search=True, quick=False``. This will result in much more accurate
-inference, yet will take *much* more time to run.
+inference, yet will take **much** more time to run.
 
 The call to ``cla.predict()`` returns both the most likely community
 assembly model (``est``) and the model probabilities (``proba``), which
@@ -168,8 +173,8 @@ you can view:
 ..
 
    **NB:** The first line of this codeblock imports the ``display``
-   method from the ``IPython`` library, which just makes pd.DataFrames
-   pretty print.
+   method from the ``IPython`` library, which makes pd.DataFrames
+   display nicely.
 
 .. figure:: images/MESSClassifier_results.png
 
@@ -199,7 +204,7 @@ The ``plot_feature_importance()`` method prunes out all the summary
 statistics that contribute less than 5% of information to the final
 model. This method is simply for visualization. Here you can see that
 the shape of the abundance distributions (as quantified by the first 4
-hill numbers) and the standard deviation of nucleotide diversity (pi)
+Hill numbers) and the standard deviation of nucleotide diversity (pi)
 within the local community are the most important summary statistics for
 differentiating between the different community assembly models.
 
@@ -286,8 +291,8 @@ simulations.
 **Spoiler alert:** Posterior predictive simulations can take quite a
 while to run. With the parameters we get even with this toy data a
 reasonable number of sims could take a couple hours. **So!** For the
-purpose of this exercise we are going to *munge* the estimates to make
-the simulations run faster. **DO NOT DO THIS WITH YOUR REAL DATA!**
+purpose of this exercise we are going to *transform* the estimated parameters
+to make the simulations run faster. **DO NOT DO THIS WITH YOUR REAL DATA!**
 
 .. code:: python
 
@@ -313,7 +318,10 @@ minutes.
 
 ::
 
-     [#                   ]   5% Performing simulations
+      Generating 20 simulation(s).
+    [####################] 100%  Finished 19 simulations   | 0:02:57 | 
+ 
+      Calculating PCs and plotting
 
 ..
 
@@ -322,23 +330,24 @@ minutes.
    For simplicity here we will not use this option, but in reality it
    would be a good idea to parallelize the posterior predictive
    simulations. See the :ref:`MESS parallelization docs
-   <arallelization.md>` for more info about how to implement the parallel
-    backend.
+   <mess_parallelization>` for more info about how to implement the parallel
+   backend.
 
 This time the only thing we *have* to pass in is the empirical data and
-the dataframe of prediction values, but I'm showing a couple more
-arguments here for the sake of completeness. Setting ``est_only`` to
-``True`` will use only the exact parameter estimates for all simulations,
-whereas setting it to ``False`` will sample uniformly between the upper and
-lower prediction interval for each simulation. ``nsims`` should be
-obvious, the number of posterior predictive simulations to perform.
-``force`` will overwrite any pre-existing simulations, thus preventing
-mixing apples with oranges from different simulation runs. On the other
-hand if this is ``False`` (the default), then this is a handy way to add
-more PPCs to your analysis.
+the dataframe of prediction values, but we show a couple more arguments
+here for the sake of completeness. Setting ``est_only`` to ``True`` will use
+only the exact parameter estimates for all simulations, whereas setting it to
+``False`` will sample uniformly between the upper and lower prediction interval
+for each simulation. ``nsims`` should be obvious, the number of posterior
+predictive simulations to perform. ``force`` will overwrite any pre-existing
+simulations, thus preventing mixing apples with oranges from different
+simulation runs. On the other hand if this is ``False`` (the default), then
+this is a handy way to add more PPCs to your analysis.
 
-Here is a pretty typical example of a good fit of parameters to the
-data:
+The ``posterior_predictive_check()`` method will also display the summary
+statistics for the simulated and observed data projected into PC space. The
+observed data is colored in red. Here is a pretty typical example of a good
+fit of parameters to the data:
 
 .. figure:: images/MESS_PPC_GoodFit.png
 
@@ -375,8 +384,3 @@ References
     API Parallelization  <MESS_parallelization.rst>
     Process Raw Data for Analysis <MESS_process_raw_data.rst>
 
-Model Selection
----------------
-
-Parameter Estimation
---------------------
