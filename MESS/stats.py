@@ -184,7 +184,12 @@ def SAD(community, from_abundances=False, octaves=False, raw_abunds=False):
     if from_abundances:
         tmp = []
         for i, sp in enumerate(community):
-            tmp.extend([i] * sp)
+            try:
+                int(sp)
+            except:
+                # If sp won't cast to int it's bad data so skip it.
+                continue
+            tmp.extend([i] * int(sp))
         community = tmp
 
     ## Make a counter for the local_community, counts the number of

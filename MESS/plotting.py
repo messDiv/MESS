@@ -60,10 +60,16 @@ target_labels = {"mutation_rate":"\u03BC",\
 #                "filtering":"#EDFF00",\
 #                "competition":"#FF3EA5"}
 
-## Miami Dolphins
-model_colors = {"neutral":"#FF8800",\
-                "filtering":"#00B7C4",\
-                "competition":"#005679"}
+# ## Miami Dolphins
+# model_colors = {"neutral":"#FF8800",\
+#                 "filtering":"#00B7C4",\
+#                 "competition":"#005679"}
+
+## Surf & Turf
+model_colors = {"neutral":"#F4CC70",\
+                "filtering":"#DE7A22",\
+                "competition":"#20948B",\
+                "pairwise_competition":"#6AB187"}
 
 
 def _filter_sims(simfile,\
@@ -442,7 +448,9 @@ def plot_rank_abundance_through_time(outdir, sp_through_time, equilibria,\
         fig = plt.figure(figsize=(12,5))
 
         ## Make the SAD subplot, convert Ne back to abundance by dividing by alpha
-        abund = SAD([x.stats["Ne_local"]/x.paramsdict["alpha"] for x in species], from_abundances=True, octaves=True)
+        if any(np.isnan([x.stats["abundance"] for x in species])):
+            continue
+        abund = SAD([x.stats["abundance"] for x in species], from_abundances=True, octaves=True)        
         ax1 = plt.subplot(121)
         plot_sad(abund, max_n_species, max_n_bins, max_class_count, octave_bin_labels, verbose)
 
@@ -512,7 +520,7 @@ def plot_abundance_vs_colonization_time(outdir, sp_through_time, equilibria,\
 
         ## Make the abundance vs colonization time plot
         ax1 = plt.subplot(121)
-        max_coltime = max([s.stats["coltime"]for s in species])
+        max_coltime = max([s.stats["tdiv"]for s in species])
         plot_abund_vs_colon(species, max_coltime, max_abundance)
 
         ## Make the rank abundance distribution subplot
@@ -760,7 +768,7 @@ def prep_normalized_plots(sp_through_time):
     max_n_bins = 0
     octave_bin_labels = []
     for sp in list(sp_through_time.values()):
-        abund = SAD([x.stats["Ne_local"]/x.paramsdict["alpha"] for x in sp], from_abundances=True, octaves=True)
+        abund = SAD([x.stats["abundance"] for x in sp], from_abundances=True, octaves=True)
         octave = max(abund.keys())
         class_count = max(abund.values())
         if octave > max_octave:
@@ -856,8 +864,8 @@ def plot_rank_abundance(sp_list, max_n_species, max_abundance, stats_models=Fals
 
 
 def plot_abund_vs_colon(species, max_coltime, max_abundance):
-    x = [np.log10(s.stats["coltime"]) for s in species]
-    y = [np.log10(s.stats["Ne_local"]/s.paramsdict["alpha"]) for s in species]
+    x = [np.log10(s.stats["tdiv"]) for s in species]
+    y = [np.log10(s.stats["abundance"]) for s in species]
     plt.scatter(x, y, color="blue", s=100)
     plt.ylim(0, int(math.ceil(np.log10(max_abundance))))
     plt.xlim(0, 8) #int(math.ceil(np.log10(max_coltime))))
