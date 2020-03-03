@@ -65,11 +65,11 @@ target_labels = {"mutation_rate":"\u03BC",\
 #                 "filtering":"#00B7C4",\
 #                 "competition":"#005679"}
 
-## Surf & Turf
-model_colors = {"neutral":"#F4CC70",\
-                "filtering":"#DE7A22",\
-                "competition":"#20948B",\
-                "pairwise_competition":"#6AB187"}
+## Primary colors
+model_colors = {"neutral":"#375E97",\
+                "filtering":"#3F681C",\
+                "competition":"#FB6542",\
+                "pairwise_competition":"#FFBB00"}
 
 
 def _filter_sims(simfile,\
@@ -193,8 +193,9 @@ def plot_simulations_hist(simfile,\
     neut_df = sim_df[labels.values == "neutral"]
     filt_df = sim_df[labels.values == "filtering"]
     comp_df = sim_df[labels.values == "competition"]
-    if verbose: print("Nsims\n  neutral\t{}\n  filtering\t{}\n  competition\t{}"\
-                        .format(len(neut_df), len(filt_df), len(comp_df)))
+    pw_df   = sim_df[labels.values == "pairwise_competition"]
+    if verbose: print("Nsims\n  neutral\t{}\n  filtering\t{}\n  competition\t{}\n pairwise_competition\t{}"\
+                        .format(len(neut_df), len(filt_df), len(comp_df), len(pw_df)))
     
     ## TODO: Would be cool to have an option to plot kde instead of hist.
     ## i.e. neut_df.plot(kind='kde'). Here it is, but it's untested-ish.
@@ -218,6 +219,9 @@ def plot_simulations_hist(simfile,\
                     color=MESS.plotting.model_colors["filtering"], grid=False)
     _ = comp_df.hist(ax = axs, label="competition", alpha=alpha, bins=bins,\
                     color=MESS.plotting.model_colors["competition"], grid=False)
+
+    _ = pw_df.hist(ax = axs, label="pairwise competition", alpha=alpha, bins=bins,\
+                    color=MESS.plotting.model_colors["pairwise_competition"], grid=False)
 
     plt.tight_layout()
     return axs
@@ -420,7 +424,7 @@ def plot_rank_abundance_through_time(outdir, sp_through_time, equilibria,\
     #if only_extant:
     #    sp_through_time = prune_extant(sp_through_time)
 
-    max_n_species, max_abundance, max_octave, max_class_count, max_n_bins, octave_bin_labels = prep_normalized_plots(sp_through_time)
+    max_n_species, max_abundance, max_octave, max_class_count, max_n_bins, octave_bin_labels = prep_normalized_plots(np.nan_to_num(sp_through_time))
     if verbose:
         print("info:\n\nmax_n_species - {}\nmax_abundance - {}\nmax_octave - {}\nmax_class_count - {}\nmax_n_bins - {}\noctave_bin_labels - {}\n".format(\
                 max_n_species, max_abundance, max_octave, max_class_count,\
@@ -867,7 +871,7 @@ def plot_abund_vs_colon(species, max_coltime, max_abundance):
     x = [np.log10(s.stats["tdiv"]) for s in species]
     y = [np.log10(s.stats["abundance"]) for s in species]
     plt.scatter(x, y, color="blue", s=100)
-    plt.ylim(0, int(math.ceil(np.log10(max_abundance))))
+    plt.ylim(0, 1) #int(math.ceil(np.log10(max_abundance))))
     plt.xlim(0, 8) #int(math.ceil(np.log10(max_coltime))))
     plt.title("Abundance vs Colonization Time", fontsize=24)
     plt.ylabel("Abundance (log10)", fontsize=20)
@@ -912,24 +916,26 @@ def get_max_heat_bin(sp_through_time, max_pi_local, max_dxy):
     return max_heat_bin
 
 
-def plot_death_probs(death_probs, outdir, model, local_community_record=None):
+def plot_death_probs(death_probs, outdir, model, local_community_record):
     """
     deaths_probs arg should be a dictionnary of time : death_probabilities
     This function aims at generating an animated gif of the distribution of death_probabilities through time
     """
     ## Create a directory to store the individual images
-    out_dir = outdir+"/plots_death_probs_"+model
+    print("Generating death probabilities plots thourgh time")
+    out_dir = outdir+"/plots_death_probs"
     os.mkdir(out_dir)
-
     maxtime = len(death_probs.keys())
     names = sorted([str(1000000000+i) for i in range(maxtime)])
-    values = [x for x in death_probs.values()]
+    values = [x for x in np.nan_to_num(death_probs.values())]
     maxprob = max(np.reshape(values,len(values[0])*len(values)))
     minprob = min(np.reshape(values,len(values[0])*len(values)))
 
+    tot_plots = len(death_probs)
     for i,time in enumerate(death_probs.keys()):
+        progressbar(tot_plots, i+1)
         fig = plt.figure(figsize=(12,5))
-        plt.plot(sorted(death_probs[time]))
+        plt.plot(sorted(np.nan_to_num(death_probs[time])))
         plt.ylabel('Probability of death')
         plt.ylim(minprob-minprob/100,maxprob+maxprob/100)
         plt.yscale('log')
@@ -937,35 +943,38 @@ def plot_death_probs(death_probs, outdir, model, local_community_record=None):
         plt.title('Distribution of death probabilities at time '+str(time))
         fig.savefig(out_dir+'/'+names[i]+'.png')
         plt.close()
-        
+
 
     # Actually generate the animation now.
     namegif = model + "_death_probabilities.gif"
     outgif = os.path.join(out_dir,namegif)
+    progressbar(100, 100, "\n")
     _make_animated_gif(out_dir, outgif)
 
-    if local_community_record != None:
-        out_dir2 = outdir+"/plots_death_probs_per_species_"+model
-        os.mkdir(out_dir2)
+    out_dir2 = outdir+"/plots_death_probs_per_species_"+model
+    os.mkdir(out_dir2)
 
-        # Have a different view with death probs for species
-        for i,time in enumerate(death_probs.keys()):
-            fig = plt.figure(figsize=(12,5))
-            plt.scatter(local_community_record[time],death_probs[time])
-            plt.ylabel('Probability of death')
-            plt.ylim(minprob-minprob/100,maxprob+maxprob/100)
-            plt.yscale('log')
-            plt.xlabel('species')
-            plt.title('Distribution of death probabilities at time '+str(time))
-            fig.savefig(out_dir2+'/'+names[i]+'.png')
-            plt.close()
-            
+    # Have a different view with death probs for species
+    for i,time in enumerate(death_probs.keys()):
+        progressbar(tot_plots, i+1)
+        fig = plt.figure(figsize=(12,5))
+        plt.scatter(local_community_record[time],np.nan_to_num(death_probs[time]))
+        plt.ylabel('Probability of death')
+        plt.ylim(minprob-minprob/100,maxprob+maxprob/100)
+        plt.yscale('log')
+        plt.xlabel('species')
+        plt.title('Distribution of death probabilities at time '+str(time))
+        fig.savefig(out_dir2+'/'+names[i]+'.png')
+        plt.close()
 
-        # Actually generate the animation now.
 
-        namegif = model + "_death_probabilities_persp.gif"
-        outgif = os.path.join(out_dir2,namegif)
-        _make_animated_gif(out_dir2, outgif)
+    # Actually generate the animation now.
+
+    namegif = model + "_death_probabilities_persp.gif"
+    outgif = os.path.join(out_dir2,namegif)
+    progressbar(100, 100, "\n")
+    _make_animated_gif(out_dir2, outgif)
+
 
 
 

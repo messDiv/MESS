@@ -223,7 +223,7 @@ class Region(object):
 
             elif param == "community_assembly_model":
                 if newvalue == "*":
-                    self._priors[param] = ["neutral", "filtering", "competition","pairwise_competition"]
+                    self._priors[param] = ["neutral", "filtering", "competition"]
                     newvalue = np.random.choice(self._priors[param])
                 self.paramsdict[param] = newvalue
 
@@ -263,7 +263,7 @@ class Region(object):
         self.metacommunity._update_species_pool(sname, trait_value)
 
 
-    def _reset_local_communities(self):
+    def _reset_local_communities(self,fancy=False):
         """
         Flip the local community. Basically make a copy, resample any parameters
         that were specified with priors and _prepopulate it.
@@ -271,7 +271,7 @@ class Region(object):
         LOGGER.debug("_reset_local_community()")
         for name, island in self.islands.items():
             new = island._copy()
-            new._prepopulate()
+            new._prepopulate(fancy=fancy)
             self.islands[name] = new
 
 
@@ -619,7 +619,7 @@ class Region(object):
     ## TODO: Need to think about how to quantify lambda if there is more
     ## than one island
     ## TODO: Need to implement the force flag here to allow or prevent overwriting
-    def simulate(self, _lambda=0, nsteps=0, log_full=False, quiet=True):
+    def simulate(self, _lambda=0, nsteps=0, log_full=False, quiet=True, fancy=False):
         ## Run one realization of this Region. simulate() accepts EITHER _lambda
         ## value to run to OR # of steps to perform, and not both.
         ##  * log_full turns on extremely verbose logging to files in the outdir
@@ -651,7 +651,7 @@ class Region(object):
 
         ## Not as big of a deal on ipp simulations, but if you're running on a local computer
         ## the local communities need to get reupped for each simulation.
-        self._reset_local_communities()
+        self._reset_local_communities(fancy=fancy)
 
         if self._log_files:
             ## Get an output directory for dumping data
@@ -680,7 +680,7 @@ class Region(object):
                     island._log(full=log_full)
         t1 = time.time()
         dictloc = self.islands["island1"].paramsdict
-        filename = 'speed_test_'+self.paramsdict["community_assembly_model"]+'_J'+str(dictloc["J"])+'_m'+str(dictloc["m"])+'_s'+str(dictloc["speciation_prob"])+'.txt'
+        filename = 'array_speed_test_'+self.paramsdict["community_assembly_model"]+'_J'+str(dictloc["J"])+'_m'+str(dictloc["m"])+'_s'+str(dictloc["speciation_prob"])+'.txt'
         file = open(filename,'a') 
         file.write(str(t1-t0)+'\n')
         file.close()
@@ -690,15 +690,6 @@ class Region(object):
         ## TODO: Combine stats across local communities if more than one
         for name, island in self.islands.items():
             statsdf = island.get_stats()
-            deaths_probs = island._death_probs
-            outdir = self._get_simulation_outdir(prefix="deaths_probs-")
-            model = self.paramsdict["community_assembly_model"]
-            if model != "neutral":
-                local_community_record = island._local_community_record
-                MESS.plotting.plot_death_probs(deaths_probs, outdir, model, local_community_record)
-            else:
-                MESS.plotting.plot_death_probs(deaths_probs, outdir, model)
-## This should be added to the fancy_plots but I can't make it work now
 
         ## Paste regional parameters on the front of the local community
         ## parameters and simulations
@@ -720,7 +711,7 @@ class Region(object):
     def fancy_plots(self, quiet=True):
         LOGGER.debug("Entering fancy_plots()")
 
-        self.simulate(_lambda=1, log_full=True, quiet=quiet)
+        self.simulate(_lambda=1, log_full=True, quiet=quiet, fancy=True)
 
         outdir = self._get_simulation_outdir(prefix="fancy-")
 
@@ -740,6 +731,8 @@ class Region(object):
                 MESS.plotting.plot_abundance_vs_colonization_time(outdir,
                                                         island.species_through_time,
                                                         island.lambda_through_time)
+                MESS.plotting.plot_death_probs(island.death_probs_through_time, outdir,                      self.paramsdict["community_assembly_model"],
+                                        island.local_community_through_time)
             except Exception as inst:
                 print("    Exception in fancy_plots() - {}".format(inst))
 
@@ -777,10 +770,10 @@ class Region(object):
     #def get_local_phy(self):
 
 
-def simulate(data, _lambda=0, nsteps=0, quiet=True):
+def simulate(data, _lambda=0, nsteps=0, quiet=True, fancy=False):
     import os
     LOGGER.debug("Entering sim - {} on pid {}\n{}".format(data, os.getpid(), data.paramsdict))
-    res = data.simulate(_lambda=_lambda, nsteps=nsteps, quiet=quiet)
+    res = data.simulate(_lambda=_lambda, nsteps=nsteps, quiet=quiet, fancy=fancy)
     LOGGER.debug("Leaving sim - {} on pid {}\n{}".format(data, os.getpid(),\
                                                         [str(x) for x in data.islands.values()]))
     return res

@@ -144,8 +144,9 @@ class LocalCommunity(object):
         self.survived_invasives = 0
         self.invasion_time = -1
 
-        self._death_probs = OrderedDict({})
-        self._local_community_record = OrderedDict({})
+        self.death_probs_through_time = OrderedDict({})
+        self.local_community_through_time = OrderedDict({})
+        self.fancy = False
 
 
     def _copy(self):
@@ -438,7 +439,7 @@ class LocalCommunity(object):
         return "<LocalCommunity {}>".format(self.name)
 
 
-    def _prepopulate(self, verbose=False):
+    def _prepopulate(self, verbose=False, fancy=False):
         LOGGER.debug("prepopulating local_community - {}".format(self))
         if not self.region:
             msg = "Skip populating the local community as it is unlinked to a region."
@@ -501,6 +502,8 @@ class LocalCommunity(object):
         if self.region.paramsdict["community_assembly_model"] == "pairwise_competition":
             self._distance_matrix_init()
 
+        self.fancy = fancy
+
 
     def _neutral_death_step(self):
         victim = random.choice(self.local_community)
@@ -508,7 +511,7 @@ class LocalCommunity(object):
             pass
         vic_idx = random.randint(0,self.paramsdict["J"]-1)
         victim = self.local_community[vic_idx]
-        if not self.current_time % (self.paramsdict["J"]*2):
+        if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs()
         self._finalize_death(victim,vic_idx)
 
@@ -533,7 +536,7 @@ class LocalCommunity(object):
             ## vic_idx is nan because of too high values in the exponential
                 vic_idx = random.randint(0,self.paramsdict["J"]-1)
             victim = self.local_community[vic_idx]
-        if not self.current_time % (self.paramsdict["J"]*2):
+        if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs(death_probs)
         self._finalize_death(victim,vic_idx)
 
@@ -554,7 +557,7 @@ class LocalCommunity(object):
             ## vic_idx is nan because of too high values in the exponential
                 vic_idx = random.randint(0,self.paramsdict["J"]-1)
             victim = self.local_community[vic_idx]
-        if not self.current_time % (self.paramsdict["J"]*2):
+        if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs(death_probs)
         self._finalize_death(victim, vic_idx)
 
@@ -573,7 +576,7 @@ class LocalCommunity(object):
             ## Get the victim conditioning on unequal death probability
             vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
             victim = self.local_community[vic_idx]
-        if not self.current_time % (self.paramsdict["J"]*2):
+        if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs(death_probs)
         self._finalize_death(victim, vic_idx)
 
@@ -581,10 +584,11 @@ class LocalCommunity(object):
     def _record_deaths_probs(self,death_probs=np.array(())):
         if len(death_probs) == 0: #Neutral
             n = self.paramsdict["J"]
-            self._death_probs[self.current_time] = np.array([1/n]*n)
+            self.death_probs_through_time[self.current_time] = np.array([1/n]*n)
+            self.local_community_through_time[self.current_time] = self.local_community.copy()
         else:
-            self._death_probs[self.current_time] = death_probs
-            self._local_community_record[self.current_time] = self.local_community.copy()
+            self.death_probs_through_time[self.current_time] = death_probs
+            self.local_community_through_time[self.current_time] = self.local_community.copy()
             # print("death probs at ",self.current_time)
             # print(self._death_probs[self.current_time])
             # print("loc comm at ", self.current_time)
