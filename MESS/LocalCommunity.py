@@ -254,7 +254,8 @@ class LocalCommunity(object):
         self.local_interaction_matrix = np.zeros((n,n))
         for i in range(n):
             for j in range(n):
-                self.local_interaction_matrix[i][j] = self.region.metacommunity._get_interaction_term(int(float(self.local_community[i])),int(float(self.local_community[j])))
+                self.local_interaction_matrix[i][j] = self.region.metacommunity._get_interaction_term(self.local_community[i],self.local_community[j])
+
 
     ## For the pairwise compeition model, a global matrix is used which summarize the competition interactions for all individuals
     def _distance_matrix_init(self):
@@ -266,10 +267,12 @@ class LocalCommunity(object):
         self._exp_distance_matrix = np.exp(-(dist_matrix)/es)
 
 
+
+
     ## Update the distance matrix using the position of the last dead individual
     def _distance_matrix_add(self):
         nb_ind = self.paramsdict["J"]
-        idx = self.last_dead_ind
+        idx = self.last_dead_ind[0]
         self.local_traits[idx] = self.region.get_trait(self.local_community[idx])
         ## Reshape local_traits for the cdist function
         local_traits = self.local_traits.reshape(nb_ind,1)
@@ -278,6 +281,16 @@ class LocalCommunity(object):
         new_dist = np.reshape(distance.cdist(local_traits,[local_traits[idx]]),(nb_ind))
         self._exp_distance_matrix[idx] = np.exp(-(new_dist/es))
         self._exp_distance_matrix[:,idx] = self._exp_distance_matrix[idx].T
+
+    def _interaction_matrix_update(self):
+        nb_ind = self.paramsdict["J"]
+        idx = self.last_dead_ind[0]
+        new_species = self.local_community[idx]
+        
+        new_interaction1 = np.array([self.region.metacommunity._get_interaction_term(new_species, sp) for sp in self.local_community])
+        new_interaction2 = np.array([self.region.metacommunity._get_interaction_term(sp, new_species) for sp in self.local_community])
+        self.local_interaction_matrix[idx] = new_interaction1
+        self.local_interaction_matrix[:,idx] = new_interaction2.T
 
 
     ## Update global death probabilities for the filtering model
@@ -627,7 +640,7 @@ class LocalCommunity(object):
             ## If the species of the victim went locally extinct then clean up local_info
             self._test_local_extinction(victim)
             ## Record the new empty space
-            self.last_dead_ind = vic_idx
+            self.last_dead_ind = (vic_idx,victim) #Index, species
 
         except Exception as inst:
             raise MESSError("Error in _finalize_death(): {}".format(inst))
@@ -710,7 +723,7 @@ class LocalCommunity(object):
                 ## Grab the new colonizing species
                 new_species = self._migrate_step()
                 chx = new_species # for speciation
-                dead = self.last_dead_ind
+                dead = self.last_dead_ind[0]
                 ## The invasion code "works" in that it worked last time I tried it, but it's
                 ## not doing anything right now except slowing down the process. I don't want to dl
                 ## it in case we want to resurrect, so it's just commented out for now. 5/2019 iao.
@@ -742,7 +755,7 @@ class LocalCommunity(object):
                     ## This is the fastest way to sample from a list. >4x faster than np.random.choice
                     ## Don't allow empty space to reproduce
                     chx = random.choice([x for x in self.local_community if x != None])
-                    dead = self.last_dead_ind
+                    dead = self.last_dead_ind[0]
                     idx = np.argwhere(self.local_community==chx)[0][0]
                     # print(idx," (species:",self.local_community[idx]," trait:",self.local_traits[idx],") replaced ", dead," (species:",self.local_community[dead]," trait:",self.local_traits[dead],")")
                     ## Record new individual's species
@@ -767,10 +780,14 @@ class LocalCommunity(object):
                 #             print("sp_j:",self.local_community[j],"tr_i:",self.local_traits[j])
 
             ## WARNING : Pairwise competition assumes that "mig_clust_size" is one !
-            if self.region.paramsdict["community_assembly_model"] == "pairwise_competition":
+            if self.region.paramsdict["community_assembly_model"] == "pairwise_competition" and chx != self.last_dead_ind[1]:
+                # The matrix are only changing if the new individual has not the same species as the dead one
                 if self._hackersonly["mig_clust_size"] != 1:
                     raise MESSError("Pairwise competition only handles migration cluster of size 1")
                 self._distance_matrix_add()
+                self._interaction_matrix_update()
+
+                ## TODO : It has to be updated too if there is a speciation !! NOT HANDLE AT ALL FOR NOW ??
             
 
             ##############################################

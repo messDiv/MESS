@@ -258,7 +258,7 @@ class Metacommunity(object):
 
 
     def _get_interaction_term(self,species1,species2):
-        return self.interaction_matrix[species1][species2]
+        return self.interaction_matrix[int(float(species1))][int(float(species2))]
 
 
     def _write_params(self, outfile=None, full=False):
