@@ -250,6 +250,7 @@ class LocalCommunity(object):
         """
         Retrieve information from the metacommunity to store the local interaction matrix
         """
+        print("set interaction")
         n = self.paramsdict["J"]
         self.local_interaction_matrix = np.zeros((n,n))
         for i in range(n):
@@ -258,31 +259,18 @@ class LocalCommunity(object):
 
 
     ## For the pairwise compeition model, a global matrix is used which summarize the competition interactions for all individuals
-    def _distance_matrix_init(self):
+    def _set_distance_matrix(self):
+        print("set distance")
         ## Reshape local_traits for the cdist function
         local_traits = self.local_traits.reshape(self.paramsdict["J"],1)
         es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
 
         dist_matrix = distance.cdist(local_traits,local_traits,'sqeuclidean')
-        self._exp_distance_matrix = np.exp(-(dist_matrix)/es)
+        self._exp_distance_matrix = np.exp(-(dist_matrix*self.local_interaction_matrix)/es)
 
-
-
-
-    ## Update the distance matrix using the position of the last dead individual
-    def _distance_matrix_add(self):
-        nb_ind = self.paramsdict["J"]
-        idx = self.last_dead_ind[0]
-        self.local_traits[idx] = self.region.get_trait(self.local_community[idx])
-        ## Reshape local_traits for the cdist function
-        local_traits = self.local_traits.reshape(nb_ind,1)
-        es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
-
-        new_dist = np.reshape(distance.cdist(local_traits,[local_traits[idx]]),(nb_ind))
-        self._exp_distance_matrix[idx] = np.exp(-(new_dist/es))
-        self._exp_distance_matrix[:,idx] = self._exp_distance_matrix[idx].T
 
     def _interaction_matrix_update(self):
+        print("update interaction")
         nb_ind = self.paramsdict["J"]
         idx = self.last_dead_ind[0]
         new_species = self.local_community[idx]
@@ -291,6 +279,26 @@ class LocalCommunity(object):
         new_interaction2 = np.array([self.region.metacommunity._get_interaction_term(sp, new_species) for sp in self.local_community])
         self.local_interaction_matrix[idx] = new_interaction1
         self.local_interaction_matrix[:,idx] = new_interaction2.T
+
+
+    ## Update the distance matrix using the position of the last dead individual
+    def _distance_matrix_update(self):
+        print("update dist")
+        nb_ind = self.paramsdict["J"]
+        idx = self.last_dead_ind[0]
+        self.local_traits[idx] = self.region.get_trait(self.local_community[idx])
+        ## Reshape local_traits for the cdist function
+        local_traits = self.local_traits.reshape(nb_ind,1)
+        es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
+
+        new_dist = np.reshape(distance.cdist(local_traits,[local_traits[idx]]),(nb_ind))
+        self._exp_distance_matrix[idx] = np.exp(-(new_dist*self.local_interaction_matrix[idx]/es))
+        # TERM INTO THE EXP : does not take mutualism into account for now : consider only the strength TODO
+        # ! if only mutualism, what happens ? -> prob to 0 ? And if all prob to 0 then neutral ?
+        ## IN ANY CASE : document what is happening in special cases
+        # PLUS DOES NOT YET HANDLE ASYMMETRIC INTERACTIONS
+        self._exp_distance_matrix[:,idx] = self._exp_distance_matrix[idx].T
+
 
 
     ## Update global death probabilities for the filtering model
@@ -522,8 +530,8 @@ class LocalCommunity(object):
 
         ## Initialize distance matrix if we are in pairwise competition
         if self.region.paramsdict["community_assembly_model"] == "pairwise_competition":
-            self._distance_matrix_init()
             self._set_local_interaction_matrix()
+            self._set_distance_matrix()
 
 
         self.fancy = fancy
@@ -784,8 +792,8 @@ class LocalCommunity(object):
                 # The matrix are only changing if the new individual has not the same species as the dead one
                 if self._hackersonly["mig_clust_size"] != 1:
                     raise MESSError("Pairwise competition only handles migration cluster of size 1")
-                self._distance_matrix_add()
                 self._interaction_matrix_update()
+                self._distance_matrix_update()
 
                 ## TODO : It has to be updated too if there is a speciation !! NOT HANDLE AT ALL FOR NOW ??
             
