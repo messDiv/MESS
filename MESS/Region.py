@@ -70,8 +70,6 @@ class Region(object):
                        ("mutation_rate", 2.2e-8),
                        ("alpha", 2000),
                        ("sequence_length", 570),
-                       ("intrasp_competition", 1),
-                       ("intersp_competition", 1),
         ])
 
         ## A dictionary for holding prior ranges for values we're interested in
@@ -245,16 +243,6 @@ class Region(object):
 
             elif param == "sequence_length":
                 self.paramsdict[param] = float(newvalue)
-
-            elif param == "intrasp_competition":
-                tup = tuplecheck(newvalue, dtype=float)
-                self.paramsdict[param] = tup
-                #First value : alpha | second value : beta | if only one : fixed
-
-            elif param == "intersp_competition":
-                tup = tuplecheck(newvalue, dtype=float)
-                self.paramsdict[param] = tup
-                #First value : alpha | second value : beta | if only one : fixed
 
             else:
                 self.paramsdict[param] = newvalue
@@ -803,8 +791,6 @@ REGION_PARAMS = {
     "mutation_rate" : "Mutation rate scaled per base per generation",\
     "alpha" : "Abundance/Ne scaling factor",\
     "sequence_length" : "Length in bases of the sequence to simulate",\
-    "intersp_competition" : "Strength of the interspecific competition (fixed single value or parameters for the gamma distribution)",\
-    "intrasp_competition" : "Strength of the intraspecific competition (fixed single value or parameters for the gamma distribution)",\
 }
 
 

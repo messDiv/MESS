@@ -51,6 +51,9 @@ class Metacommunity(object):
                         ("death_proportion", 0.7),
                         ("trait_rate_meta", 2),
                         ("ecological_strength", 1),
+                        ("intrasp_competition", 1),
+                        ("intersp_competition", 1),
+                        ("mutualism_proportion", 0.5),
         ])
 
         ## elite hackers only internal dictionary, normally you shouldn't mess with this
@@ -222,6 +225,17 @@ class Metacommunity(object):
                     self.paramsdict[param] = tup
                 LOGGER.debug("{} {}".format(param, tup))
 
+            elif param == "intrasp_competition":
+                tup = tuplecheck(newvalue, dtype=float)
+                self.paramsdict[param] = tup
+                #First value : alpha | second value : beta | if only one : fixed
+
+            elif param == "intersp_competition":
+                tup = tuplecheck(newvalue, dtype=float)
+                self.paramsdict[param] = tup
+                #First value : alpha | second value : beta | if only one : fixed
+
+
         except Exception as inst:
             ## Do something intelligent here?
             raise MESSError("Error {}\n    Bad parameter {} - Bad value {}".format(inst, param, newvalue))
@@ -241,6 +255,10 @@ class Metacommunity(object):
 
     def _get_species_traits(self):
         return self.trait_dict
+
+
+    def _get_interaction_term(self,species1,species2):
+        return self.interaction_matrix[species1][species2]
 
 
     def _write_params(self, outfile=None, full=False):
@@ -419,6 +437,69 @@ class Metacommunity(object):
 """
             raise MESSError(msg.format(self.paramsdict["S_m"], len(ids)))
 
+        ### Fill the interaction martix ###
+        ## Strength of the interaction
+        self.interaction_matrix = np.zeros((self.paramsdict["S_m"],self.paramsdict["S_m"]))
+
+            ## Begin with the interspecific interaction
+        try:
+            if type(self.paramsdict["intersp_competition"])==type((0,0)):
+                ## Draw according to gamma distribution
+                self.interaction_matrix = np.random.gamma(shape = self.paramsdict["intersp_competition"][0]
+                                    , scale = self.paramsdict["intersp_competition"][1]
+                                    , size = (self.paramsdict["S_m"],self.paramsdict["S_m"]))
+            else:
+                ## Expecting just a single value
+                self.interaction_matrix = np.array([[self.paramsdict["intersp_competition"] for _ in range(self.paramsdict["S_m"])] for _ in range(self.paramsdict["S_m"])])
+
+        except ValueError as inst:
+            msg = \
+"""
+    Attempting to set interspecific interaction matrix with {} factors but it can only be 1 (exact value) or 2 terms (shape and scale parameters for gamma distribution
+"""         
+            raise MESSError(msg.format(self.paramsdict["intrasp_competition"]))
+
+
+        try:
+            ## Write over precedent terms for the diagonal of the matrix
+            if type(self.paramsdict["intrasp_competition"])==type((0,0)):
+                ## Draw according to gamma distribution
+                rds = np.random.gamma(shape = self.paramsdict["intrasp_competition"][0]
+                                    , scale = self.paramsdict["intrasp_competition"][1]
+                                    , size = self.paramsdict["S_m"])
+                for i in range(self.paramsdict["S_m"]):
+                    self.interaction_matrix[i][i] = rds[i]
+            else:
+                ## Expecting just a single value
+                for i in range(self.paramsdict["S_m"]):
+                    self.interaction_matrix[i][i] = self.paramsdict["intrasp_competition"]
+        except ValueError as inst:
+            msg = \
+"""
+    Attempting to set intraspecific interaction matrix with {} factors but it can only be 1 (exact value) or 2 terms (shape and scale parameters for gamma distribution
+"""         
+            raise MESSError(msg.format(self.paramsdict["intrasp_competition"]))
+
+        ## Nature of the interaction
+        if type(self.paramsdict["intrasp_competition"])==type((0,0)) and type(self.paramsdict["intersp_competition"])==type((0,0)):
+            try:
+                factors = np.random.binomial(n = 1,
+                    p = self.paramsdict["mutualism_proportion"],
+                    size =(self.paramsdict["S_m"],self.paramsdict["S_m"]))
+                factors[factors == 0] = -1
+                self.interaction_matrix = self.interaction_matrix * factors
+                # A positive value is a positive interaction,
+                # A negative value is a negative interaction
+            except ValueError as inst:
+                raise MESSError("Error while drawing the nature of the interactions")
+        elif type(self.paramsdict["intrasp_competition"])==type((0,0)):
+            raise MESSError("Inter- and intra- specific competition have to be either both fixed or both gamma distributed (TODO)")
+        elif type(self.paramsdict["intersp_competition"])==type((0,0)):
+            raise MESSError("Inter- and intra- specific competition have to be either both fixed or both gamma distributed (TODO)")
+        else:
+            pass
+                    
+
         ## Calculate immigration probabilities
         ## Here the true Jm under the logseries model will not equal the true
         ## sum of abundances, since it is a random variable per simulation.
@@ -493,7 +574,10 @@ LOCAL_PARAMS = {
     "death_proportion" : "Proportion of speciation rate to be extinction rate",\
     "trait_rate_meta" : "Trait evolution rate parameter for metacommunity",\
     "ecological_strength" : "Strength of community assembly process on phenotypic change",\
-}
+    "intersp_competition" : "Strength of the interspecific competition (fixed single value or parameters for the gamma distribution)",\
+    "intrasp_competition" : "Strength of the intraspecific competition (fixed single value or parameters for the gamma distribution)",\
+    "mutualism_proportion" : "Percentage of inter- and intraspecific interaction terms that are beneficial for one the species (only used if inter- and intra- competition terms are not fixed)"
+    }
 
 
 if __name__ == "__main__":

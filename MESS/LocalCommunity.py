@@ -246,6 +246,15 @@ class LocalCommunity(object):
         else:
             raise Exception("unrecognized community assembly model in _set_death_step: {}".format(assembly_model))
 
+    def _set_local_interaction_matrix(self):
+        """
+        Retrieve information from the metacommunity to store the local interaction matrix
+        """
+        n = self.paramsdict["J"]
+        self.local_interaction_matrix = np.zeros((n,n))
+        for i in range(n):
+            for j in range(n):
+                self.local_interaction_matrix[i][j] = self.region.metacommunity._get_interaction_term(int(float(self.local_community[i])),int(float(self.local_community[j])))
 
     ## For the pairwise compeition model, a global matrix is used which summarize the competition interactions for all individuals
     def _distance_matrix_init(self):
@@ -501,6 +510,8 @@ class LocalCommunity(object):
         ## Initialize distance matrix if we are in pairwise competition
         if self.region.paramsdict["community_assembly_model"] == "pairwise_competition":
             self._distance_matrix_init()
+            self._set_local_interaction_matrix()
+
 
         self.fancy = fancy
 
