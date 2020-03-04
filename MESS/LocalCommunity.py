@@ -250,7 +250,6 @@ class LocalCommunity(object):
         """
         Retrieve information from the metacommunity to store the local interaction matrix
         """
-        print("set interaction")
         n = self.paramsdict["J"]
         self.local_interaction_matrix = np.zeros((n,n))
         for i in range(n):
@@ -260,17 +259,17 @@ class LocalCommunity(object):
 
     ## For the pairwise compeition model, a global matrix is used which summarize the competition interactions for all individuals
     def _set_distance_matrix(self):
-        print("set distance")
         ## Reshape local_traits for the cdist function
         local_traits = self.local_traits.reshape(self.paramsdict["J"],1)
         es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
 
         dist_matrix = distance.cdist(local_traits,local_traits,'sqeuclidean')
-        self._exp_distance_matrix = np.exp(-(dist_matrix*self.local_interaction_matrix)/es)
+        self._exp_distance_matrix = np.exp(-(dist_matrix/es))*(-self.local_interaction_matrix)
+        # factors intervene outside the exp because positive/negative values
+        # Multiply by -1 so that a positive term (mutualisme) decreases the probability of death and a negative term (antagonism) increases it
 
 
     def _interaction_matrix_update(self):
-        print("update interaction")
         nb_ind = self.paramsdict["J"]
         idx = self.last_dead_ind[0]
         new_species = self.local_community[idx]
@@ -283,7 +282,6 @@ class LocalCommunity(object):
 
     ## Update the distance matrix using the position of the last dead individual
     def _distance_matrix_update(self):
-        print("update dist")
         nb_ind = self.paramsdict["J"]
         idx = self.last_dead_ind[0]
         self.local_traits[idx] = self.region.get_trait(self.local_community[idx])
@@ -292,11 +290,8 @@ class LocalCommunity(object):
         es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
 
         new_dist = np.reshape(distance.cdist(local_traits,[local_traits[idx]]),(nb_ind))
-        self._exp_distance_matrix[idx] = np.exp(-(new_dist*self.local_interaction_matrix[idx]/es))
-        # TERM INTO THE EXP : does not take mutualism into account for now : consider only the strength TODO
-        # ! if only mutualism, what happens ? -> prob to 0 ? And if all prob to 0 then neutral ?
-        ## IN ANY CASE : document what is happening in special cases
-        # PLUS DOES NOT YET HANDLE ASYMMETRIC INTERACTIONS
+        self._exp_distance_matrix[idx] = np.exp(-(new_dist/es))*(-self.local_interaction_matrix[idx])
+        # DOES NOT YET HANDLE ASYMMETRIC INTERACTIONS
         self._exp_distance_matrix[:,idx] = self._exp_distance_matrix[idx].T
 
 
@@ -581,7 +576,8 @@ class LocalCommunity(object):
             ## Sum all the interaction, exept ones with self
             death_probs = np.nan_to_num(np.sum(self._exp_distance_matrix,axis=0))-np.nan_to_num(np.diag(self._exp_distance_matrix))
             ## Scale all fitness values to proportions
-            death_probs = np.array(death_probs)/np.sum(death_probs)
+            death_probs = self.normalize(death_probs)
+            #death_probs = death_probs/np.sum(death_probs)
             ## Get the victim conditioning on unequal death probability
             try:
                 vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
@@ -592,6 +588,11 @@ class LocalCommunity(object):
         if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs(death_probs)
         self._finalize_death(victim, vic_idx)
+
+
+    def normalize(self, death_probs):
+        death_probs = death_probs + np.min(death_probs)
+        return death_probs/np.sum(death_probs)
 
 
     def _filtering_death_step(self):
