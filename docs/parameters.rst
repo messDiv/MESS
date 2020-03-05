@@ -186,6 +186,9 @@ Example entries to params.txt::
 speciation_rate
 ---------------
 
+The speciation rate parameter of the birth-death process which generates the
+metacommunity phylogeny.
+
 Example entries to params.txt::
 
     2                  ## [2] [speciation_rate]: Speciation rate of metacommunity
@@ -196,6 +199,9 @@ Example entries to params.txt::
 death_proportion
 ----------------
 
+The rate of extinction proportional to the speciation rate for the birth-death
+metacommunity phylogeny.
+
 Example entries to params.txt::
 
     0.7                ## [3] [death_proportion]: Proportion of speciation rate to be extinction rate
@@ -205,6 +211,10 @@ Example entries to params.txt::
 
 trait_rate_meta
 ---------------
+
+The variance of the Brownian motion process for evolving traits along the
+metacommunity phylogeny. Smaller values will result in more trait similarity
+within clades, and larger values will result in more overdispersed traits.
 
 Example entries to params.txt::
 
@@ -262,6 +272,10 @@ Example entries to params.txt::
 name
 ----
 
+This is a label for the local community and is used to generate output file
+names. Generally not that useful unless you're simulating multiple local
+communities.
+
 Example entries to params.txt::
 
     island1            ## [0] [name]: Local community name
@@ -271,6 +285,10 @@ Example entries to params.txt::
 
 J 
 --
+
+The number of individuals in the local community. This value is fixed for the
+duration of a community assembly simulation. The size of `J` will have a strong
+impact on the consequent species richness and abundance distribution.
 
 Example entries to params.txt::
 
@@ -282,6 +300,10 @@ Example entries to params.txt::
 m 
 --
 
+The probability at any given timestep that a randomly sampled individual in the
+local community will be replaced by a migrant from the metacommunity. Larger
+values of `m` will generally result in increased species richness.
+
 Example entries to params.txt::
 
     0.01               ## [2] [m]: Migration rate into local community
@@ -291,6 +313,11 @@ Example entries to params.txt::
 
 speciation_prob
 ---------------
+
+Given that a randomly sampled individual from the local community is being
+replaced by the offspring of another individual from the local community, this
+parameter defines the probability that this offspring individual will undergo
+a speciation process.
 
 Example entries to params.txt::
 
