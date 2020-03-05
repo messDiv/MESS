@@ -148,6 +148,8 @@ class LocalCommunity(object):
         self.local_community_through_time = OrderedDict({})
         self.fancy = False
 
+        self.new_species = Dict({})
+
 
     def _copy(self):
         """
@@ -265,11 +267,14 @@ class LocalCommunity(object):
 
         dist_matrix = distance.cdist(local_traits,local_traits,'sqeuclidean')
         self._exp_distance_matrix = np.exp(-(dist_matrix/es))*(-self.local_interaction_matrix)
-        # factors intervene outside the exp because positive/negative values
-        # Multiply by -1 so that a positive term (mutualisme) decreases the probability of death and a negative term (antagonism) increases it
+        ## factors intervene outside the exp because positive/negative values
+        ## Multiply by -1 so tha
+        ## a positive term (mutualisme) decreases the probability of death and 
+        ## a negative term (antagonism) increases it
 
 
     def _interaction_matrix_update(self):
+        # print("update interaction", self.last_dead_ind)
         nb_ind = self.paramsdict["J"]
         idx = self.last_dead_ind[0]
         new_species = self.local_community[idx]
@@ -278,10 +283,12 @@ class LocalCommunity(object):
         new_interaction2 = np.array([self.region.metacommunity._get_interaction_term(sp, new_species) for sp in self.local_community])
         self.local_interaction_matrix[idx] = new_interaction1
         self.local_interaction_matrix[:,idx] = new_interaction2.T
+        # print(self.local_interaction_matrix)
 
 
     ## Update the distance matrix using the position of the last dead individual
     def _distance_matrix_update(self):
+        # print("update distance", self.last_dead_ind)
         nb_ind = self.paramsdict["J"]
         idx = self.last_dead_ind[0]
         self.local_traits[idx] = self.region.get_trait(self.local_community[idx])
@@ -292,7 +299,9 @@ class LocalCommunity(object):
         new_dist = np.reshape(distance.cdist(local_traits,[local_traits[idx]]),(nb_ind))
         self._exp_distance_matrix[idx] = np.exp(-(new_dist/es))*(-self.local_interaction_matrix[idx])
         # DOES NOT YET HANDLE ASYMMETRIC INTERACTIONS
-        self._exp_distance_matrix[:,idx] = self._exp_distance_matrix[idx].T
+        self._exp_distance_matrix[:,idx] = np.exp(-(new_dist/es))*(-self.local_interaction_matrix[:,idx])
+        ## Distance are symmetrical but interactions may be not
+        # print(self._exp_distance_matrix)
 
 
 
@@ -897,6 +906,7 @@ class LocalCommunity(object):
             self.founder_flags[idx] = False
 
         elif self.region.paramsdict["speciation_model"] == "random_fission":
+            ## NOT HANDLED WITH PAIRWISE COMPETITION YET
             ## TODO: This doesn't handle the founder_flag housekeeping AT ALL!
 
             ## Get abundance of the target species so we can perform

@@ -680,12 +680,12 @@ class Region(object):
                for island in self.islands.values():
                     island._log(full=log_full)
         t1 = time.time()
-        dictloc = self.islands["island1"].paramsdict
-        filename = 'array_speed_test_'+self.paramsdict["community_assembly_model"]+'_J'+str(dictloc["J"])+'_m'+str(dictloc["m"])+'_s'+str(dictloc["speciation_prob"])+'.txt'
-        file = open(filename,'a') 
-        file.write(str(t1-t0)+'\n')
-        file.close()
-
+        # dictloc = self.islands["island1"].paramsdict
+        # filename = 'array_speed_test_'+self.paramsdict["community_assembly_model"]+'_J'+str(dictloc["J"])+'_m'+str(dictloc["m"])+'_s'+str(dictloc["speciation_prob"])+'.txt'
+        # file = open(filename,'a') 
+        # file.write(str(t1-t0)+'\n')
+        # file.close()
+        print(t1-t0)
 
 
         ## TODO: Combine stats across local communities if more than one

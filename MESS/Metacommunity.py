@@ -210,7 +210,7 @@ class Metacommunity(object):
 
             ## Cast params to correct types
             if param in ["S_m", "J_m", "speciation_rate", "death_proportion", "trait_rate_meta",
-                            "ecological_strength"]:
+                            "ecological_strength","mutualism_proportion"]:
                 dtype = float 
                 if param in ["S_m", "J_m"]:
                     dtype = int
@@ -258,7 +258,8 @@ class Metacommunity(object):
 
 
     def _get_interaction_term(self,species1,species2):
-        return self.interaction_matrix[int(float(species1))][int(float(species2))]
+        return self.interaction_matrix[int(float(species1))-1][int(float(species2))-1]
+    #Species from 1 to 100 but matrix from 0 to 99
 
 
     def _write_params(self, outfile=None, full=False):
@@ -492,12 +493,14 @@ class Metacommunity(object):
                 # A negative value is a negative interaction
             except ValueError as inst:
                 raise MESSError("Error while drawing the nature of the interactions")
+
         elif type(self.paramsdict["intrasp_competition"])==type((0,0)):
             raise MESSError("Inter- and intra- specific competition have to be either both fixed or both gamma distributed (TODO)")
         elif type(self.paramsdict["intersp_competition"])==type((0,0)):
             raise MESSError("Inter- and intra- specific competition have to be either both fixed or both gamma distributed (TODO)")
         else:
             pass
+            # No random proportion of mutualism if values fixed
                     
 
         ## Calculate immigration probabilities
