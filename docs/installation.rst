@@ -12,6 +12,7 @@ Method 1: Install pre-built binary from conda
 
 1. Download and install `anaconda <https://www.anaconda.com/download/>`_ or
 `miniconda <https://conda.io/miniconda.html>`_.
+
 2. (Optional) create a separate `conda environment
 <https://conda.io/docs/user-guide/tasks/manage-environments.html>`_ to install
 into:
