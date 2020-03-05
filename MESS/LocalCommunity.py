@@ -841,6 +841,7 @@ class LocalCommunity(object):
 
         if self.region.paramsdict["speciation_model"] == "point_mutation":
             ## Replace the individual in the local_community with the new species
+            self.last_dead_ind = idx
             self.local_community[idx] = sname
             ## Record new trait value
             self.local_traits[idx] = trt
@@ -858,6 +859,8 @@ class LocalCommunity(object):
             self._add_local_info(sname = sname, abundances_through_time=parent_abunds , ancestor = ancestor)
             ## Speciation flips the founder_flag for the new species
             self.founder_flags[idx] = False
+            self._distance_matrix_add()
+
 
         elif self.region.paramsdict["speciation_model"] == "random_fission":
             ## TODO: This doesn't handle the founder_flag housekeeping AT ALL!
