@@ -148,8 +148,6 @@ class LocalCommunity(object):
         self.local_community_through_time = OrderedDict({})
         self.fancy = False
 
-        self.new_species = Dict({})
-
 
     def _copy(self):
         """
@@ -766,16 +764,13 @@ class LocalCommunity(object):
                 # print(self.local_traits)
             else:
                 try:
-                    # print("no migration:")
                     self.death_step()
-                    # print(self.local_community)
                     ## Sample all available from local community (community grows slow in volcanic model)
                     ## This is the fastest way to sample from a list. >4x faster than np.random.choice
                     ## Don't allow empty space to reproduce
                     chx = random.choice([x for x in self.local_community if x != None])
                     dead = self.last_dead_ind[0]
                     idx = np.argwhere(self.local_community==chx)[0][0]
-                    # print(idx," (species:",self.local_community[idx]," trait:",self.local_traits[idx],") replaced ", dead," (species:",self.local_community[dead]," trait:",self.local_traits[dead],")")
                     ## Record new individual's species
                     self.local_community[dead] = chx
                     ## Take the index of the parent
@@ -784,18 +779,10 @@ class LocalCommunity(object):
                     old_trait = self.local_traits[dead]
                     new_trait = self.local_traits[idx]
                     self.local_traits[dead] = self.local_traits[idx]
-                    # print(self.local_community)
-                    # print(self.local_traits)
+
                 except Exception as inst:
                     LOGGER.error("Exception in step() - {}".format(inst))
                     raise inst
-                # for i,sp in enumerate(self.local_community):
-                #     for j,tr in enumerate((self.local_traits)):
-                #         if (self.local_community[j] == self.local_community[i] and self.local_traits[i] != self.local_traits[j]) or (self.local_community[j] != self.local_community[i] and self.local_traits[i] == self.local_traits[j]):
-                #             print("PROBLEM")
-                #             print("i:",i," j:",j)
-                #             print("sp_i:",self.local_community[i]," tr_i:",self.local_traits[i])
-                #             print("sp_j:",self.local_community[j],"tr_i:",self.local_traits[j])
 
             ## WARNING : Pairwise competition assumes that "mig_clust_size" is one !
             if self.region.paramsdict["community_assembly_model"] == "pairwise_competition" and chx != self.last_dead_ind[1]:
@@ -890,7 +877,7 @@ class LocalCommunity(object):
             self.local_community[idx] = sname
             ## Record new trait value
             self.local_traits[idx] = trt
-
+            self.last_dead_ind = (idx,sname)
             ## If the new individual removes the last member of the ancestor
             ## species, then you need to do some housekeeping.
             ## TODO: is this really an "extinction" event? we need to clean up
@@ -905,8 +892,13 @@ class LocalCommunity(object):
             ## Speciation flips the founder_flag for the new species
             self.founder_flags[idx] = False
 
+            self.region.metacommunity._create_interaction(sname)
+            self._interaction_matrix_update()
+            self._distance_matrix_update()
+
         elif self.region.paramsdict["speciation_model"] == "random_fission":
             ## NOT HANDLED WITH PAIRWISE COMPETITION YET
+            ## Add the handling of lists in last_dead_ind to handle both random fission and cluster migration
             ## TODO: This doesn't handle the founder_flag housekeeping AT ALL!
 
             ## Get abundance of the target species so we can perform

@@ -89,8 +89,12 @@ class Metacommunity(object):
         ## A dictionary for fast trait value lookups
         self.trait_dict = {}
 
+        ## Adictionary for extended interaction terms (when speciation)
+        self.added_species = {}
+
         self._set_metacommunity()
         LOGGER.debug("Metacommunity paramsdict - {}".format(self.paramsdict))
+
 
 
     def __str__(self):
@@ -208,7 +212,7 @@ class Metacommunity(object):
                 print("  Updating Metacommunity parameters requires running _set_metacommunity()"\
                         + " to apply the changes.")
 
-            ## Cast params to correct types
+            ## Cast params to correct types 
             if param in ["S_m", "J_m", "speciation_rate", "death_proportion", "trait_rate_meta",
                             "ecological_strength","mutualism_proportion"]:
                 dtype = float 
@@ -258,8 +262,63 @@ class Metacommunity(object):
 
 
     def _get_interaction_term(self,species1,species2):
-        return self.interaction_matrix[int(float(species1))-1][int(float(species2))-1]
+        try:
+            return self.interaction_matrix[int(float(species1))-1][int(float(species2))-1]
     #Species from 1 to 100 but matrix from 0 to 99
+        except ValueError:
+            if species1 in self.added_species:
+                species1 = self.added_species[species1]
+            if species2 in self.added_species:
+                species2 = self.added_species[species2]
+            return self.interaction_matrix[int(float(species1))-1][int(float(species2))-1]
+
+    def _create_interaction(self,sname):
+        ## Extend matrix
+        self.interaction_matrix = np.hstack([
+            np.vstack([
+            self.interaction_matrix, np.zeros((len(self.interaction_matrix)))
+            ]),
+            np.zeros((1,len(self.interaction_matrix)+1)).T
+            ])
+        ## Add interspecific interaction
+        if type(self.paramsdict["intersp_competition"])==type((0,0)):
+            ## Draw according to gamma distribution 
+            self.interaction_matrix[-1] = np.random.gamma(shape = self.paramsdict["intersp_competition"][0]
+                                , scale = self.paramsdict["intersp_competition"][1]
+                                , size = (len(self.interaction_matrix)))
+            self.interaction_matrix[:,-1] = np.random.gamma(shape = self.paramsdict["intersp_competition"][0]
+                                , scale = self.paramsdict["intersp_competition"][1]
+                                , size = (len(self.interaction_matrix)))
+
+        else:
+            ## Expecting just a single value 
+            self.interaction_matrix[-1] = np.array([self.paramsdict["intersp_competition"] for _ in range(len(self.interaction_matrix))])
+            self.interaction_matrix[:,-1] = np.array([self.paramsdict["intersp_competition"] for _ in range(len(self.interaction_matrix))])
+
+        ## Add intraspecific interaction
+        ## Write over precedent terms for the diagonal of the matrix
+        if type(self.paramsdict["intrasp_competition"])==type((0,0)):
+            ## Draw according to gamma distribution 
+            rd = np.random.gamma(shape = self.paramsdict["intrasp_competition"][0]
+                                , scale = self.paramsdict["intrasp_competition"][1]
+                                , size = 1)
+            self.interaction_matrix[-1][-1] = rd
+        else:
+            ## Expecting just a single value 
+            self.interaction_matrix[-1][-1] = self.paramsdict["intrasp_competition"]
+      
+
+        ## Nature of the interaction
+        if type(self.paramsdict["intrasp_competition"])==type((0,0)) and type(self.paramsdict["intersp_competition"])==type((0,0)):
+            factors = np.random.binomial(n = 1,
+                p = self.paramsdict["mutualism_proportion"],
+                size =(2,len(self.interaction_matrix)))
+            factors[factors == 0] = -1 
+            self.interaction_matrix[-1] = self.interaction_matrix[-1] * factors[0]
+            self.interaction_matrix[:,-1] = self.interaction_matrix[:,-1] * factors[1].T
+            # A positive value is a positive interaction,
+            # A negative value is a negative interaction
+        self.added_species[sname] = len(self.interaction_matrix)
 
 
     def _write_params(self, outfile=None, full=False):
@@ -267,10 +326,10 @@ class Metacommunity(object):
         Write out the parameters of this Metacommunity to a file properly
         formatted as input for `MESS -p <params.txt>`.
 
-        :param string outfile: The name of the params file to write to. If not
+        :param string outfile: The name of the params file to write to. If not 
             specified this will default to `params-<Region.name>.txt`.
-        :param bool full: Whether to write out only the parameters of this
-            this particular Metacommunity realization, or to write out the
+        :param bool full: Whether to write out only the parameters of this 
+            this particular Metacommunity realization, or to write out the 
             parameters including any prior ranges.
         """
         if outfile is None:
