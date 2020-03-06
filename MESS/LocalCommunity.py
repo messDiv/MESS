@@ -740,6 +740,7 @@ class LocalCommunity(object):
                 new_species = self._migrate_step()
                 chx = new_species # for speciation
                 dead = self.last_dead_ind[0]
+
                 ## The invasion code "works" in that it worked last time I tried it, but it's
                 ## not doing anything right now except slowing down the process. I don't want to dl
                 ## it in case we want to resurrect, so it's just commented out for now. 5/2019 iao.
@@ -792,7 +793,6 @@ class LocalCommunity(object):
                 self._interaction_matrix_update()
                 self._distance_matrix_update()
 
-                ## TODO : It has to be updated too if there is a speciation !! NOT HANDLE AT ALL FOR NOW ??
             
 
             ##############################################
@@ -874,10 +874,10 @@ class LocalCommunity(object):
 
         if self.region.paramsdict["speciation_model"] == "point_mutation":
             ## Replace the individual in the local_community with the new species
+            self.last_dead_ind = (idx,self.local_community[idx])
             self.local_community[idx] = sname
             ## Record new trait value
             self.local_traits[idx] = trt
-            self.last_dead_ind = (idx,sname)
             ## If the new individual removes the last member of the ancestor
             ## species, then you need to do some housekeeping.
             ## TODO: is this really an "extinction" event? we need to clean up
@@ -898,6 +898,8 @@ class LocalCommunity(object):
 
         elif self.region.paramsdict["speciation_model"] == "random_fission":
             ## NOT HANDLED WITH PAIRWISE COMPETITION YET
+            if self.region.paramsdict["community_assembly_model"] == "pairwise_competition":
+                raise MESSError("Random fission and pairwise_competition not yet handled together")
             ## Add the handling of lists in last_dead_ind to handle both random fission and cluster migration
             ## TODO: This doesn't handle the founder_flag housekeeping AT ALL!
 
