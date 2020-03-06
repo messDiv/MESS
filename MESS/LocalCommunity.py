@@ -81,7 +81,7 @@ class LocalCommunity(object):
         self._hackersonly = dict([
                         ("allow_empty", False),
                         ("outdir", []),
-                        ("mig_clust_size", 2),
+                        ("mig_clust_size", 1),
                         ("age", 100000),
                         ("trait_rate_local", 0),
                         ("mode", "volcanic"),

@@ -283,16 +283,22 @@ class Metacommunity(object):
             ])
         ## Add interspecific interaction
         if type(self.paramsdict["intersp_competition"])==type((0,0)):
-            ## Draw according to gamma distribution 
-            self.interaction_matrix[-1] = [np.random.normal(
-                self._get_interaction_term(parent, sp),
-                self._hackersonly["inter_term_rate"], 1)[0]
-            for sp in range(1,len(self.interaction_matrix)+1)]
+            # Draw according to gamma distribution 
+            # self.interaction_matrix[-1] = [np.random.normal(
+            #     self._get_interaction_term(parent, sp),
+            #     self._hackersonly["inter_term_rate"], 1)[0]
+            # for sp in range(1,len(self.interaction_matrix)+1)]
 
-            self.interaction_matrix[:,-1] = [np.random.normal(
-                self._get_interaction_term(sp, parent),
-                self._hackersonly["inter_term_rate"], 1)[0]
-            for sp in range(1,len(self.interaction_matrix)+1)]
+            # self.interaction_matrix[:,-1] = [np.random.normal(
+            #     self._get_interaction_term(sp, parent),
+            #     self._hackersonly["inter_term_rate"], 1)[0]
+            # for sp in range(1,len(self.interaction_matrix)+1)]
+            rds = np.random.gamma(shape = self.paramsdict["intersp_competition"][0]
+                            , scale = self.paramsdict["intersp_competition"][1]
+                            , size = (2,len(self.interaction_matrix)))
+            self.interaction_matrix[-1] = rds[0]
+            self.interaction_matrix[:,-1] = rds[1]
+
         else:
             ## Expecting just a single value 
             self.interaction_matrix[-1] = np.array([self.paramsdict["intersp_competition"] for _ in range(len(self.interaction_matrix))])
@@ -301,21 +307,21 @@ class Metacommunity(object):
         ## Add intraspecific interaction
         ## Write over precedent terms for the diagonal of the matrix
         if type(self.paramsdict["intrasp_competition"])==type((0,0)):
-            ## Draw according to gamma distribution 
-            rd = np.random.normal(
-                self._get_interaction_term(parent, parent),
-                self._hackersonly["inter_term_rate"], 3)
-            # np.random.gamma(shape = self.paramsdict["intrasp_competition"][0]
-            #                     , scale = self.paramsdict["intrasp_competition"][1]
-            #                     , size = 1)
-            self.interaction_matrix[-1][-1] = rd[0]
-            try :
-                self.interaction_matrix[-1][int(float(parent))-1] = rd[1]
-                self.interaction_matrix[int(float(parent))-1][-1] = rd[2]
-            except ValueError:
-                parent = self.added_species[parent]
-                self.interaction_matrix[-1][int(float(parent))-1] = rd[1]
-                self.interaction_matrix[int(float(parent))-1][-1] = rd[2]
+            # ## Draw according to gamma distribution 
+            # rd = np.random.normal(
+            #     self._get_interaction_term(parent, parent),
+            #     self._hackersonly["inter_term_rate"], 3)
+            np.random.gamma(shape = self.paramsdict["intrasp_competition"][0]
+                                , scale = self.paramsdict["intrasp_competition"][1]
+                                , size = 1)
+            # self.interaction_matrix[-1][-1] = rd[0]
+            # try :
+            #     self.interaction_matrix[-1][int(float(parent))-1] = rd[1]
+            #     self.interaction_matrix[int(float(parent))-1][-1] = rd[2]
+            # except ValueError:
+            #     parent = self.added_species[parent]
+            #     self.interaction_matrix[-1][int(float(parent))-1] = rd[1]
+            #     self.interaction_matrix[int(float(parent))-1][-1] = rd[2]
             # Interaction with parent species derives from intraspecific interaction
         else:
             ## Expecting just a single value 
