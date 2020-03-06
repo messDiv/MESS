@@ -263,15 +263,17 @@ class Metacommunity(object):
 
 
     def _get_interaction_term(self,species1,species2):
-        try:
-            return self.interaction_matrix[int(float(species1))-1][int(float(species2))-1]
-    #Species from 1 to 100 but matrix from 0 to 99
-        except ValueError:
-            if species1 in self.added_species:
-                species1 = self.added_species[species1]
-            if species2 in self.added_species:
-                species2 = self.added_species[species2]
-            return self.interaction_matrix[int(float(species1))-1][int(float(species2))-1]
+        
+        return self.interaction_matrix[self.species_dict[species1]][self.species_dict[species2]]
+    #    try:
+    #         return self.interaction_matrix[int(float(species1))-1][int(float(species2))-1]
+    # #Species from 1 to 100 but matrix from 0 to 99
+    #     except ValueError:
+    #         if species1 in self.added_species:
+    #             species1 = self.added_species[species1]
+    #         if species2 in self.added_species:
+    #             species2 = self.added_species[species2]
+    #         return self.interaction_matrix[int(float(species1))-1][int(float(species2))-1]
 
     def _create_interaction(self,new, parent):
         ## Extend matrix
@@ -301,8 +303,8 @@ class Metacommunity(object):
 
         else:
             ## Expecting just a single value 
-            self.interaction_matrix[-1] = np.array([self.paramsdict["intersp_competition"] for _ in range(len(self.interaction_matrix))])
-            self.interaction_matrix[:,-1] = np.array([self.paramsdict["intersp_competition"] for _ in range(len(self.interaction_matrix))])
+            self.interaction_matrix[-1] = np.array([self.paramsdict["intersp_competition"] * len(self.interaction_matrix)])
+            self.interaction_matrix[:,-1] = np.array([self.paramsdict["intersp_competition"] * len(self.interaction_matrix)])
 
         ## Add intraspecific interaction
         ## Write over precedent terms for the diagonal of the matrix
@@ -338,8 +340,8 @@ class Metacommunity(object):
         #     self.interaction_matrix[:,-1] = self.interaction_matrix[:,-1] * factors[1].T
         #     # A positive value is a positive interaction,
         #     # A negative value is a negative interaction
-        ## NO redrwa from type if evolution from parent
-        self.added_species[new] = len(self.interaction_matrix)
+        ## NO redraw from type if evolution from parent
+        self.species_dict[new] = len(self.interaction_matrix)-1
 
 
     def _write_params(self, outfile=None, full=False):
@@ -509,6 +511,11 @@ class Metacommunity(object):
             self.community['trait_values'] = np.array(trait_values)
 
             self.trait_dict = {x["ids"]:x["trait_values"] for x in self.community}
+            ## Initiate dictionary for interaction matrix
+            try:
+                self.species_dict = { s : int(float(s)) - 1 for s in self.community["ids"]}
+            except:
+                pass
 
         except ValueError as inst:
             msg = \
@@ -590,6 +597,7 @@ class Metacommunity(object):
         LOGGER.debug("Size of metacommunity - {}".format(Jm))
         self.community['immigration_probabilities'] = self.community["abundances"]/float(Jm)
         LOGGER.debug("Metacommunity info: shape {}\n[:10] {}".format(self.community.shape, self.community[:10]))
+
 
 
     def _update_species_pool(self, sname, trait_value):
