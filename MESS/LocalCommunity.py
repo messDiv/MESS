@@ -226,6 +226,8 @@ class LocalCommunity(object):
         self.region = region
         self.SGD = SGD([], ndims=region._hackersonly["sgd_dimensions"], nbins=region._hackersonly["sgd_bins"])
         self._hackersonly["trait_rate_local"] = self._get_trait_rate_local()
+    # Copy trait evolution rate for the interaction term, but divided because interaction are mor sensible.
+    # To be refine !
         self._set_death_step()
 
 
@@ -892,7 +894,7 @@ class LocalCommunity(object):
             ## Speciation flips the founder_flag for the new species
             self.founder_flags[idx] = False
 
-            self.region.metacommunity._create_interaction(sname)
+            self.region.metacommunity._create_interaction(new = sname, parent = self.last_dead_ind[1])
             self._interaction_matrix_update()
             self._distance_matrix_update()
 

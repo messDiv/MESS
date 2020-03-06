@@ -66,7 +66,8 @@ class Metacommunity(object):
         self._hackersonly= OrderedDict([
                         ("metacommunity_type", meta_type),
                         ("lognorm_shape", 1.98),
-                        ("filtering_optimum", 1)
+                        ("filtering_optimum", 1),
+                        ("inter_term_rate", 0.01), #Arbitrary : to be precised
         ])
 
         ## A dictionary for holding prior ranges for values we're interested in
@@ -272,7 +273,7 @@ class Metacommunity(object):
                 species2 = self.added_species[species2]
             return self.interaction_matrix[int(float(species1))-1][int(float(species2))-1]
 
-    def _create_interaction(self,sname):
+    def _create_interaction(self,new, parent):
         ## Extend matrix
         self.interaction_matrix = np.hstack([
             np.vstack([
@@ -283,13 +284,15 @@ class Metacommunity(object):
         ## Add interspecific interaction
         if type(self.paramsdict["intersp_competition"])==type((0,0)):
             ## Draw according to gamma distribution 
-            self.interaction_matrix[-1] = np.random.gamma(shape = self.paramsdict["intersp_competition"][0]
-                                , scale = self.paramsdict["intersp_competition"][1]
-                                , size = (len(self.interaction_matrix)))
-            self.interaction_matrix[:,-1] = np.random.gamma(shape = self.paramsdict["intersp_competition"][0]
-                                , scale = self.paramsdict["intersp_competition"][1]
-                                , size = (len(self.interaction_matrix)))
+            self.interaction_matrix[-1] = [np.random.normal(
+                self._get_interaction_term(parent, sp),
+                self._hackersonly["inter_term_rate"], 1)[0]
+            for sp in range(1,len(self.interaction_matrix)+1)]
 
+            self.interaction_matrix[:,-1] = [np.random.normal(
+                self._get_interaction_term(sp, parent),
+                self._hackersonly["inter_term_rate"], 1)[0]
+            for sp in range(1,len(self.interaction_matrix)+1)]
         else:
             ## Expecting just a single value 
             self.interaction_matrix[-1] = np.array([self.paramsdict["intersp_competition"] for _ in range(len(self.interaction_matrix))])
@@ -299,26 +302,38 @@ class Metacommunity(object):
         ## Write over precedent terms for the diagonal of the matrix
         if type(self.paramsdict["intrasp_competition"])==type((0,0)):
             ## Draw according to gamma distribution 
-            rd = np.random.gamma(shape = self.paramsdict["intrasp_competition"][0]
-                                , scale = self.paramsdict["intrasp_competition"][1]
-                                , size = 1)
-            self.interaction_matrix[-1][-1] = rd
+            rd = np.random.normal(
+                self._get_interaction_term(parent, parent),
+                self._hackersonly["inter_term_rate"], 3)
+            # np.random.gamma(shape = self.paramsdict["intrasp_competition"][0]
+            #                     , scale = self.paramsdict["intrasp_competition"][1]
+            #                     , size = 1)
+            self.interaction_matrix[-1][-1] = rd[0]
+            try :
+                self.interaction_matrix[-1][int(float(parent))-1] = rd[1]
+                self.interaction_matrix[int(float(parent))-1][-1] = rd[2]
+            except ValueError:
+                parent = self.added_species[parent]
+                self.interaction_matrix[-1][int(float(parent))-1] = rd[1]
+                self.interaction_matrix[int(float(parent))-1][-1] = rd[2]
+            # Interaction with parent species derives from intraspecific interaction
         else:
             ## Expecting just a single value 
             self.interaction_matrix[-1][-1] = self.paramsdict["intrasp_competition"]
       
 
-        ## Nature of the interaction
-        if type(self.paramsdict["intrasp_competition"])==type((0,0)) and type(self.paramsdict["intersp_competition"])==type((0,0)):
-            factors = np.random.binomial(n = 1,
-                p = self.paramsdict["mutualism_proportion"],
-                size =(2,len(self.interaction_matrix)))
-            factors[factors == 0] = -1 
-            self.interaction_matrix[-1] = self.interaction_matrix[-1] * factors[0]
-            self.interaction_matrix[:,-1] = self.interaction_matrix[:,-1] * factors[1].T
-            # A positive value is a positive interaction,
-            # A negative value is a negative interaction
-        self.added_species[sname] = len(self.interaction_matrix)
+        # ## Nature of the interaction
+        # if type(self.paramsdict["intrasp_competition"])==type((0,0)) and type(self.paramsdict["intersp_competition"])==type((0,0)):
+        #     factors = np.random.binomial(n = 1,
+        #         p = self.paramsdict["mutualism_proportion"],
+        #         size =(2,len(self.interaction_matrix)))
+        #     factors[factors == 0] = -1 
+        #     self.interaction_matrix[-1] = self.interaction_matrix[-1] * factors[0]
+        #     self.interaction_matrix[:,-1] = self.interaction_matrix[:,-1] * factors[1].T
+        #     # A positive value is a positive interaction,
+        #     # A negative value is a negative interaction
+        ## NO redrwa from type if evolution from parent
+        self.added_species[new] = len(self.interaction_matrix)
 
 
     def _write_params(self, outfile=None, full=False):
