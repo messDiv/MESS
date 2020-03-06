@@ -81,7 +81,7 @@ class LocalCommunity(object):
         self._hackersonly = dict([
                         ("allow_empty", False),
                         ("outdir", []),
-                        ("mig_clust_size", 1),
+                        ("mig_clust_size", 2),
                         ("age", 100000),
                         ("trait_rate_local", 0),
                         ("mode", "volcanic"),
@@ -252,17 +252,19 @@ class LocalCommunity(object):
         """
         Retrieve information from the metacommunity to store the local interaction matrix
         """
-        n = self.paramsdict["J"]
-        self.local_interaction_matrix = np.zeros((n,n))
-        for i in range(n):
-            for j in range(n):
-                self.local_interaction_matrix[i][j] = self.region.metacommunity._get_interaction_term(self.local_community[i],self.local_community[j])
-
+        # n = self.paramsdict["J"]
+        # self.local_interaction_matrix = np.zeros((n,n))
+        # for i in range(n):
+        #     for j in range(n):
+        #         self.local_interaction_matrix[i][j] = self.region.metacommunity._get_interaction_term(self.local_community[i],self.local_community[j])
+        self.local_interaction_matrix = np.array([
+            [self.region.metacommunity._get_interaction_term(sp1, sp2) for sp2 in self.local_community] for sp1 in self.local_community
+            ])
 
     ## For the pairwise compeition model, a global matrix is used which summarize the competition interactions for all individuals
     def _set_distance_matrix(self):
         ## Reshape local_traits for the cdist function
-        local_traits = self.local_traits.reshape(self.paramsdict["J"],1)
+        local_traits = self.local_traits.reshape(len(self.local_traits),1)
         es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
 
         dist_matrix = distance.cdist(local_traits,local_traits,'sqeuclidean')
@@ -276,9 +278,8 @@ class LocalCommunity(object):
     def _interaction_matrix_update(self):
         # print("update interaction", self.last_dead_ind)
         nb_ind = self.paramsdict["J"]
-        idx = self.last_dead_ind[0]
+        idx = self.last_dead_ind[0][0] ## Assumes there is only one dead
         new_species = self.local_community[idx]
-        
         new_interaction1 = np.array([self.region.metacommunity._get_interaction_term(new_species, sp) for sp in self.local_community])
         new_interaction2 = np.array([self.region.metacommunity._get_interaction_term(sp, new_species) for sp in self.local_community])
         self.local_interaction_matrix[idx] = new_interaction1
@@ -290,7 +291,7 @@ class LocalCommunity(object):
     def _distance_matrix_update(self):
         # print("update distance", self.last_dead_ind)
         nb_ind = self.paramsdict["J"]
-        idx = self.last_dead_ind[0]
+        idx = self.last_dead_ind[0][0]
         self.local_traits[idx] = self.region.get_trait(self.local_community[idx])
         ## Reshape local_traits for the cdist function
         local_traits = self.local_traits.reshape(nb_ind,1)
@@ -302,7 +303,6 @@ class LocalCommunity(object):
         self._exp_distance_matrix[:,idx] = np.exp(-(new_dist/es))*(-self.local_interaction_matrix[:,idx])
         ## Distance are symmetrical but interactions may be not
         # print(self._exp_distance_matrix)
-
 
 
     ## Update global death probabilities for the filtering model
@@ -658,7 +658,7 @@ class LocalCommunity(object):
             ## If the species of the victim went locally extinct then clean up local_info
             self._test_local_extinction(victim)
             ## Record the new empty space
-            self.last_dead_ind = (vic_idx,victim) #Index, species
+            self.last_dead_ind = ([vic_idx],[victim]) #Index, species
 
         except Exception as inst:
             raise MESSError("Error in _finalize_death(): {}".format(inst))
@@ -735,8 +735,13 @@ class LocalCommunity(object):
             ## Check probability of an immigration event
             if np.random.random_sample() < self.paramsdict["m"]:
                 ## If clustered migration remove the necessary number of additional individuals
+                acc = [[],[]]
                 for _ in range(self._hackersonly["mig_clust_size"]):
                     self.death_step()
+                    acc[0] += self.last_dead_ind[0]
+                    acc[1] += self.last_dead_ind[1]
+                self.last_dead_ind = (acc[0],acc[1])
+                ## Uses accumulator to handle cluster size > 1
 
                 ## Grab the new colonizing species
                 new_species = self._migrate_step()
@@ -788,12 +793,15 @@ class LocalCommunity(object):
                     raise inst
 
             ## WARNING : Pairwise competition assumes that "mig_clust_size" is one !
-            if self.region.paramsdict["community_assembly_model"] == "pairwise_competition" and chx != self.last_dead_ind[1]:
+            if self.region.paramsdict["community_assembly_model"] == "pairwise_competition" and chx != self.last_dead_ind[1][0]:
                 # The matrix are only changing if the new individual has not the same species as the dead one
                 if self._hackersonly["mig_clust_size"] != 1:
-                    raise MESSError("Pairwise competition only handles migration cluster of size 1")
-                self._interaction_matrix_update()
-                self._distance_matrix_update()
+                    self._set_local_interaction_matrix()
+                    self._set_distance_matrix()
+                    # Recompute all values since several changes at the same time
+                else:
+                    self._interaction_matrix_update()
+                    self._distance_matrix_update()
 
             
 
@@ -876,7 +884,7 @@ class LocalCommunity(object):
 
         if self.region.paramsdict["speciation_model"] == "point_mutation":
             ## Replace the individual in the local_community with the new species
-            self.last_dead_ind = (idx,self.local_community[idx])
+            self.last_dead_ind = ([idx],[self.local_community[idx]])
             self.local_community[idx] = sname
             ## Record new trait value
             self.local_traits[idx] = trt
@@ -894,9 +902,10 @@ class LocalCommunity(object):
             ## Speciation flips the founder_flag for the new species
             self.founder_flags[idx] = False
 
-            self.region.metacommunity._create_interaction(new = sname, parent = self.last_dead_ind[1])
-            self._interaction_matrix_update()
-            self._distance_matrix_update()
+            self.region.metacommunity._create_interaction(new = sname, parent = self.last_dead_ind[1][0])
+            if self.region.paramsdict["community_assembly_model"] == "pairwise_competition":
+                self._interaction_matrix_update()
+                self._distance_matrix_update()
 
         elif self.region.paramsdict["speciation_model"] == "random_fission":
             ## NOT HANDLED WITH PAIRWISE COMPETITION YET
@@ -917,10 +926,12 @@ class LocalCommunity(object):
             ## so we need to allow for the case of new_abund == sp_abund.
             new_abund = np.random.randint(1, sp_abund+1)
 
-            self.local_community[np.where(self.local_community == chx)[0][:new_abund]] = sname
+            deads = np.where(self.local_community == chx)[0][:new_abund]
+            self.last_dead_ind = (deads, [chx])
+            self.local_community[deads] = sname
 
             ## Also update the traits values
-            self.local_traits[np.where(self.local_community == chx)[0][:new_abund]] = trt
+            self.local_traits[deads] = trt
 
             ## Test local extinction after parent species is pushed back to
             ## local community. If no parent species remain at this time then
@@ -933,6 +944,13 @@ class LocalCommunity(object):
             ## history of the parent, and also _test_local_extinction() handles
             ## all the ancestor inheritence logic.
             self._add_local_info(sname = sname, abundances_through_time=parent_abunds , ancestor = ancestor)
+
+            if self.region.paramsdict["community_assembly_model"] == "pairwise_competition":
+                ## Update the values for the death probabilities
+                self.region.metacommunity._create_interaction(new = sname, parent = chx)
+                self._set_local_interaction_matrix()
+                self._set_distance_matrix()
+                # Recompute all values since several changes at the same time
 
         elif self.region.paramsdict["speciation_model"] == "protracted":
             pass
