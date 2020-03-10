@@ -14,6 +14,7 @@ from collections import OrderedDict
 from MESS.util import tuplecheck, sample_param_range, MESSError, set_params
 from rpy2 import robjects
 from scipy.stats import lognorm
+from .util import SEED
 
 import logging
 LOGGER = logging.getLogger(__name__)
@@ -277,6 +278,7 @@ class Metacommunity(object):
 
     def _create_interaction(self,new, parent):
         ## Extend matrix
+        np.random.seed(SEED)
         self.interaction_matrix = np.hstack([
             np.vstack([
             self.interaction_matrix, np.zeros((len(self.interaction_matrix)))
@@ -303,8 +305,8 @@ class Metacommunity(object):
 
         else:
             ## Expecting just a single value 
-            self.interaction_matrix[-1] = np.array([self.paramsdict["intersp_competition"] * len(self.interaction_matrix)])
-            self.interaction_matrix[:,-1] = np.array([self.paramsdict["intersp_competition"] * len(self.interaction_matrix)])
+            self.interaction_matrix[-1] = np.array([self.paramsdict["intersp_competition"]] * len(self.interaction_matrix))
+            self.interaction_matrix[:,-1] = np.array([self.paramsdict["intersp_competition"]] * len(self.interaction_matrix))
 
         ## Add intraspecific interaction
         ## Write over precedent terms for the diagonal of the matrix
@@ -400,6 +402,7 @@ class Metacommunity(object):
             range [0-1]
         :param bool resample: Whether to resample from any specified priors.
         """
+        np.random.seed(SEED)
         meta_type = self._hackersonly["metacommunity_type"]
         LOGGER.debug("Enter set_metacommunity - {}".format(meta_type))
 
@@ -632,6 +635,7 @@ class Metacommunity(object):
         :return: A tuple containing the species ID (str) and the trait
             value (float).
         """
+        np.random.seed(SEED)
         migrant_draw = np.random.multinomial(1, self.community["immigration_probabilities"], size=1).argmax()
         new_species = self.community["ids"][migrant_draw]
         trait_value = self.community["trait_values"][migrant_draw]

@@ -14,6 +14,8 @@ from .stats import hill_number
 from .SGD import SGD
 
 LOGGER = logging.getLogger(__name__)
+SEED = 10
+
 
 ## Custom exception class
 class MESSError(Exception):
@@ -287,6 +289,7 @@ BAD_PARAMETER = """\
     {}
     You entered: {}
     """
+
 
 if __name__ == "__main__":
     import_empirical("empirical_data")

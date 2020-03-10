@@ -667,7 +667,7 @@ class Region(object):
         else:
             done_func = lambda: step >= nsteps
 
-        t0 = time.time()
+        # t0 = time.time()
         while not done_func():
             ## This is not ideal functionality, but it at least gives you a sense of progress
             ## Especially don't do this on ipyparallel engines, because it floods the pipe.
@@ -679,13 +679,13 @@ class Region(object):
             if not step % self._hackersonly["recording_period"]:
                for island in self.islands.values():
                     island._log(full=log_full)
-        t1 = time.time()
-        # dictloc = self.islands["island1"].paramsdict
-        # filename = 'array_speed_test_'+self.paramsdict["community_assembly_model"]+'_J'+str(dictloc["J"])+'_m'+str(dictloc["m"])+'_s'+str(dictloc["speciation_prob"])+'.txt'
+        # t1 = time.time()
+        # filename = 'matrix_time.txt'
         # file = open(filename,'a') 
         # file.write(str(t1-t0)+'\n')
         # file.close()
-        print(t1-t0)
+        # print(t1-t0)
+
 
 
         ## TODO: Combine stats across local communities if more than one

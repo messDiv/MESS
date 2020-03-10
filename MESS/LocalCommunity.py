@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-from scipy.stats import logser
+from scipy.stats import logser, chisquare
 from collections import OrderedDict
 from scipy.spatial import distance
 from time import time, sleep
@@ -14,7 +14,7 @@ import sys
 import os
 import MESS
 
-from .util import MESSError, tuplecheck, sample_param_range, memoize
+from .util import MESSError, tuplecheck, sample_param_range, memoize, SEED
 from .stats import *
 from .species import species
 from .SGD import SGD
@@ -260,6 +260,8 @@ class LocalCommunity(object):
         self.local_interaction_matrix = np.array([
             [self.region.metacommunity._get_interaction_term(sp1, sp2) for sp2 in self.local_community] for sp1 in self.local_community
             ])
+        # print("after init")
+        # print(self.local_interaction_matrix)
 
     ## For the pairwise compeition model, a global matrix is used which summarize the competition interactions for all individuals
     def _set_distance_matrix(self):
@@ -272,10 +274,14 @@ class LocalCommunity(object):
         ## factors intervene outside the exp because positive/negative values
         ## Multiply by -1 so tha
         ## a positive term (mutualisme) decreases the probability of death and 
-        ## a negative term (antagonism) increases it
+        # ## a negative term (antagonism) increases it
+        # print("after init dist :")
+        # print(self._exp_distance_matrix)
 
 
     def _interaction_matrix_update(self):
+        # print("update interaction matrix")
+        # print(self.local_interaction_matrix)
         # print("update interaction", self.last_dead_ind)
         nb_ind = self.paramsdict["J"]
         idx = self.last_dead_ind[0][0] ## Assumes there is only one dead
@@ -284,11 +290,14 @@ class LocalCommunity(object):
         new_interaction2 = np.array([self.region.metacommunity._get_interaction_term(sp, new_species) for sp in self.local_community])
         self.local_interaction_matrix[idx] = new_interaction1
         self.local_interaction_matrix[:,idx] = new_interaction2.T
+        # print("updated !")
         # print(self.local_interaction_matrix)
 
 
     ## Update the distance matrix using the position of the last dead individual
     def _distance_matrix_update(self):
+        # print("updating distance matrix")
+        # print(self._exp_distance_matrix)
         # print("update distance", self.last_dead_ind)
         nb_ind = self.paramsdict["J"]
         idx = self.last_dead_ind[0][0]
@@ -302,7 +311,8 @@ class LocalCommunity(object):
         # DOES NOT YET HANDLE ASYMMETRIC INTERACTIONS
         self._exp_distance_matrix[:,idx] = np.exp(-(new_dist/es))*(-self.local_interaction_matrix[:,idx])
         ## Distance are symmetrical but interactions may be not
-        # print(self._exp_distance_matrix)
+        print("dist updated !")
+        print(self._exp_distance_matrix)
 
 
     ## Update global death probabilities for the filtering model
@@ -311,6 +321,7 @@ class LocalCommunity(object):
         Only used to perturb the environment by +/- a small random value
         """
         fo = self.region.metacommunity._hackersonly["filtering_optimum"]
+        np.random.seed(SEED)
         noise = np.random.normal(1, 0.05)
         fo = fo * noise
         self.region.metacommunity._hackersonly["filtering_optimum"] = fo
@@ -542,6 +553,7 @@ class LocalCommunity(object):
 
 
     def _neutral_death_step(self):
+        random.seed(SEED)
         victim = random.choice(self.local_community)
         if victim == None:
             pass
@@ -552,6 +564,7 @@ class LocalCommunity(object):
         self._finalize_death(victim,vic_idx)
 
     def _competition_death_step(self):
+        random.seed(SEED)
         victim = random.choice(self.local_community)
         if victim == None:
             pass
@@ -578,6 +591,7 @@ class LocalCommunity(object):
 
 
     def _pairwise_competition_death_step(self):
+        random.seed(SEED)
         victim = random.choice(self.local_community)
         if victim == None:
             pass
@@ -596,6 +610,11 @@ class LocalCommunity(object):
             victim = self.local_community[vic_idx]
         if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs(death_probs)
+
+        if (not self.current_time % (self.paramsdict["J"]*2)):
+            randomdraw = np.random.randint(0,self.paramsdict["J"],size=self.paramsdict["J"]*10)
+
+
         self._finalize_death(victim, vic_idx)
 
 
@@ -605,6 +624,7 @@ class LocalCommunity(object):
 
 
     def _filtering_death_step(self):
+        random.seed(SEED)
         victim = random.choice(self.local_community)
         if victim == None:
             pass
@@ -730,6 +750,8 @@ class LocalCommunity(object):
         :param int nsteps: The number of generations to simulate.
         """
         ## Convert time in generations to timesteps (WF -> Moran)
+        np.random.seed(SEED)
+        random.seed(SEED)
         for step in range(int(nsteps * self.paramsdict["J"]/2.)):
             chx = ''
             ## Check probability of an immigration event
@@ -794,6 +816,7 @@ class LocalCommunity(object):
 
             ## WARNING : Pairwise competition assumes that "mig_clust_size" is one !
             if self.region.paramsdict["community_assembly_model"] == "pairwise_competition" and chx != self.last_dead_ind[1][0]:
+                print("dead ind : ", self.last_dead_ind[1][0], "; new ind : ",chx)
                 # The matrix are only changing if the new individual has not the same species as the dead one
                 if self._hackersonly["mig_clust_size"] != 1:
                     self._set_local_interaction_matrix()
@@ -811,7 +834,7 @@ class LocalCommunity(object):
             if self.region.paramsdict["speciation_model"] != "none" and\
                np.random.random_sample() < self.paramsdict["speciation_prob"] and\
                chx != None:
-
+               print("will do speiciation from ", chx)
                self._speciate(chx)
 
 
@@ -857,6 +880,7 @@ class LocalCommunity(object):
 
             protracted - watdo
         """
+        np.random.seed(SEED)
         LOGGER.debug("Initiate speciation process - {}".format(chx))
 
         ## Take the first individual of chosen species
@@ -902,8 +926,8 @@ class LocalCommunity(object):
             ## Speciation flips the founder_flag for the new species
             self.founder_flags[idx] = False
 
-            self.region.metacommunity._create_interaction(new = sname, parent = self.last_dead_ind[1][0])
             if self.region.paramsdict["community_assembly_model"] == "pairwise_competition":
+                self.region.metacommunity._create_interaction(new = sname, parent = self.last_dead_ind[1][0])
                 self._interaction_matrix_update()
                 self._distance_matrix_update()
 
