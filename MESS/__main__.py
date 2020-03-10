@@ -14,9 +14,6 @@ import MESS
 from MESS.util import *
 from MESS.parallel import *
 
-import numpy as np
-import random
-
 LOGGER = logging.getLogger(__name__)
 
 

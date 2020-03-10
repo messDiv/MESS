@@ -14,7 +14,7 @@ import sys
 import os
 import MESS
 
-from .util import MESSError, tuplecheck, sample_param_range, memoize, SEED
+from .util import MESSError, tuplecheck, sample_param_range, memoize
 from .stats import *
 from .species import species
 from .SGD import SGD
@@ -321,7 +321,6 @@ class LocalCommunity(object):
         Only used to perturb the environment by +/- a small random value
         """
         fo = self.region.metacommunity._hackersonly["filtering_optimum"]
-        np.random.seed(SEED)
         noise = np.random.normal(1, 0.05)
         fo = fo * noise
         self.region.metacommunity._hackersonly["filtering_optimum"] = fo
@@ -553,7 +552,6 @@ class LocalCommunity(object):
 
 
     def _neutral_death_step(self):
-        random.seed(SEED)
         victim = random.choice(self.local_community)
         if victim == None:
             pass
@@ -564,7 +562,6 @@ class LocalCommunity(object):
         self._finalize_death(victim,vic_idx)
 
     def _competition_death_step(self):
-        random.seed(SEED)
         victim = random.choice(self.local_community)
         if victim == None:
             pass
@@ -591,7 +588,6 @@ class LocalCommunity(object):
 
 
     def _pairwise_competition_death_step(self):
-        random.seed(SEED)
         victim = random.choice(self.local_community)
         if victim == None:
             pass
@@ -624,7 +620,6 @@ class LocalCommunity(object):
 
 
     def _filtering_death_step(self):
-        random.seed(SEED)
         victim = random.choice(self.local_community)
         if victim == None:
             pass
@@ -750,8 +745,6 @@ class LocalCommunity(object):
         :param int nsteps: The number of generations to simulate.
         """
         ## Convert time in generations to timesteps (WF -> Moran)
-        np.random.seed(SEED)
-        random.seed(SEED)
         for step in range(int(nsteps * self.paramsdict["J"]/2.)):
             chx = ''
             ## Check probability of an immigration event
@@ -880,7 +873,6 @@ class LocalCommunity(object):
 
             protracted - watdo
         """
-        np.random.seed(SEED)
         LOGGER.debug("Initiate speciation process - {}".format(chx))
 
         ## Take the first individual of chosen species
