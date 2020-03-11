@@ -679,12 +679,20 @@ class Region(object):
             if not step % self._hackersonly["recording_period"]:
                for island in self.islands.values():
                     island._log(full=log_full)
+                    is_neutral = island.is_neutral
         # t1 = time.time()
         # filename = 'matrix_time.txt'
         # file = open(filename,'a') 
         # file.write(str(t1-t0)+'\n')
         # file.close()
         # print(t1-t0)
+        # print(is_neutral)
+        filename = 'is_neutral.txt'
+        outfile = os.path.join(self._get_simulation_outdir(),filename)
+        file = open(outfile,'w')
+        for i in range(len(is_neutral)):
+            file.write(str(is_neutral[i][0])+"\t"+str(is_neutral[i][1])+'\n')
+        file.close()
 
 
 

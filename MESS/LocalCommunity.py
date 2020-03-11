@@ -147,6 +147,7 @@ class LocalCommunity(object):
         self.death_probs_through_time = OrderedDict({})
         self.local_community_through_time = OrderedDict({})
         self.fancy = False
+        self.is_neutral = []
 
 
     def _copy(self):
@@ -311,8 +312,8 @@ class LocalCommunity(object):
         # DOES NOT YET HANDLE ASYMMETRIC INTERACTIONS
         self._exp_distance_matrix[:,idx] = np.exp(-(new_dist/es))*(-self.local_interaction_matrix[:,idx])
         ## Distance are symmetrical but interactions may be not
-        print("dist updated !")
-        print(self._exp_distance_matrix)
+        # print("dist updated !")
+        # print(self._exp_distance_matrix)
 
 
     ## Update global death probabilities for the filtering model
@@ -586,6 +587,15 @@ class LocalCommunity(object):
             self._record_deaths_probs(death_probs)
         self._finalize_death(victim,vic_idx)
 
+        if (not self.current_time % (self.paramsdict["J"]*2)):
+            draws = list(np.random.multinomial(100000, death_probs))
+            ch, p = chisquare(draws)
+            if p > 0.1:
+                b = 1
+            else:
+                b = 0
+            self.is_neutral += [[self.current_time, b]]
+
 
     def _pairwise_competition_death_step(self):
         victim = random.choice(self.local_community)
@@ -608,8 +618,13 @@ class LocalCommunity(object):
             self._record_deaths_probs(death_probs)
 
         if (not self.current_time % (self.paramsdict["J"]*2)):
-            randomdraw = np.random.randint(0,self.paramsdict["J"],size=self.paramsdict["J"]*10)
-
+            draws = list(np.random.multinomial(100000, death_probs))
+            ch, p = chisquare(draws)
+            if p > 0.1:
+                b = 1
+            else:
+                b = 0
+            self.is_neutral += [[self.current_time, b]]
 
         self._finalize_death(victim, vic_idx)
 
@@ -637,6 +652,14 @@ class LocalCommunity(object):
             self._record_deaths_probs(death_probs)
         self._finalize_death(victim, vic_idx)
 
+        if (not self.current_time % (self.paramsdict["J"]*2)):
+            draws = list(np.random.multinomial(100000, death_probs))
+            ch, p = chisquare(draws)
+            if p > 0.1:
+                b = 1
+            else:
+                b = 0
+            self.is_neutral += [[self.current_time, b]]
 
     def _record_deaths_probs(self,death_probs=np.array(())):
         if len(death_probs) == 0: #Neutral
@@ -809,7 +832,7 @@ class LocalCommunity(object):
 
             ## WARNING : Pairwise competition assumes that "mig_clust_size" is one !
             if self.region.paramsdict["community_assembly_model"] == "pairwise_competition" and chx != self.last_dead_ind[1][0]:
-                print("dead ind : ", self.last_dead_ind[1][0], "; new ind : ",chx)
+                # print("dead ind : ", self.last_dead_ind[1][0], "; new ind : ",chx)
                 # The matrix are only changing if the new individual has not the same species as the dead one
                 if self._hackersonly["mig_clust_size"] != 1:
                     self._set_local_interaction_matrix()
@@ -827,7 +850,7 @@ class LocalCommunity(object):
             if self.region.paramsdict["speciation_model"] != "none" and\
                np.random.random_sample() < self.paramsdict["speciation_prob"] and\
                chx != None:
-               print("will do speiciation from ", chx)
+               # print("will do speiciation from ", chx)
                self._speciate(chx)
 
 
