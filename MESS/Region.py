@@ -223,7 +223,7 @@ class Region(object):
 
             elif param == "community_assembly_model":
                 if newvalue == "*":
-                    self._priors[param] = ["neutral", "filtering", "competition"]
+                    self._priors[param] = ["neutral", "filtering", "competition", "pairwise_competition"]
                     newvalue = np.random.choice(self._priors[param])
                 self.paramsdict[param] = newvalue
 
