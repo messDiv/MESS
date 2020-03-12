@@ -223,7 +223,7 @@ class Region(object):
 
             elif param == "community_assembly_model":
                 if newvalue == "*":
-                    self._priors[param] = ["neutral", "filtering", "competition"]
+                    self._priors[param] = ["neutral", "filtering", "competition","pairwise_competition"]
                     newvalue = np.random.choice(self._priors[param])
                 self.paramsdict[param] = newvalue
 
@@ -687,12 +687,6 @@ class Region(object):
         # file.close()
         # print(t1-t0)
         # print(is_neutral)
-        filename = 'is_neutral.txt'
-        outfile = os.path.join(self._get_simulation_outdir(),filename)
-        file = open(outfile,'w')
-        for i in range(len(is_neutral)):
-            file.write(str(is_neutral[i][0])+"\t"+str(is_neutral[i][1])+'\n')
-        file.close()
 
 
 
@@ -713,6 +707,20 @@ class Region(object):
                 simout.append(x)
         simout = "\t".join(map(str, np.array(simout)))
 
+        filename = 'is_neutral.txt'
+        outfile = os.path.join(self._get_simulation_outdir(),filename)
+        file = open(outfile,'w')
+        for i in range(len(is_neutral)):
+            file.write(str(is_neutral[i][0])+"\t"+str(is_neutral[i][1])+'\n')
+        params = self.metacommunity._get_params_header() +\
+                 self._get_params_header() +\
+                 list(self.islands.values())[0]._get_params_header()
+        header = "\t".join(params + MESS.stats._get_sumstats_header(sgd_bins=self._hackersonly["sgd_bins"],\
+                                                                    sgd_dims=self._hackersonly["sgd_dimensions"],
+                                                                    metacommunity_traits=self.metacommunity._get_trait_values())) + "\n"
+        file.write(header)
+        file.write(simout)
+        file.close()
 
         return simout
 
