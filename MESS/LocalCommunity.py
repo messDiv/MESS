@@ -561,6 +561,14 @@ class LocalCommunity(object):
         if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs()
         self._finalize_death(victim,vic_idx)
+        if (not self.current_time % (self.paramsdict["J"]*2)):
+            draws = list(np.random.multinomial(100000, [1/self.paramsdict["J"]]*self.paramsdict["J"]))
+            ch, p = chisquare(draws)
+            if p > 0.1:
+                b = 1
+            else:
+                b = 0
+            self.is_neutral += [[self.current_time, b]]
 
     def _competition_death_step(self):
         victim = random.choice(self.local_community)
