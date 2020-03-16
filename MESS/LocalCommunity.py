@@ -549,7 +549,7 @@ class LocalCommunity(object):
                 b = 1
             else:
                 b = 0
-            self.is_neutral += [[self.current_time, b]]
+            self.is_neutral += [[self.current_time, b, self._lambda()]]
 
     def _competition_death_step(self):
         victim = random.choice(self.local_community)
@@ -583,7 +583,7 @@ class LocalCommunity(object):
                 b = 1
             else:
                 b = 0
-            self.is_neutral += [[self.current_time, b]]
+            self.is_neutral += [[self.current_time, b, self._lambda()]]
 
 
     def _pairwise_competition_death_step(self):
@@ -613,9 +613,9 @@ class LocalCommunity(object):
                     b = 1
                 else:
                     b = 0
-                self.is_neutral += [[self.current_time, b]]
+                self.is_neutral += [[self.current_time, b, self._lambda()]]
             except:
-                self.is_neutral += [[self.current_time, -1]]
+                self.is_neutral += [[self.current_time, -1, self._lambda()]]
                 # Values too high/low to permit tests : probably neutral in any case !
                 # Happens when both interaction termes are too low
 
@@ -652,7 +652,7 @@ class LocalCommunity(object):
                 b = 1
             else:
                 b = 0
-            self.is_neutral += [[self.current_time, b]]
+            self.is_neutral += [[self.current_time, b, self._lambda()]]
 
     def _record_deaths_probs(self,death_probs=np.array(())):
         if len(death_probs) == 0: #Neutral

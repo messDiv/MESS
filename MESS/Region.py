@@ -711,7 +711,7 @@ class Region(object):
         outfile = os.path.join(self._get_simulation_outdir(),filename)
         file = open(outfile,'w')
         for i in range(len(is_neutral)):
-            file.write(str(is_neutral[i][0])+"\t"+str(is_neutral[i][1])+'\n')
+            file.write(str(is_neutral[i][0])+"\t"+str(is_neutral[i][1])+'\t'+str(is_neutral[i][2])+'\n')
         params = self.metacommunity._get_params_header() +\
                  self._get_params_header() +\
                  list(self.islands.values())[0]._get_params_header()
