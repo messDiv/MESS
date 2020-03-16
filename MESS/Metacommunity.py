@@ -231,11 +231,21 @@ class Metacommunity(object):
                 LOGGER.debug("{} {}".format(param, tup))
 
             elif param == "intrasp_competition":
+                if newvalue=="*":
+                    alpha = np.random.gamma(0.25,4)
+                    beta = np.random.gamma(0.25,4)
+                    newvalue = (alpha,beta)
+                # Aribitrary priors here ! Should be tuneable from parameter file !
                 tup = tuplecheck(newvalue, dtype=float)
                 self.paramsdict[param] = tup
                 #First value : alpha | second value : beta | if only one : fixed
 
             elif param == "intersp_competition":
+                if newvalue=="*":
+                    alpha = np.random.gamma(0.25,4)
+                    beta = np.random.gamma(0.25,4)
+                    newvalue = (alpha,beta)
+                # Aribitrary priors here ! Should be tuneable from parameter file !
                 tup = tuplecheck(newvalue, dtype=float)
                 self.paramsdict[param] = tup
                 #First value : alpha | second value : beta | if only one : fixed

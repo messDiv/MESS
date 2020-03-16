@@ -606,13 +606,18 @@ class LocalCommunity(object):
             self._record_deaths_probs(death_probs)
 
         if (not self.current_time % (self.paramsdict["J"]*2)):
-            draws = list(np.random.multinomial(100000, death_probs))
-            ch, p = chisquare(draws)
-            if p > 0.1:
-                b = 1
-            else:
-                b = 0
-            self.is_neutral += [[self.current_time, b]]
+            try:
+                draws = list(np.random.multinomial(100000, death_probs))
+                ch, p = chisquare(draws)
+                if p > 0.1:
+                    b = 1
+                else:
+                    b = 0
+                self.is_neutral += [[self.current_time, b]]
+            except:
+                self.is_neutral += [[self.current_time, -1]]
+                # Values too high/low to permit tests : probably neutral in any case !
+                # Happens when both interaction termes are too low
 
         self._finalize_death(victim, vic_idx)
 
