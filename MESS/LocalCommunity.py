@@ -253,16 +253,9 @@ class LocalCommunity(object):
         """
         Retrieve information from the metacommunity to store the local interaction matrix
         """
-        # n = self.paramsdict["J"]
-        # self.local_interaction_matrix = np.zeros((n,n))
-        # for i in range(n):
-        #     for j in range(n):
-        #         self.local_interaction_matrix[i][j] = self.region.metacommunity._get_interaction_term(self.local_community[i],self.local_community[j])
         self.local_interaction_matrix = np.array([
             [self.region.metacommunity._get_interaction_term(sp1, sp2) for sp2 in self.local_community] for sp1 in self.local_community
             ])
-        # print("after init")
-        # print(self.local_interaction_matrix)
 
     ## For the pairwise compeition model, a global matrix is used which summarize the competition interactions for all individuals
     def _set_distance_matrix(self):
@@ -275,15 +268,11 @@ class LocalCommunity(object):
         ## factors intervene outside the exp because positive/negative values
         ## Multiply by -1 so tha
         ## a positive term (mutualisme) decreases the probability of death and 
-        # ## a negative term (antagonism) increases it
-        # print("after init dist :")
-        # print(self._exp_distance_matrix)
+        ## a negative term (antagonism) increases it
+
 
 
     def _interaction_matrix_update(self):
-        # print("update interaction matrix")
-        # print(self.local_interaction_matrix)
-        # print("update interaction", self.last_dead_ind)
         nb_ind = self.paramsdict["J"]
         idx = self.last_dead_ind[0][0] ## Assumes there is only one dead
         new_species = self.local_community[idx]
@@ -291,15 +280,10 @@ class LocalCommunity(object):
         new_interaction2 = np.array([self.region.metacommunity._get_interaction_term(sp, new_species) for sp in self.local_community])
         self.local_interaction_matrix[idx] = new_interaction1
         self.local_interaction_matrix[:,idx] = new_interaction2.T
-        # print("updated !")
-        # print(self.local_interaction_matrix)
 
 
     ## Update the distance matrix using the position of the last dead individual
     def _distance_matrix_update(self):
-        # print("updating distance matrix")
-        # print(self._exp_distance_matrix)
-        # print("update distance", self.last_dead_ind)
         nb_ind = self.paramsdict["J"]
         idx = self.last_dead_ind[0][0]
         self.local_traits[idx] = self.region.get_trait(self.local_community[idx])
@@ -309,11 +293,8 @@ class LocalCommunity(object):
 
         new_dist = np.reshape(distance.cdist(local_traits,[local_traits[idx]]),(nb_ind))
         self._exp_distance_matrix[idx] = np.exp(-(new_dist/es))*(-self.local_interaction_matrix[idx])
-        # DOES NOT YET HANDLE ASYMMETRIC INTERACTIONS
         self._exp_distance_matrix[:,idx] = np.exp(-(new_dist/es))*(-self.local_interaction_matrix[:,idx])
-        ## Distance are symmetrical but interactions may be not
-        # print("dist updated !")
-        # print(self._exp_distance_matrix)
+
 
 
     ## Update global death probabilities for the filtering model
@@ -614,7 +595,6 @@ class LocalCommunity(object):
             death_probs = np.nan_to_num(np.sum(self._exp_distance_matrix,axis=0))-np.nan_to_num(np.diag(self._exp_distance_matrix))
             ## Scale all fitness values to proportions
             death_probs = self.normalize(death_probs)
-            #death_probs = death_probs/np.sum(death_probs)
             ## Get the victim conditioning on unequal death probability
             try:
                 vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
@@ -677,12 +657,6 @@ class LocalCommunity(object):
         else:
             self.death_probs_through_time[self.current_time] = death_probs
             self.local_community_through_time[self.current_time] = self.local_community.copy()
-            # print("death probs at ",self.current_time)
-            # print(self._death_probs[self.current_time])
-            # print("loc comm at ", self.current_time)
-            # print(self._local_community_record[self.current_time])
-            # print("loc traits at ", self.current_time)
-            # print(self.local_traits)
 
 
     def _finalize_death(self, victim, vic_idx):
