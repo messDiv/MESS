@@ -341,16 +341,15 @@ class Metacommunity(object):
       
 
         # ## Nature of the interaction
-        # if type(self.paramsdict["intrasp_competition"])==type((0,0)) and type(self.paramsdict["intersp_competition"])==type((0,0)):
-        #     factors = np.random.binomial(n = 1,
-        #         p = self.paramsdict["mutualism_proportion"],
-        #         size =(2,len(self.interaction_matrix)))
-        #     factors[factors == 0] = -1 
-        #     self.interaction_matrix[-1] = self.interaction_matrix[-1] * factors[0]
-        #     self.interaction_matrix[:,-1] = self.interaction_matrix[:,-1] * factors[1].T
+        if type(self.paramsdict["intrasp_competition"])==type((0,0)) and type(self.paramsdict["intersp_competition"])==type((0,0)):
+            factors = np.random.binomial(n = 1,
+                p = self.paramsdict["mutualism_proportion"],
+                size =(2,len(self.interaction_matrix)))
+            factors[factors == 0] = -1 
+            self.interaction_matrix[-1] = self.interaction_matrix[-1] * factors[0]
+            self.interaction_matrix[:,-1] = self.interaction_matrix[:,-1] * factors[1].T
         #     # A positive value is a positive interaction,
         #     # A negative value is a negative interaction
-        ## NO redraw from type if evolution from parent
         self.species_dict[new] = len(self.interaction_matrix)-1
 
 
