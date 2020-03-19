@@ -232,8 +232,12 @@ class Metacommunity(object):
 
             elif param == "intrasp_competition":
                 if newvalue=="*":
-                    alpha = np.random.gamma(0.25,4)
-                    beta = np.random.gamma(0.25,4)
+                    mean = np.random.uniform(np.log10(0.01), np.log10(10), size=1)
+                    mean = np.power(10, mean)
+                    var = np.random.uniform(np.log10(0.01), np.log10(10), size=1)
+                    var = np.power(10, var)
+                    beta = var/mean
+                    alpha = mean/beta
                     newvalue = (alpha,beta)
                 # Aribitrary priors here ! Should be tuneable from parameter file !
                 tup = tuplecheck(newvalue, dtype=float)
@@ -242,8 +246,12 @@ class Metacommunity(object):
 
             elif param == "intersp_competition":
                 if newvalue=="*":
-                    alpha = np.random.gamma(0.25,4)
-                    beta = np.random.gamma(0.25,4)
+                    mean = np.random.uniform(np.log10(0.01), np.log10(10), size=1)
+                    mean = np.power(10, mean)
+                    var = np.random.uniform(np.log10(0.01), np.log10(10), size=1)
+                    var = np.power(10, var)
+                    beta = var/mean
+                    alpha = mean/beta
                     newvalue = (alpha,beta)
                 # Aribitrary priors here ! Should be tuneable from parameter file !
                 tup = tuplecheck(newvalue, dtype=float)
@@ -273,17 +281,7 @@ class Metacommunity(object):
 
 
     def _get_interaction_term(self,species1,species2):
-        
         return self.interaction_matrix[self.species_dict[species1]][self.species_dict[species2]]
-    #    try:
-    #         return self.interaction_matrix[int(float(species1))-1][int(float(species2))-1]
-    # #Species from 1 to 100 but matrix from 0 to 99
-    #     except ValueError:
-    #         if species1 in self.added_species:
-    #             species1 = self.added_species[species1]
-    #         if species2 in self.added_species:
-    #             species2 = self.added_species[species2]
-    #         return self.interaction_matrix[int(float(species1))-1][int(float(species2))-1]
 
     def _create_interaction(self,new, parent):
         ## Extend matrix

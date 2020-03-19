@@ -598,9 +598,11 @@ class LocalCommunity(object):
             ## Get the victim conditioning on unequal death probability
             try:
                 vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
-            except: 
+            except Exception as inst:
+                raise MESSError("Error in _deathsteap - {}".format(inst))
             ## vic_idx is nan because of too high values in the exponential
                 vic_idx = random.randint(0,self.paramsdict["J"]-1)
+                raise MESSError
             victim = self.local_community[vic_idx]
         if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs(death_probs)
@@ -623,8 +625,12 @@ class LocalCommunity(object):
 
 
     def normalize(self, death_probs):
-        death_probs = death_probs + np.min(death_probs)
-        return death_probs/np.sum(death_probs)
+        death_probs = death_probs + abs(np.min(death_probs))
+        if np.sum(death_probs)==0:
+            return [1/self.paramsdict["J"] for _ in range(self.paramsdict["J"])]
+            # All equals
+        else:
+            return death_probs/np.sum(death_probs)
 
 
     def _filtering_death_step(self):
