@@ -51,8 +51,8 @@ class Metacommunity(object):
                         ("death_proportion", 0.7),
                         ("trait_rate_meta", 2),
                         ("ecological_strength", 1),
-                        ("intrasp_competition", 1),
-                        ("intersp_competition", 1),
+                        ("intrasp_competition", -1),
+                        ("intersp_competition", -1),
                         ("mutualism_proportion", 0.5),
         ])
 
@@ -546,7 +546,7 @@ class Metacommunity(object):
             else:
                 ## Expecting just a single value
                 self.interaction_matrix = np.array([[self.paramsdict["intersp_competition"] for _ in range(self.paramsdict["S_m"])] for _ in range(self.paramsdict["S_m"])])
-
+-
         except ValueError as inst:
             msg = \
 """
