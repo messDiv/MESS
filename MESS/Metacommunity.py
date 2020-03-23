@@ -546,7 +546,7 @@ class Metacommunity(object):
             else:
                 ## Expecting just a single value
                 self.interaction_matrix = np.array([[self.paramsdict["intersp_competition"] for _ in range(self.paramsdict["S_m"])] for _ in range(self.paramsdict["S_m"])])
--
+
         except ValueError as inst:
             msg = \
 """
