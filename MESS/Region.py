@@ -11,6 +11,7 @@ from collections import OrderedDict
 import MESS
 from .stats import *
 from .util import *
+from mpl_toolkits.mplot3d import axes3d 
 
 LOGGER = logging.getLogger(__name__)
 
@@ -206,7 +207,6 @@ class Region(object):
 
             elif param == "generations":
                 tup = tuplecheck(newvalue, dtype=float)
-
                 ## If specifying in generations then cast to int, otherwise it's
                 ## lambda (between 0 and 1) so leave it as float.
                 if isinstance(tup, tuple):
@@ -219,6 +219,7 @@ class Region(object):
                 else:
                     if tup > 1:
                         tup = int(tup)
+                        print(tup)
                     self.paramsdict[param] = tup
 
             elif param == "community_assembly_model":
@@ -645,20 +646,16 @@ class Region(object):
 
         if self._priors["generations"]:
             self.paramsdict["generations"] = sample_param_range(self._priors["generations"])[0]
-            
         ## Flip the metacommunity per simulation so we get new draws of trait values.
         ## This is a little slow for logser, and also performance scales with metacommunity size
         self._reset_metacommunity()
-
         ## Not as big of a deal on ipp simulations, but if you're running on a local computer
         ## the local communities need to get reupped for each simulation.
         self._reset_local_communities(fancy=fancy)
-
         if self._log_files:
             ## Get an output directory for dumping data
             outdir = self._get_simulation_outdir()
             self.write_params(outdir=outdir)
-
         step = 0
         ## Create an temp function to test whether we've reached the end of this simulation
         if _lambda > 0:
@@ -679,7 +676,7 @@ class Region(object):
             if not step % self._hackersonly["recording_period"]:
                for island in self.islands.values():
                     island._log(full=log_full)
-                    is_neutral = island.is_neutral
+                    # is_neutral = island.is_neutral
         # t1 = time.time()
         # filename = 'matrix_time.txt'
         # file = open(filename,'a') 
@@ -707,20 +704,21 @@ class Region(object):
                 simout.append(x)
         simout = "\t".join(map(str, np.array(simout)))
 
-        filename = 'is_neutral.txt'
-        outfile = os.path.join(self._get_simulation_outdir(),filename)
-        file = open(outfile,'w')
-        for i in range(len(is_neutral)):
-            file.write(str(is_neutral[i][0])+"\t"+str(is_neutral[i][1])+'\t'+str(is_neutral[i][2])+'\n')
-        params = self.metacommunity._get_params_header() +\
-                 self._get_params_header() +\
-                 list(self.islands.values())[0]._get_params_header()
-        header = "\t".join(params + MESS.stats._get_sumstats_header(sgd_bins=self._hackersonly["sgd_bins"],\
-                                                                    sgd_dims=self._hackersonly["sgd_dimensions"],
-                                                                    metacommunity_traits=self.metacommunity._get_trait_values())) + "\n"
-        file.write(header)
-        file.write(simout)
-        file.close()
+        # filename = 'is_neutral.txt'
+        # outfile = os.path.join(self._get_simulation_outdir(),filename)
+        # file = open(outfile,'w')
+        # for i in range(len(is_neutral)):
+        #     file.write(str(is_neutral[i][0])+"\t"+str(is_neutral[i][1])+'\t'+str(is_neutral[i][2])+'\n')
+        
+        # params = self.metacommunity._get_params_header() +\
+        #          self._get_params_header() +\
+        #          list(self.islands.values())[0]._get_params_header()
+        # header = "\t".join(params + MESS.stats._get_sumstats_header(sgd_bins=self._hackersonly["sgd_bins"],\
+        #                                                             sgd_dims=self._hackersonly["sgd_dimensions"],
+        #                                                             metacommunity_traits=self.metacommunity._get_trait_values())) + "\n"
+        # file.write(header)
+        # file.write(simout)
+        # file.close()
 
         return simout
 
@@ -750,6 +748,9 @@ class Region(object):
                                                         island.lambda_through_time)
                 MESS.plotting.plot_death_probs(island.death_probs_through_time, outdir,                      self.paramsdict["community_assembly_model"],
                                         island.local_community_through_time)
+                MESS.plotting.plot_traits_repartition(outdir,
+                                                    island.local_traits_through_time,
+                                                    island.death_probs_through_time)
             except Exception as inst:
                 print("    Exception in fancy_plots() - {}".format(inst))
 

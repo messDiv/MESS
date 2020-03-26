@@ -59,7 +59,7 @@ class Ensemble(object):
             if sim_df is not '':
                 self.sim_df = sim_df
             elif simfile is not '':
-                self.sim_df = pd.read_csv(simfile, sep="\t", header=0)
+                self.sim_df = pd.read_csv(simfile, sep="\t", header=0, dtype=np.dtype('bytes_'))
             else:
                 raise MESSError("Classifier/Regressor constructor must pass in either `simfile` or `sim_df`.")
 
@@ -269,7 +269,11 @@ class Ensemble(object):
             feat_selector = BorutaPy(model, max_iter=max_iter, n_estimators='auto', verbose=0, random_state=1)
             ## Turn off np warnings
             np.warnings.filterwarnings('ignore')
-            feat_selector.fit(tmpX, tmpy)
+            print(tmpX, tmpy)
+            for i,y in enumerate(tmpy):
+                if y!='neutral' and y !='filtering' and y!='pairwise_competition' and y!='competition':
+                    print(i,y)
+            feat_selector.fit(tmpX, np.ravel(tmpy))
 
             # check ranking of features
             features = list(self.features[feat_selector.support_])
@@ -345,6 +349,8 @@ class Ensemble(object):
 
     ## The magic method to just do-it-all
     def predict(self, select_features=True, param_search=True, by_target=False, quick=False, force=False, verbose=False):
+
+
         if verbose: print("Predict() started: {}".format(datetime.datetime.now()))
 
         try:
@@ -381,9 +387,42 @@ class Ensemble(object):
                 ## Set the best_model variable just using the model for the first target
                 self.best_model = self.model_by_target[self.targets[0]]["model"]
             else:
-                ## TODO: Make default base_model params smarter
+                # ## TODO: Make default base_model params smarter
                 self.best_model = self._base_model(n_jobs=-1)
-                self.best_model.fit(self.X, self.y)
+                print(self.best_model)
+                print(self.X.shape)
+                # for i,x in enumerate(self.X.values):
+                #     print(i,x)
+                #     for j, k in enumerate(x):
+                #         k = np.float32(k)
+                #         if k > 10000000:
+                #             print("pb")
+                #             print(i,x,j,k)
+                #             raise MESSError
+                #         elif k==np.nan:
+                #             print("pb2")
+                #             print(i,x,j,k)
+                #             raise MESSError
+                #         print(np.float32(k))
+                print(self.X.dtypes)
+                X = self.X.values.astype(np.float32)
+                print(self.y)
+                print(self.y.dtypes)
+                # from sklearn import preprocessing
+                # le = preprocessing.LabelEncoder()
+                # for column_name in self.y.columns:
+                #     if self.y.columns[column_name].dtype == object:
+                #         self.y[column_name] = le.fit_transform(self.y[column_name])
+                #     else:
+                #         pass
+                print(pd.factorize(self.y["community_assembly_model"])[0])
+                self.y=pd.factorize(self.y["community_assembly_model"])[0]
+                # self.y[self.y=="competition"]=0
+                # self.y[self.y=="filtering"]=1
+                # self.y[self.y=="neutral"]=2
+                # self.y[self.y=="pairwise_competition"]=3
+                print(self.y)
+                self.best_model.fit(X,self.y)
         if verbose: print("Predict() finished: {}".format(datetime.datetime.now()))
 
 
@@ -599,8 +638,7 @@ class Classifier(Ensemble):
 
         :return: A tuple including the predicted model and the probabilities per model class.
         """
-        super(Classifier, self).predict(select_features=select_features, param_search=param_search,\
-                                        by_target=by_target, quick=quick, verbose=verbose)
+        super(Classifier, self).predict(select_features=select_features, param_search=param_search, by_target=by_target, quick=quick, verbose=verbose)
 
         ## Force by_target to be true for GradientBoosting and AdaBoost
         self._by_target = by_target
@@ -642,7 +680,7 @@ class Classifier(Ensemble):
         """
         super(Classifier, self).cross_val_predict(cv=cv, quick=quick, verbose=verbose)
 
-        labels = ["Competition", "Filtering", "Neutral"]
+        #labels = ["Competition", "Filtering", "Neutral","Pairwise"]
         self.classification_report = metrics.classification_report(y_true=self.y,\
                                                                     y_pred=self.cv_preds)
                                                                     #labels=labels)
@@ -692,7 +730,7 @@ class Classifier(Ensemble):
 
         ## By default the confusion_matrix() function lays out the matrix based
         ## on the alpha-sorted order of labels found in the data.
-        labels = ["Competition", "Filtering", "Neutral"]
+        labels = ["Competition", "Filtering", "Neutral", "Pairwise"]
 
         conf_matrix = metrics.confusion_matrix(self.y, self.cv_preds)
 

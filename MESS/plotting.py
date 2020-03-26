@@ -977,6 +977,63 @@ def plot_death_probs(death_probs, outdir, model, local_community_record):
 
 
 
+def plot_traits_repartition(outdir, local_traits_through_time, death_probs):
+    """
+    local_traits_through_time arg should be a dictionnary of time : local_traits
+    This function aims at generating an animated gif of the distribution of traits in the local community through time
+    """
+    ## Create a directory to store the individual images
+    print("Generating local traits plots thourgh time")
+    trait_out = os.path.join(outdir, "traits_through_time")
+    if not os.path.exists(trait_out):
+        os.mkdir(trait_out)
+
+    maxtime = len(local_traits_through_time.keys())
+    names = sorted([str(1000000000+i) for i in range(maxtime)])
+    values = [x for x in np.nan_to_num(death_probs.values())]
+    maxprob = max(np.reshape(values,len(values[0])*len(values)))
+    minprob = min(np.reshape(values,len(values[0])*len(values)))
+    
+    values = [x for x in local_traits_through_time.values()]
+    maxtrait = max(np.reshape(values,len(values[0])*len(values)))
+    mintrait = min(np.reshape(values,len(values[0])*len(values)))
+
+
+    tot_plots = len(local_traits_through_time)
+    for i,time in enumerate(local_traits_through_time.keys()):
+        progressbar(tot_plots, i+1)
+        fig = plt.figure(figsize=(12,5))
+        ax = fig.add_subplot(111, projection='3d')
+        x = local_traits_through_time[time]
+        y = np.nan_to_num(death_probs[time])
+        hist, xedges, yedges = np.histogram2d(x, y, bins=10, range=[[mintrait, maxtrait], [minprob, maxprob]])
+
+        # Construct arrays for the anchor positions of the 16 bars.
+        xpos, ypos = np.meshgrid(xedges[:-1] + 0.25, yedges[:-1] + 0.25, indexing="ij")
+        xpos = xpos.ravel()
+        ypos = ypos.ravel()
+        zpos = 0
+
+        # Construct arrays with the dimensions for the 16 bars.
+        dx = dy = 0.5 * np.ones_like(zpos)
+        dz = hist.ravel()
+
+        ax.bar3d(xpos, ypos, zpos, dx, dy, dz, zsort='average')
+
+
+        plt.ylabel('death probability')
+        # plt.ylim(minprob-minprob/100,maxprob+maxprob/100)
+        plt.xlabel('trait value')
+        # plt.xlim(mintrait-abs(mintrait)/100,maxtrait+maxtrait/100)
+        plt.title('Death probabilities and trait repartitions'+str(time))
+        fig.savefig(trait_out+'/'+names[i]+'.png')
+        plt.close()
+
+
+
+
+
+
 
 REQUIRE_IMAGEMAGICK_ERROR = """
 The plots_through_time() function requires the image-magick graphics

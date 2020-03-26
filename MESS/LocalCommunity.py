@@ -146,6 +146,7 @@ class LocalCommunity(object):
 
         self.death_probs_through_time = OrderedDict({})
         self.local_community_through_time = OrderedDict({})
+        self.local_traits_through_time = OrderedDict({})
         self.fancy = False
         self.is_neutral = []
 
@@ -541,7 +542,10 @@ class LocalCommunity(object):
         victim = self.local_community[vic_idx]
         if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs()
+            self.local_traits_through_time[self.current_time] = self.local_traits
+
         self._finalize_death(victim,vic_idx)
+
         if (not self.current_time % (self.paramsdict["J"]*2)):
             draws = list(np.random.multinomial(100000, [1/self.paramsdict["J"]]*self.paramsdict["J"]))
             ch, p = chisquare(draws)
@@ -550,6 +554,7 @@ class LocalCommunity(object):
             else:
                 b = 0
             self.is_neutral += [[self.current_time, b, self._lambda()]]
+
 
     def _competition_death_step(self):
         victim = random.choice(self.local_community)
@@ -574,6 +579,8 @@ class LocalCommunity(object):
             victim = self.local_community[vic_idx]
         if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs(death_probs)
+            self.local_traits_through_time[self.current_time] = self.local_traits
+
         self._finalize_death(victim,vic_idx)
 
         if (not self.current_time % (self.paramsdict["J"]*2)):
@@ -606,6 +613,8 @@ class LocalCommunity(object):
             victim = self.local_community[vic_idx]
         if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs(death_probs)
+            self.local_traits_through_time[self.current_time] = self.local_traits
+
 
         if (not self.current_time % (self.paramsdict["J"]*2)):
             try:
@@ -649,6 +658,8 @@ class LocalCommunity(object):
             victim = self.local_community[vic_idx]
         if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs(death_probs)
+            self.local_traits_through_time[self.current_time] = self.local_traits
+
         self._finalize_death(victim, vic_idx)
 
         if (not self.current_time % (self.paramsdict["J"]*2)):

@@ -51,8 +51,10 @@ class Metacommunity(object):
                         ("death_proportion", 0.7),
                         ("trait_rate_meta", 2),
                         ("ecological_strength", 1),
-                        ("intrasp_competition", -1),
-                        ("intersp_competition", -1),
+                        ("intrasp_competition_a", 1),
+                        ("intrasp_competition_b", 1),
+                        ("intersp_competition_a", 1),
+                        ("intersp_competition_b", 1),
                         ("mutualism_proportion", 0.5),
         ])
 
@@ -230,7 +232,7 @@ class Metacommunity(object):
                     self.paramsdict[param] = tup
                 LOGGER.debug("{} {}".format(param, tup))
 
-            elif param == "intrasp_competition":
+            elif param == "intrasp_competition_a":
                 if newvalue=="*":
                     mean = np.random.uniform(np.log10(0.01), np.log10(10), size=1)
                     mean = np.power(10, mean)
@@ -238,13 +240,19 @@ class Metacommunity(object):
                     var = np.power(10, var)
                     beta = var/mean
                     alpha = mean/beta
-                    newvalue = (alpha,beta)
-                # Aribitrary priors here ! Should be tuneable from parameter file !
-                tup = tuplecheck(newvalue, dtype=float)
-                self.paramsdict[param] = tup
-                #First value : alpha | second value : beta | if only one : fixed
+                    # Aribitrary priors here ! Should be tuneable from parameter file !
+                    tup_b = tuplecheck(beta, dtype=float)
+                    self.paramsdict["intrasp_competition_b"] = tup_b
+                    newvalue = tuplecheck(alpha, dtype=float)
+                    self.paramsdict[param] = newvalue
+                else:
+                    newvalue = tuplecheck(newvalue, dtype=float)
+                    self.paramsdict[param] = newvalue
+                # First value : alpha | second value : beta
+                # When random : draw both alpha & gamma
 
-            elif param == "intersp_competition":
+
+            elif param == "intrasp_competition_b":
                 if newvalue=="*":
                     mean = np.random.uniform(np.log10(0.01), np.log10(10), size=1)
                     mean = np.power(10, mean)
@@ -252,11 +260,55 @@ class Metacommunity(object):
                     var = np.power(10, var)
                     beta = var/mean
                     alpha = mean/beta
-                    newvalue = (alpha,beta)
-                # Aribitrary priors here ! Should be tuneable from parameter file !
-                tup = tuplecheck(newvalue, dtype=float)
-                self.paramsdict[param] = tup
-                #First value : alpha | second value : beta | if only one : fixed
+                    # Aribitrary priors here ! Should be tuneable from parameter file !
+                    tup_a = tuplecheck(beta, dtype=float)
+                    self.paramsdict["intrasp_competition_a"] = tup_a
+                    newvalue = tuplecheck(beta, dtype=float)
+                    self.paramsdict[param] = newvalue
+                else:
+                    newvalue = tuplecheck(newvalue, dtype=float)
+                    self.paramsdict[param] = newvalue
+                #First value : alpha | second value : beta
+                # When random : draw both alpha & gamma
+
+
+            elif param == "intersp_competition_a":
+                if newvalue=="*":
+                    mean = np.random.uniform(np.log10(0.01), np.log10(10), size=1)
+                    mean = np.power(10, mean)
+                    var = np.random.uniform(np.log10(0.01), np.log10(10), size=1)
+                    var = np.power(10, var)
+                    beta = var/mean
+                    alpha = mean/beta
+                    # Aribitrary priors here ! Should be tuneable from parameter file !
+                    tup_b = tuplecheck(beta, dtype=float)
+                    self.paramsdict["intersp_competition_b"] = tup_b
+                    newvalue = tuplecheck(alpha, dtype=float)
+                    self.paramsdict[param] = newvalue
+                else:
+                    newvalue = tuplecheck(newvalue, dtype=float)
+                    self.paramsdict[param] = newvalue
+                #First value : alpha | second value : beta
+                # When random : draw both alpha & gamma
+
+            elif param == "intersp_competition_b":
+                if newvalue=="*":
+                    mean = np.random.uniform(np.log10(0.01), np.log10(10), size=1)
+                    mean = np.power(10, mean)
+                    var = np.random.uniform(np.log10(0.01), np.log10(10), size=1)
+                    var = np.power(10, var)
+                    beta = var/mean
+                    alpha = mean/beta
+                    # Aribitrary priors here ! Should be tuneable from parameter file !
+                    tup_a = tuplecheck(beta, dtype=float)
+                    self.paramsdict["intersp_competition_a"] = tup_a
+                    newvalue = tuplecheck(beta, dtype=float)
+                    self.paramsdict[param] = newvalue
+                else:
+                    newvalue = tuplecheck(newvalue, dtype=float)
+                    self.paramsdict[param] = newvalue
+                #First value : alpha | second value : beta
+                # When random : draw both alpha & gamma
 
 
         except Exception as inst:
@@ -292,7 +344,7 @@ class Metacommunity(object):
             np.zeros((1,len(self.interaction_matrix)+1)).T
             ])
         ## Add interspecific interaction
-        if type(self.paramsdict["intersp_competition"])==type((0,0)):
+        # if type(self.paramsdict["intersp_'competition"])==type((0,0)):
             # Draw according to gamma distribution 
             # self.interaction_matrix[-1] = [np.random.normal(
             #     self._get_interaction_term(parent, sp),
@@ -303,28 +355,28 @@ class Metacommunity(object):
             #     self._get_interaction_term(sp, parent),
             #     self._hackersonly["inter_term_rate"], 1)[0]
             # for sp in range(1,len(self.interaction_matrix)+1)]
-            rds = np.random.gamma(shape = self.paramsdict["intersp_competition"][0]
-                            , scale = self.paramsdict["intersp_competition"][1]
-                            , size = (2,len(self.interaction_matrix)))
-            self.interaction_matrix[-1] = rds[0]
-            self.interaction_matrix[:,-1] = rds[1]
+        rds = np.random.gamma(shape = self.paramsdict["intersp_competition_a"]
+                        , scale = self.paramsdict["intersp_competition_b"]
+                        , size = (2,len(self.interaction_matrix)))
+        self.interaction_matrix[-1] = rds[0]
+        self.interaction_matrix[:,-1] = rds[1]
 
-        else:
-            ## Expecting just a single value 
-            self.interaction_matrix[-1] = np.array([self.paramsdict["intersp_competition"]] * len(self.interaction_matrix))
-            self.interaction_matrix[:,-1] = np.array([self.paramsdict["intersp_competition"]] * len(self.interaction_matrix))
+        # else:
+        #     ## Expecting just a single value 
+        #     self.interaction_matrix[-1] = np.array([self.paramsdict["intersp_competition"]] * len(self.interaction_matrix))
+        #     self.interaction_matrix[:,-1] = np.array([self.paramsdict["intersp_competition"]] * len(self.interaction_matrix))
 
         ## Add intraspecific interaction
         ## Write over precedent terms for the diagonal of the matrix
-        if type(self.paramsdict["intrasp_competition"])==type((0,0)):
+        # if type(self.paramsdict["intrasp_competition"])==type((0,0)):
             # ## Draw according to gamma distribution 
             # rd = np.random.normal(
             #     self._get_interaction_term(parent, parent),
             #     self._hackersonly["inter_term_rate"], 3)
-            np.random.gamma(shape = self.paramsdict["intrasp_competition"][0]
-                                , scale = self.paramsdict["intrasp_competition"][1]
-                                , size = 1)
-            # self.interaction_matrix[-1][-1] = rd[0]
+        rd = np.random.gamma(shape = self.paramsdict["intrasp_competition_a"]
+                            , scale = self.paramsdict["intrasp_competition_b"]
+                            , size = 1)
+        self.interaction_matrix[-1][-1] = rd
             # try :
             #     self.interaction_matrix[-1][int(float(parent))-1] = rd[1]
             #     self.interaction_matrix[int(float(parent))-1][-1] = rd[2]
@@ -333,19 +385,19 @@ class Metacommunity(object):
             #     self.interaction_matrix[-1][int(float(parent))-1] = rd[1]
             #     self.interaction_matrix[int(float(parent))-1][-1] = rd[2]
             # Interaction with parent species derives from intraspecific interaction
-        else:
-            ## Expecting just a single value 
-            self.interaction_matrix[-1][-1] = self.paramsdict["intrasp_competition"]
+        # else:
+        #     ## Expecting just a single value 
+        #     self.interaction_matrix[-1][-1] = self.paramsdict["intrasp_competition"]
       
 
         # ## Nature of the interaction
-        if type(self.paramsdict["intrasp_competition"])==type((0,0)) and type(self.paramsdict["intersp_competition"])==type((0,0)):
-            factors = np.random.binomial(n = 1,
-                p = self.paramsdict["mutualism_proportion"],
-                size =(2,len(self.interaction_matrix)))
-            factors[factors == 0] = -1 
-            self.interaction_matrix[-1] = self.interaction_matrix[-1] * factors[0]
-            self.interaction_matrix[:,-1] = self.interaction_matrix[:,-1] * factors[1].T
+        # if type(self.paramsdict["intrasp_competition"])==type((0,0)) and type(self.paramsdict["intersp_competition"])==type((0,0)):
+        factors = np.random.binomial(n = 1,
+                                    p = self.paramsdict["mutualism_proportion"],
+                                    size =(2,len(self.interaction_matrix)))
+        factors[factors == 0] = -1 
+        self.interaction_matrix[-1] = self.interaction_matrix[-1] * factors[0]
+        self.interaction_matrix[:,-1] = self.interaction_matrix[:,-1] * factors[1].T
         #     # A positive value is a positive interaction,
         #     # A negative value is a negative interaction
         self.species_dict[new] = len(self.interaction_matrix)-1
@@ -451,6 +503,7 @@ class Metacommunity(object):
 
             self._hackersonly["filtering_optimum"] = np.random.normal(loc=np.mean(trait_values), scale=np.std(trait_values), size=1)[0]
 
+
         ## Attempt to read tree/ids/abunds/traits from a file. If it fails, fall back to just
         ## try reading the old list of abundances format.
         ##
@@ -535,65 +588,65 @@ class Metacommunity(object):
         ### Fill the interaction martix ###
         ## Strength of the interaction
         self.interaction_matrix = np.zeros((self.paramsdict["S_m"],self.paramsdict["S_m"]))
-
             ## Begin with the interspecific interaction
         try:
-            if type(self.paramsdict["intersp_competition"])==type((0,0)):
+            # if type(self.paramsdict["intersp_competition"])==type((0,0)):
                 ## Draw according to gamma distribution
-                self.interaction_matrix = np.random.gamma(shape = self.paramsdict["intersp_competition"][0]
-                                    , scale = self.paramsdict["intersp_competition"][1]
-                                    , size = (self.paramsdict["S_m"],self.paramsdict["S_m"]))
-            else:
-                ## Expecting just a single value
-                self.interaction_matrix = np.array([[self.paramsdict["intersp_competition"] for _ in range(self.paramsdict["S_m"])] for _ in range(self.paramsdict["S_m"])])
+            self.interaction_matrix = np.random.gamma(shape = self.paramsdict["intersp_competition_a"]
+                                , scale = self.paramsdict["intersp_competition_b"]
+                                , size = (self.paramsdict["S_m"],self.paramsdict["S_m"]))
+            # else:
+            #     ## Expecting just a single value
+            #     self.interaction_matrix = np.array([[self.paramsdict["intersp_competition"] for _ in range(self.paramsdict["S_m"])] for _ in range(self.paramsdict["S_m"])])
 
         except ValueError as inst:
             msg = \
 """
     Attempting to set interspecific interaction matrix with {} factors but it can only be 1 (exact value) or 2 terms (shape and scale parameters for gamma distribution
 """         
-            raise MESSError(msg.format(self.paramsdict["intrasp_competition"]))
+            raise MESSError(msg.format(self.paramsdict["intrasp_competition_a"]))
 
 
         try:
             ## Write over precedent terms for the diagonal of the matrix
-            if type(self.paramsdict["intrasp_competition"])==type((0,0)):
+            # if type(self.paramsdict["intrasp_competition"])==type((0,0)):
                 ## Draw according to gamma distribution
-                rds = np.random.gamma(shape = self.paramsdict["intrasp_competition"][0]
-                                    , scale = self.paramsdict["intrasp_competition"][1]
-                                    , size = self.paramsdict["S_m"])
-                for i in range(self.paramsdict["S_m"]):
-                    self.interaction_matrix[i][i] = rds[i]
-            else:
-                ## Expecting just a single value
-                for i in range(self.paramsdict["S_m"]):
-                    self.interaction_matrix[i][i] = self.paramsdict["intrasp_competition"]
+            rds = np.random.gamma(shape = self.paramsdict["intrasp_competition_a"]
+                                , scale = self.paramsdict["intrasp_competition_b"]
+                                , size = self.paramsdict["S_m"])
+            for i in range(self.paramsdict["S_m"]):
+                self.interaction_matrix[i][i] = rds[i]
+            # else:
+            #     ## Expecting just a single value
+            #     for i in range(self.paramsdict["S_m"]):
+            #         self.interaction_matrix[i][i] = self.paramsdict["intrasp_competition"]
         except ValueError as inst:
             msg = \
 """
     Attempting to set intraspecific interaction matrix with {} factors but it can only be 1 (exact value) or 2 terms (shape and scale parameters for gamma distribution
 """         
-            raise MESSError(msg.format(self.paramsdict["intrasp_competition"]))
+            raise MESSError(msg.format(self.paramsdict["intrasp_competition_b"]))
 
         ## Nature of the interaction
-        if type(self.paramsdict["intrasp_competition"])==type((0,0)) and type(self.paramsdict["intersp_competition"])==type((0,0)):
-            try:
-                factors = np.random.binomial(n = 1,
-                    p = self.paramsdict["mutualism_proportion"],
-                    size =(self.paramsdict["S_m"],self.paramsdict["S_m"]))
-                factors[factors == 0] = -1
-                self.interaction_matrix = self.interaction_matrix * factors
-                # A positive value is a positive interaction,
-                # A negative value is a negative interaction
-            except ValueError as inst:
-                raise MESSError("Error while drawing the nature of the interactions")
+        # if type(self.paramsdict["intrasp_competition"])==type((0,0)) and type(self.paramsdict["intersp_competition"])==type((0,0)):
 
-        elif type(self.paramsdict["intrasp_competition"])==type((0,0)):
-            raise MESSError("Inter- and intra- specific competition have to be either both fixed or both gamma distributed (TODO)")
-        elif type(self.paramsdict["intersp_competition"])==type((0,0)):
-            raise MESSError("Inter- and intra- specific competition have to be either both fixed or both gamma distributed (TODO)")
-        else:
-            pass
+        try:
+            factors = np.random.binomial(n = 1,
+                p = self.paramsdict["mutualism_proportion"],
+                size =(self.paramsdict["S_m"],self.paramsdict["S_m"]))
+            factors[factors == 0] = -1
+            self.interaction_matrix = self.interaction_matrix * factors
+            # A positive value is a positive interaction,
+            # A negative value is a negative interaction
+        except ValueError as inst:
+            raise MESSError("Error while drawing the nature of the interactions")
+
+        # elif type(self.paramsdict["intrasp_competition"])==type((0,0)):
+        #     raise MESSError("Inter- and intra- specific competition have to be either both fixed or both gamma distributed (TODO)")
+        # elif type(self.paramsdict["intersp_competition"])==type((0,0)):
+        #     raise MESSError("Inter- and intra- specific competition have to be either both fixed or both gamma distributed (TODO)")
+        # else:
+        #     pass
             # No random proportion of mutualism if values fixed
                     
 
@@ -604,7 +657,6 @@ class Metacommunity(object):
         LOGGER.debug("Size of metacommunity - {}".format(Jm))
         self.community['immigration_probabilities'] = self.community["abundances"]/float(Jm)
         LOGGER.debug("Metacommunity info: shape {}\n[:10] {}".format(self.community.shape, self.community[:10]))
-
 
 
     def _update_species_pool(self, sname, trait_value):
@@ -672,8 +724,10 @@ LOCAL_PARAMS = {
     "death_proportion" : "Proportion of speciation rate to be extinction rate",\
     "trait_rate_meta" : "Trait evolution rate parameter for metacommunity",\
     "ecological_strength" : "Strength of community assembly process on phenotypic change",\
-    "intersp_competition" : "Strength of the interspecific competition (fixed single value or parameters for the gamma distribution)",\
-    "intrasp_competition" : "Strength of the intraspecific competition (fixed single value or parameters for the gamma distribution)",\
+    "intersp_competition_a" : "Shape of the gamma distribution for the interspecific competition",\
+    "intersp_competition_b" : "Scale of the gamma distribution for the interspecific competition",\
+    "intrasp_competition_a" : "Shape of the gamma distribution for the intraspecific competition",\
+    "intrasp_competition_b" : "Scale of the gamma distribution for the intraspecific competition",\
     "mutualism_proportion" : "Percentage of inter- and intraspecific interaction terms that are beneficial for one the species (only used if inter- and intra- competition terms are not fixed)"
     }
 
