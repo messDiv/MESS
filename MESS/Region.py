@@ -219,7 +219,6 @@ class Region(object):
                 else:
                     if tup > 1:
                         tup = int(tup)
-                        print(tup)
                     self.paramsdict[param] = tup
 
             elif param == "community_assembly_model":

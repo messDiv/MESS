@@ -542,7 +542,8 @@ class LocalCommunity(object):
         victim = self.local_community[vic_idx]
         if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs()
-            self.local_traits_through_time[self.current_time] = self.local_traits
+            self.local_traits_through_time[self.current_time] = self.local_traits.copy()
+
 
         self._finalize_death(victim,vic_idx)
 
@@ -579,7 +580,8 @@ class LocalCommunity(object):
             victim = self.local_community[vic_idx]
         if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs(death_probs)
-            self.local_traits_through_time[self.current_time] = self.local_traits
+            self.local_traits_through_time[self.current_time] = self.local_traits.copy()
+
 
         self._finalize_death(victim,vic_idx)
 
@@ -613,7 +615,8 @@ class LocalCommunity(object):
             victim = self.local_community[vic_idx]
         if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs(death_probs)
-            self.local_traits_through_time[self.current_time] = self.local_traits
+            self.local_traits_through_time[self.current_time] = self.local_traits.copy()
+
 
 
         if (not self.current_time % (self.paramsdict["J"]*2)):
@@ -658,7 +661,7 @@ class LocalCommunity(object):
             victim = self.local_community[vic_idx]
         if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs(death_probs)
-            self.local_traits_through_time[self.current_time] = self.local_traits
+            self.local_traits_through_time[self.current_time] = self.local_traits.copy()
 
         self._finalize_death(victim, vic_idx)
 
