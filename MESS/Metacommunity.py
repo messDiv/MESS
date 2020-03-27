@@ -245,6 +245,9 @@ class Metacommunity(object):
                     self.paramsdict["intrasp_competition_b"] = tup_b
                     newvalue = tuplecheck(alpha, dtype=float)
                     self.paramsdict[param] = newvalue
+                elif isinstance(tuplecheck(newvalue, dtype=float), tuple):
+                    tup = tuplecheck(newvalue, dtype=float)
+                    self.paramsdict[param] = sample_param_range(tup, loguniform=True)[0]
                 else:
                     newvalue = tuplecheck(newvalue, dtype=float)
                     self.paramsdict[param] = newvalue
@@ -285,6 +288,9 @@ class Metacommunity(object):
                     self.paramsdict["intersp_competition_b"] = tup_b
                     newvalue = tuplecheck(alpha, dtype=float)
                     self.paramsdict[param] = newvalue
+                elif isinstance(tuplecheck(newvalue, dtype=float), tuple):
+                    tup = tuplecheck(newvalue, dtype=float)
+                    self.paramsdict[param] = sample_param_range(tup, loguniform=True)[0]
                 else:
                     newvalue = tuplecheck(newvalue, dtype=float)
                     self.paramsdict[param] = newvalue
@@ -724,10 +730,10 @@ LOCAL_PARAMS = {
     "death_proportion" : "Proportion of speciation rate to be extinction rate",\
     "trait_rate_meta" : "Trait evolution rate parameter for metacommunity",\
     "ecological_strength" : "Strength of community assembly process on phenotypic change",\
-    "intersp_competition_a" : "Shape of the gamma distribution for the interspecific competition (unique value if scale=-1)",\
-    "intersp_competition_b" : "Scale of the gamma distribution for the interspecific competition (-1 if not used)",\
-    "intrasp_competition_a" : "Shape of the gamma distribution for the intraspecific competition (unique value if scale=-1)",\
-    "intrasp_competition_b" : "Scale of the gamma distribution for the intraspecific competition (-1 if not used)",\
+    "intersp_competition_a" : "Shape of the gamma distribution for the interspecific competition (unique value if scale=-1, * for random gamma distribution, 2 values for random loguniform draw)",\
+    "intersp_competition_b" : "Scale of the gamma distribution for the interspecific competition (-1 if not used, * for random gamma distribution)",\
+    "intrasp_competition_a" : "Shape of the gamma distribution for the intraspecific competition (unique value if scale=-1, * for random gamma distribution, 2 values for random loguniform draw)",\
+    "intrasp_competition_b" : "Scale of the gamma distribution for the intraspecific competition (-1 if not used, * for random gamma distribution)",\
     "mutualism_proportion" : "Percentage of inter- and intraspecific interaction terms that are beneficial for one the species (only used if inter- and intra- competition terms are not fixed)"
     }
 
