@@ -994,9 +994,7 @@ def plot_traits_repartition(outdir, local_traits_through_time, death_probs):
     maxprob = max(np.reshape(values,len(values[0])*len(values)))
     minprob = min(np.reshape(values,len(values[0])*len(values)))
     
-    values = [x for x in local_traits_through_time.values()]
-    maxtrait = max(np.reshape(values,len(values[0])*len(values)))
-    mintrait = min(np.reshape(values,len(values[0])*len(values)))
+    # print(minprob, maxprob)
 
 
     tot_plots = len(local_traits_through_time)
@@ -1006,26 +1004,36 @@ def plot_traits_repartition(outdir, local_traits_through_time, death_probs):
         ax = fig.add_subplot(111, projection='3d')
         x = local_traits_through_time[time]
         y = np.nan_to_num(death_probs[time])
-        hist, xedges, yedges = np.histogram2d(x, y, bins=10, range=[[mintrait, maxtrait], [minprob, maxprob]])
 
-        # Construct arrays for the anchor positions of the 16 bars.
-        xpos, ypos = np.meshgrid(xedges[:-1] + 0.25, yedges[:-1] + 0.25, indexing="ij")
-        xpos = xpos.ravel()
-        ypos = ypos.ravel()
-        zpos = 0
-
-        # Construct arrays with the dimensions for the 16 bars.
-        dx = dy = 0.5 * np.ones_like(zpos)
-        dz = hist.ravel()
-
-        ax.bar3d(xpos, ypos, zpos, dx, dy, dz, zsort='average')
+        data_array = np.zeros((100,100))
+        for j in range(len(death_probs[time])):
+            if y[j] != 0:
+                data_array[int((x[j]+10)*5)][int((max(-9.999,np.log10(y[j]))+10))*10] += 1
+            else:
+                #set min death prob
+                data_array[int((x[j]+10)*5)][0] += 1
 
 
-        plt.ylabel('death probability')
+        x_data, y_data = np.meshgrid( np.arange(data_array.shape[1]),
+                              np.arange(data_array.shape[0]) )
+        
+        x_data = x_data.flatten()
+        y_data = y_data.flatten()
+        z_data = data_array.flatten()
+        ax.bar3d( x_data,
+                  y_data,
+                  np.zeros(len(z_data)),
+                  1, 1, z_data )
+        ax.set_yticklabels(['A',-10,-6,-2,2,6,10])
+        ax.set_xticklabels(['A',0,'','0.001','','',1])
+        ax.set_zlim(0,1000)
+       
+
+        plt.xlabel('death probability')
         # plt.ylim(minprob-minprob/100,maxprob+maxprob/100)
-        plt.xlabel('trait value')
+        plt.ylabel('trait value')
         # plt.xlim(mintrait-abs(mintrait)/100,maxtrait+maxtrait/100)
-        plt.title('Death probabilities and trait repartitions'+str(time))
+        plt.title('Death probabilities and trait repartitions t='+str(time))
         fig.savefig(trait_out+'/'+names[i]+'.png')
         plt.close()
 
