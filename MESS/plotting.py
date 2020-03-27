@@ -411,7 +411,6 @@ def plot_rank_abundance_through_time(outdir, sp_through_time, equilibria,\
     import seaborn
     seaborn.set
     seaborn.set_style(style="white")
-
     ## Make the output directory for heatmaps inside the top level output directory
     abund_out = os.path.join(outdir, "abundance_plots")
     if not os.path.exists(abund_out):
@@ -419,11 +418,9 @@ def plot_rank_abundance_through_time(outdir, sp_through_time, equilibria,\
 
     times = list(equilibria.keys())
     equilibria = list(equilibria.values())
-
     ## If you only want to see extant species then prune all the extinct ones
     #if only_extant:
     #    sp_through_time = prune_extant(sp_through_time)
-
     max_n_species, max_abundance, max_octave, max_class_count, max_n_bins, octave_bin_labels = prep_normalized_plots(np.nan_to_num(sp_through_time))
     if verbose:
         print("info:\n\nmax_n_species - {}\nmax_abundance - {}\nmax_octave - {}\nmax_class_count - {}\nmax_n_bins - {}\noctave_bin_labels - {}\n".format(\
@@ -764,7 +761,8 @@ def normalized_pi_dxy_heatmaps(outdir, sp_through_time, equilibria, one_d=False,
 def prep_normalized_plots(sp_through_time):
     ## GET MAX values for abundance and num species so we can normalize the plot axes
     max_n_species = max([len(x) for x in list(sp_through_time.values())])
-    max_abundance = max([max([y.stats["Ne_local"]/y.paramsdict["alpha"] for y in sp]) for sp in list(sp_through_time.values())])
+    max_abundance = max([max([np.nan_to_num(y.stats["Ne_local"]/y.paramsdict["alpha"]) for y in sp]) for sp in list(sp_through_time.values())])
+    ## Add nan_to_num because the first Ne is always nan. Don't know why
 
     ## Get max values for abundance class count and abundance octave
     max_octave = 0
@@ -1026,7 +1024,7 @@ def plot_traits_repartition(outdir, local_traits_through_time, death_probs):
                   1, 1, z_data )
         ax.set_yticklabels(['A',-10,-6,-2,2,6,10])
         ax.set_xticklabels(['A',0,'','0.001','','',1])
-        ax.set_zlim(0,1000)
+        ax.set_zlim(0,len(local_traits_through_time[time]))
        
 
         plt.xlabel('death probability')

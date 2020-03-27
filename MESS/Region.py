@@ -725,7 +725,46 @@ class Region(object):
     def fancy_plots(self, quiet=True):
         LOGGER.debug("Entering fancy_plots()")
 
-        self.simulate(_lambda=1, log_full=True, quiet=quiet, fancy=True)
+        if not os.path.exists(self.paramsdict["project_dir"]):
+            os.mkdir(self.paramsdict["project_dir"])
+
+        simfile = os.path.join(self.paramsdict["project_dir"], "SIMOUT.txt")
+        ## Open output file. If force then overwrite existing, otherwise just append.
+        append = 'a'
+        ## Decide whether to print the header, if stuff is already in there then
+        ## don't print the header, unless you're doing force because this opens
+        ## in overwrite mode.
+        params = self.metacommunity._get_params_header() +\
+                 self._get_params_header() +\
+                 list(self.islands.values())[0]._get_params_header()
+        header = "\t".join(params + MESS.stats._get_sumstats_header(sgd_bins=self._hackersonly["sgd_bins"],\
+                                                                    sgd_dims=self._hackersonly["sgd_dimensions"],
+                                                                    metacommunity_traits=self.metacommunity._get_trait_values())) + "\n"
+        LOGGER.debug("SIMOUT header - {}".format(header))
+        if os.path.exists(simfile):
+            header = ""
+        SIMOUT = open(simfile, append)
+        SIMOUT.write(header)
+
+
+        gens = sample_param_range(self.paramsdict["generations"], nsamps=1)
+        ## Check if we're doing steps or lambda
+        do_lambda = False
+        if isinstance(gens[0], float):
+            do_lambda = True
+
+
+
+        if not do_lambda:
+            res = self.simulate(nsteps=gens[0], log_full=True, quiet=quiet, fancy=True)
+        else:
+            res = self.simulate(_lambda=gens[0], log_full=True, quiet=quiet, fancy=True)
+
+        SIMOUT.write(res + "\n")
+
+
+
+        # self.simulate(_lambda=1, log_full=True, quiet=quiet, fancy=True)
 
         outdir = self._get_simulation_outdir(prefix="fancy-")
 
