@@ -55,7 +55,7 @@ class Metacommunity(object):
                         ("intrasp_competition_b", -1),
                         ("intersp_competition_a", -1),
                         ("intersp_competition_b", -1),
-                        ("mutualism_proportion", 0.5),
+                        ("mutualism_proportion", 0),
         ])
 
         ## elite hackers only internal dictionary, normally you shouldn't mess with this
@@ -225,7 +225,7 @@ class Metacommunity(object):
                 if isinstance(tup, tuple):
                     self._priors[param] = tup
                     loguniform = False
-                    if param in ["ecological_strength"]:
+                    if param in ["ecological_strength","mutualism_proportion"]:
                         loguniform = True
                     self.paramsdict[param] = sample_param_range(tup, loguniform=loguniform)[0]
                 else:
@@ -350,7 +350,7 @@ class Metacommunity(object):
             np.zeros((1,len(self.interaction_matrix)+1)).T
             ])
         ## Add interspecific interaction
-        if self.paramsdict["intersp_'competition_b"] >= 0:
+        if self.paramsdict["intersp_competition_b"] >= 0:
             # Draw according to gamma distribution 
             # self.interaction_matrix[-1] = [np.random.normal(
             #     self._get_interaction_term(parent, sp),
@@ -634,26 +634,26 @@ class Metacommunity(object):
             raise MESSError(msg.format(self.paramsdict["intrasp_competition_b"]))
 
         ## Nature of the interaction
-        if self.paramsdict["intrasp_competition_b"] >= 0 and self.paramsdict["intersp_competition_b"] >= 0:
+        # if self.paramsdict["intrasp_competition_b"] >= 0 and self.paramsdict["intersp_competition_b"] >= 0:
 
-            try:
-                factors = np.random.binomial(n = 1,
-                    p = self.paramsdict["mutualism_proportion"],
-                    size =(self.paramsdict["S_m"],self.paramsdict["S_m"]))
-                factors[factors == 0] = -1
-                self.interaction_matrix = self.interaction_matrix * factors
-                # A positive value is a positive interaction,
-                # A negative value is a negative interaction
-            except ValueError as inst:
-                raise MESSError("Error while drawing the nature of the interactions")
+        try:
+            factors = np.random.binomial(n = 1,
+                p = self.paramsdict["mutualism_proportion"],
+                size =(self.paramsdict["S_m"],self.paramsdict["S_m"]))
+            factors[factors == 0] = -1
+            self.interaction_matrix = self.interaction_matrix * factors
+            # A positive value is a positive interaction,
+            # A negative value is a negative interaction
+        except ValueError as inst:
+            raise MESSError("Error while drawing the nature of the interactions")
 
-        elif self.paramsdict["intrasp_competition_b"] >= 0:
-            raise MESSError("Inter- and intra- specific competition have to be either both fixed or both gamma distributed (TODO)")
-        elif self.paramsdict["intersp_competition_b"] >= 0:
-            raise MESSError("Inter- and intra- specific competition have to be either both fixed or both gamma distributed (TODO)")
-        else:
-            pass
-            # No random proportion of mutualism if values fixed
+        # elif self.paramsdict["intrasp_competition_b"] >= 0:
+        #     raise MESSError("Inter- and intra- specific competition have to be either both fixed or both gamma distributed (TODO)")
+        # elif self.paramsdict["intersp_competition_b"] >= 0:
+        #     raise MESSError("Inter- and intra- specific competition have to be either both fixed or both gamma distributed (TODO)")
+        # else:
+        #     pass
+        #     # No random proportion of mutualism if values fixed
                     
 
         ## Calculate immigration probabilities
