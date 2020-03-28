@@ -728,7 +728,9 @@ class Region(object):
         if not os.path.exists(self.paramsdict["project_dir"]):
             os.mkdir(self.paramsdict["project_dir"])
 
-        simfile = os.path.join(self.paramsdict["project_dir"], "SIMOUT.txt")
+        outdir = self._get_simulation_outdir(prefix="fancy-")
+
+        simfile = os.path.join(outdir, "SIMOUT.txt")
         ## Open output file. If force then overwrite existing, otherwise just append.
         append = 'a'
         ## Decide whether to print the header, if stuff is already in there then
@@ -766,7 +768,7 @@ class Region(object):
 
         # self.simulate(_lambda=1, log_full=True, quiet=quiet, fancy=True)
 
-        outdir = self._get_simulation_outdir(prefix="fancy-")
+        
 
         for island in self.islands.values():
             try:
