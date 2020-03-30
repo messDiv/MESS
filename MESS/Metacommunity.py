@@ -288,6 +288,8 @@ class Metacommunity(object):
                     self.paramsdict["intersp_competition_b"] = tup_b
                     newvalue = tuplecheck(alpha, dtype=float)
                     self.paramsdict[param] = newvalue
+                elif newvalue=='-1':
+                    self.paramsdict[param] = self.paramsdict["intrasp_competition_a"]
                 elif isinstance(tuplecheck(newvalue, dtype=float), tuple):
                     tup = tuplecheck(newvalue, dtype=float)
                     self.paramsdict[param] = sample_param_range(tup, loguniform=True)[0]
