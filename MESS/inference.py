@@ -269,10 +269,6 @@ class Ensemble(object):
             feat_selector = BorutaPy(model, max_iter=max_iter, n_estimators='auto', verbose=0, random_state=1)
             ## Turn off np warnings
             np.warnings.filterwarnings('ignore')
-            print(tmpX, tmpy)
-            for i,y in enumerate(tmpy):
-                if y!='neutral' and y !='filtering' and y!='pairwise_competition' and y!='competition':
-                    print(i,y)
             feat_selector.fit(tmpX, np.ravel(tmpy))
 
             # check ranking of features
@@ -389,8 +385,6 @@ class Ensemble(object):
             else:
                 # ## TODO: Make default base_model params smarter
                 self.best_model = self._base_model(n_jobs=-1)
-                print(self.best_model)
-                print(self.X.shape)
                 # for i,x in enumerate(self.X.values):
                 #     print(i,x)
                 #     for j, k in enumerate(x):
@@ -404,10 +398,7 @@ class Ensemble(object):
                 #             print(i,x,j,k)
                 #             raise MESSError
                 #         print(np.float32(k))
-                print(self.X.dtypes)
                 X = self.X.values.astype(np.float32)
-                print(self.y)
-                print(self.y.dtypes)
                 # from sklearn import preprocessing
                 # le = preprocessing.LabelEncoder()
                 # for column_name in self.y.columns:
@@ -415,14 +406,12 @@ class Ensemble(object):
                 #         self.y[column_name] = le.fit_transform(self.y[column_name])
                 #     else:
                 #         pass
-                print(pd.factorize(self.y["community_assembly_model"])[0])
-                self.y=pd.factorize(self.y["community_assembly_model"])[0]
+                #self.y=pd.factorize(self.y["community_assembly_model"])[0]
                 # self.y[self.y=="competition"]=0
                 # self.y[self.y=="filtering"]=1
                 # self.y[self.y=="neutral"]=2
                 # self.y[self.y=="pairwise_competition"]=3
-                print(self.y)
-                self.best_model.fit(X,self.y)
+                self.best_model.fit(X,np.ravel(self.y))
         if verbose: print("Predict() finished: {}".format(datetime.datetime.now()))
 
 
