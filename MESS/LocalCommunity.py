@@ -534,18 +534,14 @@ class LocalCommunity(object):
 
     def _neutral_death_step(self):
         victim = MESS.rng.rng.choice(self.local_community)
-        print(victim)
         if victim == None:
             pass
         vic_idx = MESS.rng.rng.integers(0,self.paramsdict["J"]-1)
-        print(vic_idx)
         victim = self.local_community[vic_idx]
         if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs()
             self.local_traits_through_time[self.current_time] = self.local_traits.copy()
 
-        print(self.local_community)
-        print(self.local_traits)
         self._finalize_death(victim,vic_idx)
 
         if (not self.current_time % (self.paramsdict["J"]*2)):

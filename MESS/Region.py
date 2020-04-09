@@ -526,7 +526,7 @@ class Region(object):
         ## Decide whether to print the header, if stuff is already in there then
         ## don't print the header, unless you're doing force because this opens
         ## in overwrite mode.
-        params = self.metacommunity._get_params_header() +\
+        params = ['seed'] + self.metacommunity._get_params_header() +\
                  self._get_params_header() +\
                  list(self.islands.values())[0]._get_params_header()
         header = "\t".join(params + MESS.stats._get_sumstats_header(sgd_bins=self._hackersonly["sgd_bins"],\
@@ -561,8 +561,7 @@ class Region(object):
                         res = self.simulate(nsteps=gens[i])
                     else:
                         res = self.simulate(_lambda=gens[i], quiet=quiet)
-
-                    SIMOUT.write(res + "\n")
+                    SIMOUT.write(str(int(MESS.rng.seed))+"\t"+res + "\n")
                     LOGGER.debug("Finished simulation {} stats:\n{}".format(i, res))
             except KeyboardInterrupt as inst:
                 print("\n    Cancelling remaining simulations")
@@ -619,7 +618,7 @@ class Region(object):
                     else:
                         passdict[result] = parallel_jobs[result].result()
                         res = passdict[result]
-                        SIMOUT.write(res + "\n")
+                        SIMOUT.write(str(int(MESS.rng.seed))+"\t"+res + "\n")
                 except Exception as inst:
                     LOGGER.error("Caught a failed simulation - {}".format(inst))
                     ## Don't let one bad apple spoin the bunch,
@@ -755,7 +754,7 @@ class Region(object):
         ## Decide whether to print the header, if stuff is already in there then
         ## don't print the header, unless you're doing force because this opens
         ## in overwrite mode.
-        params = self.metacommunity._get_params_header() +\
+        params = ['seed'] + self.metacommunity._get_params_header() +\
                  self._get_params_header() +\
                  list(self.islands.values())[0]._get_params_header()
         header = "\t".join(params + MESS.stats._get_sumstats_header(sgd_bins=self._hackersonly["sgd_bins"],\
@@ -781,7 +780,7 @@ class Region(object):
         else:
             res = self.simulate(_lambda=gens[0], log_full=True, quiet=quiet, fancy=True)
 
-        SIMOUT.write(res + "\n")
+        SIMOUT.write(str(int(MESS.rng.seed))+"\t"+res + "\n")
 
 
 
