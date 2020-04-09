@@ -9,7 +9,6 @@ import pandas as pd
 import numpy as np
 import msprime
 import itertools
-import random
 import sys
 import os
 import MESS
@@ -257,7 +256,6 @@ class LocalCommunity(object):
         self.local_interaction_matrix = np.array([
             [self.region.metacommunity._get_interaction_term(sp1, sp2) for sp2 in self.local_community] for sp1 in self.local_community
             ])
-
     ## For the pairwise compeition model, a global matrix is used which summarize the competition interactions for all individuals
     def _set_distance_matrix(self):
         ## Reshape local_traits for the cdist function
@@ -304,7 +302,7 @@ class LocalCommunity(object):
         Only used to perturb the environment by +/- a small random value
         """
         fo = self.region.metacommunity._hackersonly["filtering_optimum"]
-        noise = np.random.normal(1, 0.05)
+        noise = MESS.rng.rng.normal(1, 0.05)
         fo = fo * noise
         self.region.metacommunity._hackersonly["filtering_optimum"] = fo
         
@@ -535,20 +533,23 @@ class LocalCommunity(object):
 
 
     def _neutral_death_step(self):
-        victim = random.choice(self.local_community)
+        victim = MESS.rng.rng.choice(self.local_community)
+        print(victim)
         if victim == None:
             pass
-        vic_idx = random.randint(0,self.paramsdict["J"]-1)
+        vic_idx = MESS.rng.rng.integers(0,self.paramsdict["J"]-1)
+        print(vic_idx)
         victim = self.local_community[vic_idx]
         if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs()
             self.local_traits_through_time[self.current_time] = self.local_traits.copy()
 
-
+        print(self.local_community)
+        print(self.local_traits)
         self._finalize_death(victim,vic_idx)
 
         if (not self.current_time % (self.paramsdict["J"]*2)):
-            draws = list(np.random.multinomial(100000, [1/self.paramsdict["J"]]*self.paramsdict["J"]))
+            draws = list(MESS.rng.rng.multinomial(100000, [1/self.paramsdict["J"]]*self.paramsdict["J"]))
             ch, p = chisquare(draws)
             if p > 0.1:
                 b = 1
@@ -558,7 +559,7 @@ class LocalCommunity(object):
 
 
     def _competition_death_step(self):
-        victim = random.choice(self.local_community)
+        victim = MESS.rng.rng.choice(self.local_community)
         if victim == None:
             pass
         else:
@@ -573,10 +574,10 @@ class LocalCommunity(object):
             death_probs = np.nan_to_num(death_probs)/np.sum(death_probs)
             ## Get the victim conditioning on unequal death probability
             try:
-                vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
+                vic_idx = list(MESS.rng.rng.multinomial(1, death_probs)).index(1)
             except: 
             ## vic_idx is nan because of too high values in the exponential
-                vic_idx = random.randint(0,self.paramsdict["J"]-1)
+                vic_idx = MESS.rng.rng.integers(0,self.paramsdict["J"]-1)
             victim = self.local_community[vic_idx]
         if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs(death_probs)
@@ -586,7 +587,7 @@ class LocalCommunity(object):
         self._finalize_death(victim,vic_idx)
 
         if (not self.current_time % (self.paramsdict["J"]*2)):
-            draws = list(np.random.multinomial(100000, death_probs))
+            draws = list(MESS.rng.rng.multinomial(100000, death_probs))
             ch, p = chisquare(draws)
             if p > 0.1:
                 b = 1
@@ -596,7 +597,7 @@ class LocalCommunity(object):
 
 
     def _pairwise_competition_death_step(self):
-        victim = random.choice(self.local_community)
+        victim = MESS.rng.rng.choice(self.local_community)
         if victim == None:
             pass
         else:
@@ -606,11 +607,11 @@ class LocalCommunity(object):
             death_probs = self.normalize(death_probs)
             ## Get the victim conditioning on unequal death probability
             try:
-                vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
+                vic_idx = list(MESS.rng.rng.multinomial(1, death_probs)).index(1)
             except Exception as inst:
                 raise MESSError("Error in _deathsteap - {}".format(inst))
             ## vic_idx is nan because of too high values in the exponential
-                vic_idx = random.randint(0,self.paramsdict["J"]-1)
+                vic_idx = MESS.rng.rng.integers(0,self.paramsdict["J"]-1)
                 raise MESSError
             victim = self.local_community[vic_idx]
         if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
@@ -621,7 +622,7 @@ class LocalCommunity(object):
 
         if (not self.current_time % (self.paramsdict["J"]*2)):
             try:
-                draws = list(np.random.multinomial(100000, death_probs))
+                draws = list(MESS.rng.rng.multinomial(100000, death_probs))
                 ch, p = chisquare(draws)
                 if p > 0.1:
                     b = 1
@@ -646,7 +647,7 @@ class LocalCommunity(object):
 
 
     def _filtering_death_step(self):
-        victim = random.choice(self.local_community)
+        victim = MESS.rng.rng.choice(self.local_community)
         if victim == None:
             pass
         else:
@@ -657,7 +658,7 @@ class LocalCommunity(object):
             ## Scale all fitness values to proportions
             death_probs = death_probs/np.sum(death_probs)
             ## Get the victim conditioning on unequal death probability
-            vic_idx = list(np.random.multinomial(1, death_probs)).index(1)
+            vic_idx = list(MESS.rng.rng.multinomial(1, death_probs)).index(1)
             victim = self.local_community[vic_idx]
         if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs(death_probs)
@@ -666,7 +667,7 @@ class LocalCommunity(object):
         self._finalize_death(victim, vic_idx)
 
         if (not self.current_time % (self.paramsdict["J"]*2)):
-            draws = list(np.random.multinomial(100000, death_probs))
+            draws = list(MESS.rng.rng.multinomial(100000, death_probs))
             ch, p = chisquare(draws)
             if p > 0.1:
                 b = 1
@@ -693,7 +694,7 @@ class LocalCommunity(object):
         ##else:
             ## If invasiveness is less than the random value remove the invasive individual
             ## else choose a new individual
-        ##    if victim == self.invasive and np.random.rand() < self.invasiveness:
+        ##    if victim == self.invasive and MESS.rng.rng.rand() < self.invasiveness:
         ##        self.survived_invasives += 1
         ##        victim = random.choice(self.local_community)
         try:
@@ -778,7 +779,7 @@ class LocalCommunity(object):
         for step in range(int(nsteps * self.paramsdict["J"]/2.)):
             chx = ''
             ## Check probability of an immigration event
-            if np.random.random_sample() < self.paramsdict["m"]:
+            if MESS.rng.rng.uniform(0,1) < self.paramsdict["m"]:
                 ## If clustered migration remove the necessary number of additional individuals
                 acc = [[],[]]
                 for _ in range(self._hackersonly["mig_clust_size"]):
@@ -819,9 +820,9 @@ class LocalCommunity(object):
                 try:
                     self.death_step()
                     ## Sample all available from local community (community grows slow in volcanic model)
-                    ## This is the fastest way to sample from a list. >4x faster than np.random.choice
+                    ## This is the fastest way to sample from a list. >4x faster than MESS.rng.rng.choice
                     ## Don't allow empty space to reproduce
-                    chx = random.choice([x for x in self.local_community if x != None])
+                    chx = MESS.rng.rng.choice([x for x in self.local_community if x != None])
                     dead = self.last_dead_ind[0]
                     idx = np.argwhere(self.local_community==chx)[0][0]
                     ## Record new individual's species
@@ -855,7 +856,7 @@ class LocalCommunity(object):
             ## Speciation process
             ##############################################
             if self.region.paramsdict["speciation_model"] != "none" and\
-               np.random.random_sample() < self.paramsdict["speciation_prob"] and\
+               MESS.rng.rng.uniform(0,1) < self.paramsdict["speciation_prob"] and\
                chx != None:
                # print("will do speiciation from ", chx)
                self._speciate(chx)
@@ -924,7 +925,7 @@ class LocalCommunity(object):
         ## Trait evolution. Offspring trait is normally distributed
         ## with mean of parent value, and stdv equal to stdv of BM
         ## process in metacommunity times average lineage lifetime
-        trt = np.random.normal(parent_trait, self._hackersonly["trait_rate_local"], 1)[0]
+        trt = MESS.rng.rng.normal(parent_trait, self._hackersonly["trait_rate_local"], 1)[0]
 
         self.region._record_local_speciation(sname, trt)
 
@@ -968,9 +969,9 @@ class LocalCommunity(object):
             ## If sp_abund == 1, or if new_abund == sp_abund then this is
             ## essentially anagenetic speciation, as the initial species will
             ## be removed from the local community and replaced by the new sp.
-            ## The `sp_abund+1` here is because randint samples up to sp_abund-1,
+            ## The `sp_abund+1` here is because integers samples up to sp_abund-1,
             ## so we need to allow for the case of new_abund == sp_abund.
-            new_abund = np.random.randint(1, sp_abund+1)
+            new_abund = MESS.rng.rng.integers(1, sp_abund+1)
 
             deads = np.where(self.local_community == chx)[0][:new_abund]
             self.last_dead_ind = (deads, [chx])
@@ -1127,7 +1128,8 @@ class LocalCommunity(object):
             tree_sequence = msprime.simulate(length = self.region.paramsdict["sequence_length"],\
                                             mutation_rate = self.region.paramsdict["mutation_rate"],\
                                             population_configurations = pop_cfgs,\
-                                            demographic_events = split_events)
+                                            demographic_events = split_events,
+                                            random_seed = MESS.rng.seed)
 
             ## This block of code is for debugging the msprime demography
             ## It might be cute to add a command line flag to optionally
@@ -1136,7 +1138,7 @@ class LocalCommunity(object):
                 tree = tree_sequence.first()
                 colour_map = {0:"red", 1:"blue"}
                 for idx in range(len(sp_idxs) - 2):
-                    r, g, b = np.random.randint(0, 255, 3)
+                    r, g, b = MESS.rng.rng.integers(0, 255, 3)
                     colour_map[idx+2] = "rgb({}, {}, {})".format(r, g, b)
                 node_colours = {u: colour_map[tree.population(u)] for u in tree.nodes()}
                 node_labels = {u: (str(u)) for u in tree.nodes()}

@@ -76,8 +76,8 @@ if __name__ == "__main__":
     ## Test SAD()
     import numpy as np
 
-    pis = np.random.exponential(0.05, size=100)
-    dxys = np.random.exponential(0.05, size=100)
+    pis = MESS.rng.rng.exponential(0.05, size=100)
+    dxys = MESS.rng.rng.exponential(0.05, size=100)
     sgd = SGD(pis)
     print(sgd)
     sgd2 = SGD(pis, dxys, nbins=5)

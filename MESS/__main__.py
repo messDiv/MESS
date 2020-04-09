@@ -13,6 +13,7 @@ import MESS
 
 from MESS.util import *
 from MESS.parallel import *
+from MESS.rng import *
 
 LOGGER = logging.getLogger(__name__)
 
@@ -29,25 +30,27 @@ def parse_params(args):
         sys.exit("  No params file found")
 
     ## Params file is sectioned off by region and then by n local communities
-    ## do each section independently. The [1:] thing just drops the first result
-    ## from split which is '' anyway.
-    plines = plines.split("------- ")[1:]
+    ## do each section independently
+    plines = plines.split("------- ")
+    ## Get seed for global simulations
+    seed = plines[0].split("\n")[1].split("##")[0]
+    MESS.rng.init(seed)
 
     ## Get Region params and make into a dict, ignore all blank lines
-    items = [i.split("##")[0].strip() for i in plines[0].split("\n")[1:] if not i.strip() == ""]
+    items = [i.split("##")[0].strip() for i in plines[1].split("\n")[1:] if not i.strip() == ""]
     keys = list(MESS.Region('null', quiet=True).paramsdict.keys())
     region_params = {str(i):j for i, j in zip(keys, items)}
 
     LOGGER.debug("Region params - {}".format(region_params))
 
     ## Get metacommunity params and make a dict
-    items = [i.split("##")[0].strip() for i in plines[1].split("\n")[1:] if not i.strip() == ""]
+    items = [i.split("##")[0].strip() for i in plines[2].split("\n")[1:] if not i.strip() == ""]
     keys = list(MESS.Metacommunity(meta_type="uniform", quiet=True).paramsdict.keys())
     meta_params = {str(i):j for i, j in zip(keys, items)}
     LOGGER.debug("Metacommunity params - {}".format(meta_params))
 
     island_params = []
-    for i, params in enumerate(plines[2:]):
+    for i, params in enumerate(plines[3:]):
         items = [i.split("##")[0].strip() for i in params.split("\n")[1:] if not i.strip() == ""]
         keys = list(MESS.LocalCommunity('null', quiet=True).paramsdict.keys())
         island_dict = {str(i):j for i, j in zip(keys, items)}
@@ -55,10 +58,10 @@ def parse_params(args):
 
     LOGGER.debug("All island params - {}".format(island_params))
 
-    return region_params, meta_params, island_params
+    return seed, region_params, meta_params, island_params
 
 
-def getregion(args, region_params, meta_params, island_params):
+def getregion(args, seed, region_params, meta_params, island_params):
     """ 
     loads simulation or creates a new one and set its params as
     read in from the params file. Does not launch ipcluster. 
@@ -411,12 +414,12 @@ def main():
 
     ## create new Region or load existing Region
     if args.params:
-        region_params, meta_params, island_params = parse_params(args)
+        seed, region_params, meta_params, island_params = parse_params(args)
         LOGGER.debug("region params - {}\nmetacommunity params - {}\nisland params - {}"\
                     .format(region_params, meta_params, island_params))
 
         ## launch or load Region with custom profile/pid
-        data = getregion(args, region_params, meta_params, island_params)
+        data = getregion(args, seed, region_params, meta_params, island_params)
 
         ## Validate, format, and import empirical data
         if args.empirical:

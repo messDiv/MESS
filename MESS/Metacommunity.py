@@ -4,7 +4,6 @@ import collections
 import pandas as pd
 import numpy as np
 import itertools
-import random
 import sys
 import os
 import warnings
@@ -118,7 +117,7 @@ class Metacommunity(object):
                 self.paramsdict[k] = sample_param_range(v, loguniform=loguniform)[0]
 
 
-    def _simulate_metacommunity(self, J, S_m, speciation_rate, death_proportion, trait_rate_meta):
+    def _simulate_metacommunity(self, J, S_m, speciation_rate, death_proportion, trait_rate_meta, seed):
         """
         Simulate the tree, evolve the traits on it and paste on abundances.
         Calls out to R code.
@@ -135,7 +134,9 @@ class Metacommunity(object):
         #' @param speciation_rate the speciation rate
         #' @param death_proportion the proportional extinction rate
         #' @param trait_rate_meta the rate of brownian motion
-        makeMeta <- function(Jm, S, lambda, deathFrac, sigma2) {
+        #' @param seed global seed to make the code repeatable
+        makeMeta <- function(Jm, S, lambda, deathFrac, sigma2, seed) {
+        set.seed(seed)
           ## the tree
           ## suppress an annoying message about geiger overwritting an ape method
           tre <- suppressMessages(TreeSim::sim.bd.taxa(S, numbsim = 1, lambda = lambda, mu = lambda * deathFrac,
@@ -144,7 +145,6 @@ class Metacommunity(object):
           ## the traits
           trt <- ape::rTraitCont(tre, sigma = sqrt(sigma2))
           trt <- data.frame(name = names(trt), value = as.numeric(trt))
-
           ## parameters for the log-series
           nBar <- Jm / S
           p <- 1 - 1/nBar
@@ -196,7 +196,8 @@ class Metacommunity(object):
                         S_m,
                         float(speciation_rate),
                         float(death_proportion),
-                        float(trait_rate_meta))
+                        float(trait_rate_meta),
+                        int(MESS.rng.seed))
         tree = res[0][0]
         traits = pd.DataFrame(np.array(res[1]).T,
                                 columns=["name", "value"])
@@ -234,9 +235,9 @@ class Metacommunity(object):
 
             elif param == "intrasp_competition_a":
                 if newvalue=="*":
-                    mean = np.random.uniform(np.log10(0.01), np.log10(10), size=1)
+                    mean = MESS.rng.rng.uniform(np.log10(0.01), np.log10(10), size=1)
                     mean = np.power(10, mean)
-                    var = np.random.uniform(np.log10(0.01), np.log10(10), size=1)
+                    var = MESS.rng.rng.uniform(np.log10(0.01), np.log10(10), size=1)
                     var = np.power(10, var)
                     beta = var/mean
                     alpha = mean/beta
@@ -257,9 +258,9 @@ class Metacommunity(object):
 
             elif param == "intrasp_competition_b":
                 if newvalue=="*":
-                    mean = np.random.uniform(np.log10(0.01), np.log10(10), size=1)
+                    mean = MESS.rng.rng.uniform(np.log10(0.01), np.log10(10), size=1)
                     mean = np.power(10, mean)
-                    var = np.random.uniform(np.log10(0.01), np.log10(10), size=1)
+                    var = MESS.rng.rng.uniform(np.log10(0.01), np.log10(10), size=1)
                     var = np.power(10, var)
                     beta = var/mean
                     alpha = mean/beta
@@ -277,9 +278,9 @@ class Metacommunity(object):
 
             elif param == "intersp_competition_a":
                 if newvalue=="*":
-                    mean = np.random.uniform(np.log10(0.01), np.log10(10), size=1)
+                    mean = MESS.rng.rng.uniform(np.log10(0.01), np.log10(10), size=1)
                     mean = np.power(10, mean)
-                    var = np.random.uniform(np.log10(0.01), np.log10(10), size=1)
+                    var = MESS.rng.rng.uniform(np.log10(0.01), np.log10(10), size=1)
                     var = np.power(10, var)
                     beta = var/mean
                     alpha = mean/beta
@@ -301,9 +302,9 @@ class Metacommunity(object):
 
             elif param == "intersp_competition_b":
                 if newvalue=="*":
-                    mean = np.random.uniform(np.log10(0.01), np.log10(10), size=1)
+                    mean = MESS.rng.rng.uniform(np.log10(0.01), np.log10(10), size=1)
                     mean = np.power(10, mean)
-                    var = np.random.uniform(np.log10(0.01), np.log10(10), size=1)
+                    var = MESS.rng.rng.uniform(np.log10(0.01), np.log10(10), size=1)
                     var = np.power(10, var)
                     beta = var/mean
                     alpha = mean/beta
@@ -354,16 +355,16 @@ class Metacommunity(object):
         ## Add interspecific interaction
         if self.paramsdict["intersp_competition_b"] >= 0:
             # Draw according to gamma distribution 
-            # self.interaction_matrix[-1] = [np.random.normal(
+            # self.interaction_matrix[-1] = [MESS.rng.rng.normal(
             #     self._get_interaction_term(parent, sp),
             #     self._hackersonly["inter_term_rate"], 1)[0]
             # for sp in range(1,len(self.interaction_matrix)+1)]
 
-            # self.interaction_matrix[:,-1] = [np.random.normal(
+            # self.interaction_matrix[:,-1] = [MESS.rng.rng.normal(
             #     self._get_interaction_term(sp, parent),
             #     self._hackersonly["inter_term_rate"], 1)[0]
             # for sp in range(1,len(self.interaction_matrix)+1)]
-            rds = np.random.gamma(shape = self.paramsdict["intersp_competition_a"]
+            rds = MESS.rng.rng.gamma(shape = self.paramsdict["intersp_competition_a"]
                             , scale = self.paramsdict["intersp_competition_b"]
                             , size = (2,len(self.interaction_matrix)))
             self.interaction_matrix[-1] = rds[0]
@@ -378,10 +379,10 @@ class Metacommunity(object):
         ## Write over precedent terms for the diagonal of the matrix
         if self.paramsdict["intrasp_competition_b"] >= 0:
             # ## Draw according to gamma distribution 
-            # rd = np.random.normal(
+            # rd = MESS.rng.rng.normal(
             #     self._get_interaction_term(parent, parent),
             #     self._hackersonly["inter_term_rate"], 3)
-            rd = np.random.gamma(shape = self.paramsdict["intrasp_competition_a"]
+            rd = MESS.rng.rng.gamma(shape = self.paramsdict["intrasp_competition_a"]
                                 , scale = self.paramsdict["intrasp_competition_b"]
                                 , size = 1)
             self.interaction_matrix[-1][-1] = rd
@@ -400,7 +401,7 @@ class Metacommunity(object):
 
         # ## Nature of the interaction
         if self.paramsdict["intrasp_competition_b"] >= 0 and self.paramsdict["intersp_competition_b"] >= 0:
-            factors = np.random.binomial(n = 1,
+            factors = MESS.rng.rng.binomial(n = 1,
                                         p = self.paramsdict["mutualism_proportion"],
                                         size =(2,len(self.interaction_matrix)))
             factors[factors == 0] = -1 
@@ -500,7 +501,8 @@ class Metacommunity(object):
                                                                 self.paramsdict["S_m"],\
                                                                 self.paramsdict["speciation_rate"],\
                                                                 self.paramsdict["death_proportion"],\
-                                                                self.paramsdict["trait_rate_meta"])
+                                                                self.paramsdict["trait_rate_meta"],\
+                                                                MESS.rng.seed)
             #handle = Phylo.read(StringIO(tree), "newick")
             handle = dendropy.Tree.get(data=tree, schema="newick")
             self.metacommunity_tree = handle
@@ -509,8 +511,7 @@ class Metacommunity(object):
             ids = traits["name"].values.astype(str)
             trait_values = traits["value"].values
 
-            self._hackersonly["filtering_optimum"] = np.random.normal(loc=np.mean(trait_values), scale=np.std(trait_values), size=1)[0]
-
+            self._hackersonly["filtering_optimum"] = MESS.rng.rng.normal(loc=np.mean(trait_values), scale=np.std(trait_values), size=1)[0]
 
         ## Attempt to read tree/ids/abunds/traits from a file. If it fails, fall back to just
         ## try reading the old list of abundances format.
@@ -557,7 +558,7 @@ class Metacommunity(object):
 
         if random or not trait_values.size:
             LOGGER.debug("Using random trait values")
-            trait_values = np.random.rand(self.paramsdict["S_m"])
+            trait_values = MESS.rng.rng.random(self.paramsdict["S_m"])
 
         ## If ids haven't been assigned yet, do that here
         if not ids.size:
@@ -600,7 +601,7 @@ class Metacommunity(object):
         try:
             if self.paramsdict["intersp_competition_b"] >= 0:
                 ## Draw according to gamma distribution
-                self.interaction_matrix = np.random.gamma(shape = self.paramsdict["intersp_competition_a"]
+                self.interaction_matrix = MESS.rng.rng.gamma(shape = self.paramsdict["intersp_competition_a"]
                                     , scale = self.paramsdict["intersp_competition_b"]
                                     , size = (self.paramsdict["S_m"],self.paramsdict["S_m"]))
             else:
@@ -619,7 +620,7 @@ class Metacommunity(object):
             ## Write over precedent terms for the diagonal of the matrix
             if self.paramsdict["intrasp_competition_b"] >= 0:
                     ## Draw according to gamma distribution
-                rds = np.random.gamma(shape = self.paramsdict["intrasp_competition_a"]
+                rds = MESS.rng.rng.gamma(shape = self.paramsdict["intrasp_competition_a"]
                                     , scale = self.paramsdict["intrasp_competition_b"]
                                     , size = self.paramsdict["S_m"])
                 for i in range(self.paramsdict["S_m"]):
@@ -639,7 +640,7 @@ class Metacommunity(object):
         # if self.paramsdict["intrasp_competition_b"] >= 0 and self.paramsdict["intersp_competition_b"] >= 0:
 
         try:
-            factors = np.random.binomial(n = 1,
+            factors = MESS.rng.rng.binomial(n = 1,
                 p = self.paramsdict["mutualism_proportion"],
                 size =(self.paramsdict["S_m"],self.paramsdict["S_m"]))
             factors[factors == 0] = -1
@@ -699,7 +700,7 @@ class Metacommunity(object):
         :return: A tuple containing the species ID (str) and the trait
             value (float).
         """
-        migrant_draw = np.random.multinomial(1, self.community["immigration_probabilities"], size=1).argmax()
+        migrant_draw = MESS.rng.rng.multinomial(1, self.community["immigration_probabilities"], size=1).argmax()
         new_species = self.community["ids"][migrant_draw]
         trait_value = self.community["trait_values"][migrant_draw]
 

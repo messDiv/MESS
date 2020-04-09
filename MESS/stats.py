@@ -358,11 +358,11 @@ def _get_sumstats_header(sgd_bins=10, sgd_dims=1, metacommunity_traits=None):
     :param array-like metacommunity_traits: Metacommunity trait values.
     """
     ## Create some random data so the sumstats calculation doesn't freak out
-    pis = np.random.random(10)/10
-    dxys = np.random.random(10)/10
-    abunds = np.random.randint(1, 100, 10)
-    trts = np.random.random(10)*10
-    meta_trts = np.random.random(10)*10
+    pis = MESS.rng.rng.random(10)/10
+    dxys = MESS.rng.rng.random(10)/10
+    abunds = MESS.rng.rng.integers(1, 100, 10)
+    trts = MESS.rng.rng.random(10)*10
+    meta_trts = MESS.rng.rng.random(10)*10
 
     dat = pd.DataFrame([], columns=["pi", "dxy", "abundance", "trait"])
     dat["pi"] = pis
@@ -539,7 +539,7 @@ def feature_sets(empirical_df=None):
 
     ## Pass in a dummy list of metacommnity traits, or else the call to
     ## _get_sumstats_header won't return metacommunity traits.
-    sumstats = _get_sumstats_header(metacommunity_traits=np.random.rand(10))
+    sumstats = _get_sumstats_header(metacommunity_traits=MESS.rng.rng.rand(10))
     feature_sets = OrderedDict({})
     feature_sets["abundance"] = ["S"] + [x for x in sumstats if "abund" in x and "_cor" not in x]
     feature_sets["pi"] = [x for x in sumstats if ("pi" in x or "SGD" in x) and "_cor" not in x]
@@ -586,10 +586,10 @@ if __name__ == "__main__":
     print(("SAD - {}".format(sad)))
     print(("SAD octaves - {}".format(sad_oct)))
 
-    pis = np.random.random(10)/10
-    dxys = np.random.random(10)/10
-    abunds = np.random.randint(1, 100, 10)
-    trts = np.random.random(10)*10
+    pis = MESS.rng.rng.random(10)/10
+    dxys = MESS.rng.rng.random(10)/10
+    abunds = MESS.rng.rng.integers(1, 100, 10)
+    trts = MESS.rng.rng.random(10)*10
 
     dat = pd.DataFrame([], columns=["pis", "dxys", "abunds", "traits"])
     dat["pis"] = pis

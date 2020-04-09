@@ -9,12 +9,12 @@ import pandas as pd
 import shlex
 import subprocess
 import sys
+import MESS
 
 from .stats import hill_number
 from .SGD import SGD
 
 LOGGER = logging.getLogger(__name__)
-SEED = 10
 
 
 ## Custom exception class
@@ -84,18 +84,18 @@ def sample_param_range(param, nsamps=1, loguniform=False):
     if isinstance(param, tuple):
         if isinstance(param[0], float):
             if loguniform:
-                param = np.random.uniform(np.log10(param[0]), np.log10(param[1]), size=nsamps)
+                param = MESS.rng.rng.uniform(np.log10(param[0]), np.log10(param[1]), size=nsamps)
                 param = np.power(10, param)
             else:
-                param = np.round(np.random.uniform(param[0], param[1], nsamps), 5)
+                param = np.round(MESS.rng.rng.uniform(param[0], param[1], nsamps), 5)
         else:
             if loguniform:
-                param = np.random.uniform(np.log10(param[0]), np.log10(param[1]), nsamps)
+                param = MESS.rng.rng.uniform(np.log10(param[0]), np.log10(param[1]), nsamps)
                 param = np.int32(np.power(10, param))
             else:
-                param = np.random.randint(param[0], param[1], nsamps)
+                param = MESS.rng.rng.integers(param[0], param[1], nsamps)
     elif param == 0:
-        param = np.round(np.random.random(nsamps), 3)
+        param = np.round(MESS.rng.rng.random(nsamps), 3)
     else:
         param = [param] * nsamps
     LOGGER.debug("Sampled Value: {}".format(param))
@@ -104,7 +104,7 @@ def sample_param_range(param, nsamps=1, loguniform=False):
 
 def tuplecheck(newvalue, dtype=str):
     """
-    Takes a string argument and returns value as a tuple.
+    Takes a string argument and returns value as a stuple.
     Needed for paramfile conversion from CLI to set_params args
     """
 
@@ -255,12 +255,12 @@ def synthetic_community(model="random", nspecies=10):
     :return: A pandas.DataFrame with 4 columns (abundance, pi, dxy, trait)
         and `nspecies` rows, populated with toy data.
     """
-    abunds = np.random.randint(1, 1000, nspecies)
+    abunds = MESS.rng.rng.integers(1, 1000, nspecies)
 
     if model == "random":
-        pis = np.random.random(nspecies)/10
-        dxys = np.random.random(nspecies)/10
-        trts = np.random.random(nspecies)*10
+        pis = MESS.rng.rng.random(nspecies)/10
+        dxys = MESS.rng.rng.random(nspecies)/10
+        trts = MESS.rng.rng.random(nspecies)*10
     elif model == "correlated":
         pis = abunds/1000.
         dxys = pis*1.15
@@ -269,12 +269,12 @@ def synthetic_community(model="random", nspecies=10):
         def filt(strength=10, victim_trait=-3.32923208, filt_opt=0):
             return 1 - (np.exp(-((victim_trait - filt_opt) ** 2)/strength))
         trts = 1-np.array([filt(strength=10, victim_trait=x/100, filt_opt=abunds.max()/100) for x in abunds])
-        pis = np.random.random(nspecies)/10
-        dxys = np.random.random(nspecies)/10
+        pis = MESS.rng.rng.random(nspecies)/10
+        dxys = MESS.rng.rng.random(nspecies)/10
     elif model == "competition":
         trts = np.array([x - abunds.mean() for x in abunds])/10
-        pis = np.random.random(nspecies)/10
-        dxys = np.random.random(nspecies)/10
+        pis = MESS.rng.rng.random(nspecies)/10
+        dxys = MESS.rng.rng.random(nspecies)/10
     dat = pd.DataFrame([], columns=["pi", "dxy", "abundance", "trait"])
     dat["pi"] = pis
     dat["dxy"] = dxys

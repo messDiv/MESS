@@ -5,13 +5,14 @@ import os
 import string
 import time
 import tempfile
-
 from collections import OrderedDict
 
 import MESS
 from .stats import *
 from .util import *
-from mpl_toolkits.mplot3d import axes3d 
+from mpl_toolkits.mplot3d import axes3d
+
+#from MESS.rng import rng, seed
 
 LOGGER = logging.getLogger(__name__)
 
@@ -37,6 +38,13 @@ class Region(object):
 
         self._log_files = log_files
 
+        ## If there is no random number generator (param file creation),
+        ## then initiate one
+        try:
+            test = MESS.rng.seed
+        except:
+            MESS.rng.init()
+            
         ## Do some checking here to make sure the name doesn't have
         ## special characters, spaces, or path delimiters. Allow _ and -.
         ## This will raise an error immediately if there are bad chars in name.
@@ -109,6 +117,7 @@ class Region(object):
         self.colonization_matrix = []
 
 
+
     #########################
     ## Housekeeping functions
     #########################
@@ -172,6 +181,7 @@ class Region(object):
                               dirname\
                               + "-" + str(time.time()).replace(".", "")[-7:]\
                               + str(np.random.randint(100)))
+        ## Do not use the seed here : we don't want to overwrite the results
         if not os.path.exists(outdir):
             os.mkdir(outdir)
 
@@ -224,7 +234,8 @@ class Region(object):
             elif param == "community_assembly_model":
                 if newvalue == "*":
                     self._priors[param] = ["neutral", "filtering", "competition","pairwise_competition"]
-                    newvalue = np.random.choice(self._priors[param])
+                    print(self.paramsdict["seed"])
+                    newvalue = self.paramsdict["seed"].choice(self._priors[param])
                 self.paramsdict[param] = newvalue
 
             elif param == "speciation_model":
@@ -367,11 +378,19 @@ class Region(object):
                 raise MESSError(PARAMS_EXISTS.format(outfile))
 
         with open(outfile, 'w') as paramsfile:
+            # Writing the seed on top
+            paramvalue = MESS.rng.seed
+            padding = (" "*(20-len(paramvalue)))
+            paramindex = " ## [0] "
+            name = "[seed]: "
+            description = "global seed used for random number generation. Enables repeatability\n"
+            paramsfile.write("\n" + paramvalue + padding + \
+                                        paramindex + name + description)
+
             ## Write the header. Format to 80 columns
             header = "------- MESS params file (v.{})".format(MESS.__version__)
             header += ("-"*(80-len(header)))
             paramsfile.write(header)
-
             ## Whip through the current paramsdict and write out the current
             ## param value, the ordered dict index number. Also,
             ## get the short description from paramsinfo. Make it look pretty,
@@ -641,7 +660,7 @@ class Region(object):
             LOGGER.debug("alpha - {}".format(self.paramsdict["alpha"]))
 
         if self._priors["community_assembly_model"]:
-            self.paramsdict["community_assembly_model"] = np.random.choice(self._priors["community_assembly_model"])
+            self.paramsdict["community_assembly_model"] = self.paramsdict["seed"].choice(self._priors["community_assembly_model"])
 
         if self._priors["generations"]:
             self.paramsdict["generations"] = sample_param_range(self._priors["generations"])[0]
