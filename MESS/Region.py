@@ -379,7 +379,8 @@ class Region(object):
 
         with open(outfile, 'w') as paramsfile:
             # Writing the seed on top
-            paramvalue = MESS.rng.seed
+            paramvalue = '*'
+            #Default behavior : will use a new random seed each time
             padding = (" "*(20-len(paramvalue)))
             paramindex = " ## [0] "
             name = "[seed]: "

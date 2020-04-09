@@ -33,7 +33,7 @@ def parse_params(args):
     ## do each section independently
     plines = plines.split("------- ")
     ## Get seed for global simulations
-    seed = plines[0].split("\n")[1].split("##")[0]
+    seed = [i.split("##")[0].strip() for i in plines[0].split("\n")[1:] if not i.strip() == ""][0]
     MESS.rng.init(seed)
 
     ## Get Region params and make into a dict, ignore all blank lines
