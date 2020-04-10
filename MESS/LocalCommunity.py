@@ -1080,7 +1080,9 @@ class LocalCommunity(object):
 
         ss = calculate_sumstats(dat, sgd_bins=self.region._hackersonly["sgd_bins"],\
                                     sgd_dims=self.region._hackersonly["sgd_dimensions"],\
-                                    metacommunity_traits=self.region.metacommunity._get_trait_values()) 
+                                    metacommunity_traits=self.region.metacommunity._get_trait_values(),
+                                    normalize_hills=self.region._hackersonly["normalize_hills"],
+                                    verbose=False)
 
         ## If you don't actually want all the intermediate files then we won't make them
         if self.region._log_files:

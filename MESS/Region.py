@@ -91,6 +91,9 @@ class Region(object):
         ##      probability: proportional, inverse, uniform. This is something that
         ##      Rosie mentioned and could be worth trying in the future. Right now
         ##      it is wholly unimplemented. TODO
+        ##  * normalize_hills: Whether to rescale the Hill numbers for abundance,
+        ##      pi, and traits by species richness to make them more comparable
+        ##      across simulations.
 
         self._hackersonly = dict([
                        ("population_growth", "harmonic"),
@@ -98,6 +101,7 @@ class Region(object):
                        ("sgd_bins", 10),
                        ("recording_period", 10),
                        ("abundance_speciation_ratio", "proportional"),
+                       ("normalize_hills", False),
         ])
 
         ## Add simple default local and metacommunities

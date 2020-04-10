@@ -374,7 +374,7 @@ def _get_sumstats_header(sgd_bins=10, sgd_dims=1, metacommunity_traits=None):
     return header
 
 
-def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=1, metacommunity_traits=None, verbose=False):
+def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=1, metacommunity_traits=None, normalize_hills=False, verbose=False):
     """
     Calculate all summary statistics on a dataset composed of one or more of
     the target data axes. This function will automatically detect the
@@ -404,6 +404,10 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=1, metacommunity_trai
         from the metacommunity. Used for calculating some of the trait based
         summary statistics. These values take the same form as the values of the
         local trait data (i.e. they should be continuous and zero centered).
+    :param bool normalize_hills: Whether to scale Hill number summary stats
+        by species richness. This transforms them into evenness measures
+        which are more comparable across communities of differing richness.
+        See Jost 2010 for more details.
     :param bool verbose: Whether to print some informational messages.
 
     :return: Returns a pandas.Dataframe with one row containing all of the
@@ -510,7 +514,24 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=1, metacommunity_trai
             ## No py data. Skip SGD.
             pass
 
-    return pd.DataFrame(stat_dict, index=[0])
+    stat_df = pd.DataFrame(stat_dict, index=[0])
+
+    ## Normalize all Hill #s by dividing by S, so you can compare across
+    ## different sized communities. Log transform both numerator and
+    ## denominator for proper normalization (see Jost 2010).
+    if normalize_hills:
+        ## For pi_h numbers 0 is a totally valid value, but it makes
+        ## np.log() freak out and return -inf and issue a warning, so
+        ## here we do some gymnastics to handle this.
+
+        ## Get only the Hill number columns, use masked arrays to log the
+        ## values and then fill nan with 0 and create a DF. After that
+        ## update the appropriate columns in the stat_df
+        h_df = pd.DataFrame(np.ma.log(stat_df[[x for x in stat_df.columns if "_h" in x]].values).filled(0),\
+                    columns=[x for x in stat_df.columns if "_h" in x], index=stat_df.index)
+        stat_df.update(h_df.apply(lambda x: x/np.log(stat_df["S"])))
+
+    return stat_df
 
 
 def feature_sets(empirical_df=None):

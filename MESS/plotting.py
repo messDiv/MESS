@@ -17,6 +17,7 @@ import subprocess
 import MESS
 from MESS.stats import SAD
 from MESS.util import *
+from numpy import inf
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import PowerTransformer, StandardScaler
 
@@ -116,11 +117,19 @@ def _filter_sims(simfile,\
         feature_set = MESS.stats.feature_sets()["all"]
 
     ## Normalize all Hill #s by dividing by S, so you can compare across
-    ## different sized communities.
+    ## different sized communities. Log transform both numerator and
+    ## denominator for proper normalization (see Jost 2010).
     if normalize_hills:
-        sim_df[[x for x in sim_df.columns if "_h" in x]] =\
-                sim_df[[x for x in sim_df.columns if "_h" in x]]\
-                .apply(lambda x: x/sim_df["S"])
+        ## For pi_h numbers 0 is a totally valid value, but it makes
+        ## np.log() freak out and return -inf and issue a warning, so
+        ## here we do some gymnastics to handle this.
+
+        ## Get only the Hill number columns, use masked arrays to log the
+        ## values and then fill nan with 0 and create a DF. After that
+        ## update the appropriate columns in the sim_df
+        h_df = pd.DataFrame(np.ma.log(sim_df[[x for x in sim_df.columns if "_h" in x]].values).filled(0),\
+                    columns=[x for x in sim_df.columns if "_h" in x], index=sim_df.index)
+        sim_df.update(h_df.apply(lambda x: x/np.log(sim_df["S"])))
 
     ## Prune the simulations based on selected features and number of
     ## simulations to retain.
