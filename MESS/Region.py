@@ -254,7 +254,7 @@ class Region(object):
             raise
 
 
-    def _record_local_speciation(self, sname, trait_value):
+    def _record_local_speciation(self, sname, trait_value, ancestor):
         """
         Local speciation events need to be recorded, for example the trait 
         value needs to get added to the metacommunity trait value list. Maybe
@@ -263,8 +263,9 @@ class Region(object):
 
         :param string sname: The ID of the new species.
         :param float trait_value: The trait value of the new species.
+        :param string ancestor: The ID of the parental species
         """
-        self.metacommunity._update_species_pool(sname, trait_value)
+        self.metacommunity._update_species_pool(sname, trait_value, ancestor)
 
 
     def _reset_local_communities(self):
