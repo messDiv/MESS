@@ -150,7 +150,7 @@ class LocalCommunity(object):
         ## Track how many invasives differentially survived
         self.survived_invasives = 0
         self.invasion_time = -1
-
+        self.NAME_SEPARATOR = "."
 
     def _copy(self):
         """
@@ -798,7 +798,7 @@ class LocalCommunity(object):
         ## We want the new name to be globally unique but we don't
         ## want to waste a bunch of time keeping track of it in the
         ## region, so we can do something like this:
-        sname = chx + ":{}-{}".format(self.name, self.current_time)
+        sname = chx + "{}{}-{}".format(self.NAME_SEPARATOR, self.name, self.current_time)
 
         ## Fetch the abundance history of the parent species
         parent_abunds = self.local_info[chx]["abundances_through_time"]
@@ -812,7 +812,9 @@ class LocalCommunity(object):
         ## process in metacommunity times average lineage lifetime
         trt = np.random.normal(parent_trait, self._hackersonly["trait_rate_local"], 1)[0]
 
-        self.region._record_local_speciation(sname, trt)
+        self.region._record_local_speciation(sname=sname,\
+                                            trait_value=trt,
+                                            ancestor=chx)
 
         ## If filtering then update the death probabilities to record
         ## death probability of the new species
@@ -921,12 +923,13 @@ class LocalCommunity(object):
 
         ## Clades will all be descended from one unique ancestor in the metacommunity
         ## so we will just group them by this identifier. Species names have this
-        ## format: t0:<local_name>-<split_time>, so the zeroth element of the split
-        ## on ':' will always be the metacommunity species id.
-        clades = {x:[] for x in set([y.split(":")[0] for y in self.local_info])}
+        ## format: t0.<local_name>-<split_time>, so the zeroth element of the split
+        ## on the NAME_SEPARATOR char ('.' at this moment)  will always be the
+        ## metacommunity species id.
+        clades = {x:[] for x in set([y.split("{}".format(self.NAME_SEPARATOR))[0] for y in self.local_info])}
 
         for idx in self.local_info:
-            clades[idx.split(":")[0]].append(idx)
+            clades[idx.split("{}".format(self.NAME_SEPARATOR))[0]].append(idx)
 
         LOGGER.debug("Clades - {}".format(clades))
 
@@ -960,8 +963,18 @@ class LocalCommunity(object):
             pop_cfgs = []
             split_events = []
             meta_abund = self.region._get_abundance(cname)
-            pop_meta = msprime.PopulationConfiguration(sample_size = 10, initial_size = meta_abund)
+            try:
+                pop_meta = msprime.PopulationConfiguration(sample_size = 10, initial_size = meta_abund)
+            except ValueError:
+                raise
             pop_cfgs.append(pop_meta)
+
+            # make the tree for this clade
+            all_sp = self.region.metacommunity.community["ids"]
+            drop = set(all_sp).difference(set(species_list))
+            tre = self.region.metacommunity.metacommunity_tree.drop_tips(drop)
+            tre = tre.write(tree_format=TREE_FORMAT)
+
             species_dict = {}
             for sp, idx in sp_idxs.items():
                 if not sp:
@@ -975,6 +988,7 @@ class LocalCommunity(object):
 
                 sp_obj = species(name = sp,
                          species_params = self.region.get_species_params(),
+                         tree = tre,
                          trait_value = self.region.get_trait(sp),
                          divergence_time = dat[sp].loc['colonization_times'],\
                          growth = self.region._hackersonly["population_growth"],\
@@ -1039,7 +1053,7 @@ class LocalCommunity(object):
         self.local_info = local_info_bak
 
 
-    def get_community_data(self):
+    def get_community_data(self, trees=False):
         """
         Gather the community data and format it in such a way as to prepare it
         for calling MESS.stats.calculate_sumstats(). This is a way of getting
@@ -1053,15 +1067,16 @@ class LocalCommunity(object):
         pis = np.array([x.stats["pi_local"] for x in self.species])
         dxys = np.array([x.stats["dxy"] for x in self.species])
         traits = np.array([x.stats["trait"] for x in self.species])
+        trees = np.array([x.stats["tree"] for x in self.species])
 
         dat = pd.DataFrame([], columns=["pi", "dxy", "abundance", "trait"])
         dat["abundance"] = abunds
         dat["pi"] = pis
         dat["dxy"] = dxys
         dat["trait"] = traits
+        dat["tree"] = trees
 
         return dat
-
 
     def get_stats(self):
         """
@@ -1078,9 +1093,19 @@ class LocalCommunity(object):
 
         dat =  self.get_community_data()
 
+        ## Find all species that specieated in the local community and then
+        ## went extinct. We need to prune these out of the metacommunity tree.
+        all_local_sp = [x for x in self.region.metacommunity.community["ids"] if self.NAME_SEPARATOR in x]
+        extinct_local_sp = set(all_local_sp).difference(set(self.local_community))
+        self.extant_meta_tree = self.region.metacommunity.metacommunity_tree.drop_tips(extinct_local_sp)
+        all_non_local = set(self.region.metacommunity.community["ids"]).difference(set(self.local_community))
+        self.extant_local_tree = self.region.metacommunity.metacommunity_tree.drop_tips(all_non_local)
+        meta_tree_newick = self.extant_meta_tree.write(tree_format=TREE_FORMAT)
+
         ss = calculate_sumstats(dat, sgd_bins=self.region._hackersonly["sgd_bins"],\
                                     sgd_dims=self.region._hackersonly["sgd_dimensions"],\
                                     metacommunity_traits=self.region.metacommunity._get_trait_values(),
+                                    metacommunity_tree=meta_tree_newick,
                                     normalize_hills=self.region._hackersonly["normalize_hills"],
                                     verbose=False)
 

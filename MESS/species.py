@@ -19,9 +19,10 @@ class species(object):
     def __init__(self, name = "", species_params={"mutation_rate":2.2e-8,
                                                   "alpha":2000,
                                                   "sequence_length":570},
-                trait_value = 0, growth="constant", abundance = 1,
-                meta_abundance = 1, divergence_time = 0, migration_rate=0,
-                abundance_through_time={}):
+                        tree = '',
+                        trait_value = 0, growth="constant", abundance = 1,
+                        meta_abundance = 1, divergence_time = 0, migration_rate=0,
+                        abundance_through_time={}):
 
         ## I'm calling anything that is invariant across species
         ## a 'parameter' even though I know migration rate is a
@@ -52,6 +53,9 @@ class species(object):
         self.stats["Ne_local"] = abundance * self.paramsdict["alpha"]
         self.stats["Ne_meta"] = meta_abundance
         self.stats["tdiv"] = divergence_time
+        ## The local community phylogeny of the entire lineage which this
+        ## species belongs to
+        self.stats["tree"] = tree
 
         ## Parameters
         self.name = name

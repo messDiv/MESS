@@ -3,6 +3,7 @@
 import numpy as np
 import pandas as pd
 import math
+import toytree
 from collections import Counter, OrderedDict
 from itertools import combinations
 from scipy.stats import entropy, kurtosis, hmean, iqr, skew, spearmanr
@@ -12,6 +13,11 @@ from MESS.SGD import SGD
 import MESS
 
 data_axes = ["abundance", "pi", "dxy", "trait"]
+
+## Select newick tree format.
+## 5 includes tip labels and internal and leaf branches
+## http://etetoolkit.org/docs/latest/tutorial/tutorial_trees.html#reading-and-writing-newick-trees
+TREE_FORMAT = 5
 
 
 def generalized_hill_number(abunds, vals=None, order=1, scale=True, verbose=False):
@@ -374,7 +380,13 @@ def _get_sumstats_header(sgd_bins=10, sgd_dims=1, metacommunity_traits=None):
     return header
 
 
-def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=1, metacommunity_traits=None, normalize_hills=False, verbose=False):
+def calculate_sumstats(diversity_df,
+                        sgd_bins=10,
+                        sgd_dims=1,
+                        metacommunity_traits=None,
+                        metacommunity_tree=None,
+                        normalize_hills=False,
+                        verbose=False):
     """
     Calculate all summary statistics on a dataset composed of one or more of
     the target data axes. This function will automatically detect the
@@ -383,9 +395,14 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=1, metacommunity_trai
     the following data axes:
 
     * ``abundance``: Abundances per species as counts of individuals.
-    * ``pi``: Nucleotide diversity per base per species.
-    * ``dxy``: Absolute divergence between each species in the local community and the sister species in the metacommunity.
-    * ``trait``: The trait value of each species. Trait values are continuous and the distribution of trait values in the local community should be zero centered.
+    * ``pi``:       Nucleotide diversity per base per species.
+    * ``dxy``:      Absolute divergence between each species in the local
+                    community and the sister species in the metacommunity.
+    * ``trait``:    The trait value of each species. Trait values are continuous
+                    and the distribution of trait values in the local community
+                    should be zero centered.
+    * ``tree``:     The newick formatted tree of the lineage in the local community
+                    that this species is a member of.
 
     .. note:: This method should be used for calculating summary statistics for
         all empirical datasets as this is the method that is used to generate
@@ -404,6 +421,9 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=1, metacommunity_trai
         from the metacommunity. Used for calculating some of the trait based
         summary statistics. These values take the same form as the values of the
         local trait data (i.e. they should be continuous and zero centered).
+    :param str metacommunity_tree: The tree of all extant taxa with, local
+        species grafted onto the metacommunity tree in the appropriate location.
+        Newick formatted.
     :param bool normalize_hills: Whether to scale Hill number summary stats
         by species richness. This transforms them into evenness measures
         which are more comparable across communities of differing richness.
@@ -443,13 +463,29 @@ def calculate_sumstats(diversity_df, sgd_bins=10, sgd_dims=1, metacommunity_trai
         if verbose: print("  No pi data present")
 
     try:
+        for order in range(1,5):
+            stat_dict["dxy_h{}".format(order)] = hill_number(diversity_df["dxy"], order=order)
+
         for name, func in list(moments.items()):
             stat_dict["{}_dxys".format(name)] = func(diversity_df["dxy"])
     except KeyError as inst:
         if verbose: print("  No dxy data present")
 
-    ## Tree stats
-    stat_dict["trees"] = 0
+    try:
+        ## Tree stats
+        ## Get all tip labels for all clades in the local community, then get
+        ## a list of tips unique to the metacommunity, make a toytree object
+        ## and drop all metacommunity unique tips to make the local tree.
+        ## Immediately convert to newick because that's what R functions want.
+        clades = list(set(diversity_df["tree"]))
+        loc_sp = []
+        list(map(lambda x: loc_sp.extend(toytree.tree(x).get_tip_labels()), clades))
+        meta_toytree = toytree.tree(metacommunity_tree)
+        meta_sp = set(meta_toytree.get_tip_labels()).difference(set(loc_sp))
+        loc_tree = meta_toytree.drop_tips(meta_sp).write(tree_format=TREE_FORMAT)
+
+    except KeyError as inst:
+        if verbose: print("  No trees present")
 
     try:
         for order in range(1,5):
