@@ -1,7 +1,5 @@
 """ the main CLI for calling MESS """
 
-
-
 import pkg_resources
 import argparse
 import logging
