@@ -3,9 +3,10 @@ import collections
 import pandas as pd
 import numpy as np
 import itertools
+import os
 import random
 import sys
-import os
+import toytree
 import warnings
 import MESS
 
@@ -75,7 +76,7 @@ class Metacommunity(object):
                         ("ecological_strength", []),
         ])
 
-        ## The Newick formatted tree for the metacommunity
+        ## A ToyTree formatted tree for the metacommunity
         self.metacommunity_tree = ""
 
         ## A structured numpy array for holding tip labels, abundances, colonization
@@ -200,9 +201,6 @@ class Metacommunity(object):
         """
         ## TODO: This should actually check the values and make sure they make sense
         try:
-            if (not quiet) and MESS.__interactive__:
-                print("  Updating Metacommunity parameters requires running _set_metacommunity()"\
-                        + " to apply the changes.")
 
             ## Cast params to correct types
             if param in ["S_m", "J_m", "speciation_rate", "death_proportion", "trait_rate_meta",
@@ -220,6 +218,9 @@ class Metacommunity(object):
                 else:
                     self.paramsdict[param] = tup
                 LOGGER.debug("{} {}".format(param, tup))
+
+            ## Flip the metacommunity to apply the changes
+            self._set_metacommunity()
 
         except Exception as inst:
             ## Do something intelligent here?
@@ -333,10 +334,12 @@ class Metacommunity(object):
                                                                 self.paramsdict["death_proportion"],\
                                                                 self.paramsdict["trait_rate_meta"])
             ## tree is newick format
-            self.metacommunity_tree = tree
+            self.metacommunity_tree = toytree.tree(tree)
 
             abundances = abunds
-            ids = traits["name"].values.astype(str)
+            ## One of the R tree modules can't deal with int names so we paste
+            ## on a random character here to force it to play nice.
+            ids = np.array(["t"+x for x in traits["name"].values.astype(int).astype(str)])
             trait_values = traits["value"].values
 
             self._hackersonly["filtering_optimum"] = np.random.normal(loc=np.mean(trait_values), scale=np.std(trait_values), size=1)[0]
@@ -426,7 +429,7 @@ class Metacommunity(object):
         LOGGER.debug("Metacommunity info: shape {}\n[:10] {}".format(self.community.shape, self.community[:10]))
 
 
-    def _update_species_pool(self, sname, trait_value):
+    def _update_species_pool(self, sname, trait_value, ancestor):
         """
         Add a new species to the species pool. This is on account of speciation
         in the local communities and we need to keep track of the trait values
@@ -439,12 +442,25 @@ class Metacommunity(object):
         :param str sname: The name of the new species to add to the
             metacommunity.
         :param float trait_value: The trait value of the new species.
+        :param str ancestor: The ID of the parental species.
         """
         try:
+            #print("Anc/dec {}/{}".format(sname, ancestor))
             LOGGER.debug("Adding species/trait_value - {}/{}".format(sname, trait_value))
             self.community = np.hstack((self.community,\
                                         np.array([tuple([sname, 0, 0, trait_value])], dtype=METACOMMUNITY_DTYPE)))
             self.trait_dict[sname] = trait_value
+
+            ## Graft new species onto the metacommunity tree
+            anc_name = ancestor
+            anc_node = self.metacommunity_tree.treenode.get_leaves_by_name(name=anc_name)[0]
+            sis = anc_node.get_sisters()[0]
+            ## Create a new temporary baby tree for parent/child
+            new_tre = toytree.tree(newick="({},{});".format(sname, anc_name))
+            ## First add the new parent/child relationship, then drop the anc_node
+            _ = sis.add_sister(sister=new_tre.treenode)
+            _ = sis.remove_sister(sister=anc_node)
+
         except Exception as inst:
             LOGGER.error("Error in Metacommunity._update_species_pool - {}".format(inst))
             LOGGER.error("sname/trait_value - {}/{}".format(sname, trait_value))
