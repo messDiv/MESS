@@ -99,7 +99,6 @@ def _debug_on():
     _set_debug_dict(__loglevel__)
 
 
-
 def _set_debug_dict(__loglevel__):
     """ set the debug dict """
 
