@@ -108,6 +108,8 @@ class LocalCommunity(object):
         ##  * "abundances_through_time" - A record of abundance through time for this species
         ##  * "ancestor" - The species name of the immediate ancestor if local speciation
         ##                 happened, otherwise "".
+        ##  * "split_time" - Time of last divergence event involving this species,
+        ##                   for keeping track of internal branch lengths.
         self.local_info = pd.DataFrame([])
 
         ## The regional pool that this local community belongs to
@@ -195,7 +197,9 @@ class LocalCommunity(object):
         """
         Construct a new local_info record for new_species. The fields are:
         colonization time - in the forward time model. This gets converted to
-            divergence time for the backward time model.
+            divergence time for the backward time model. This is a misnomer,
+            held over from the days when speciation wasn't a thing. This should
+            more appropriately be called "species age".
         post_colonization_migrants - The count of migrants that have come in
             that are the same species as this one, since colonization
         abundances_through_time - Dictionary containing history of population
@@ -210,14 +214,21 @@ class LocalCommunity(object):
              all the individuals will be thrown back into the parent species pool.
             Default is 0 which indicates this is a good species immediately, either a new
             colonizing lineage or a point mutation species.
+        split_time = Time of the last speciation event involving a given species.
+            During the next speciation event for this species this value will
+            will be converted to the length of the internal branch leading to
+            this speciation event. When a new species is created colonization_time
+            and split_time will be the same, but this value changes when a new
+            species is formed _from_ this one.
         """
         if abundances_through_time == 0: abundances_through_time = OrderedDict([(self.current_time,self._hackersonly["mig_clust_size"])])
         self.local_info[sname] = [self.current_time,\
                                         0,\
                                         abundances_through_time,\
                                         ancestor,\
-                                        ancestral_abundance,
-                                        speciation_completion]
+                                        ancestral_abundance,\
+                                        speciation_completion,\
+                                        self.current_time]
 
 
     def _set_region(self, region):
@@ -512,10 +523,11 @@ class LocalCommunity(object):
                                                      "abundances_through_time",\
                                                      "ancestor",\
                                                      "ancestral_abundance",\
-                                                     "speciation_completion"])
+                                                     "speciation_completion",\
+                                                     "split_time"])
         self.local_info = self.local_info.fillna(0)
         for sp in self.local_info:
-            self.local_info[sp] = [0, 0, OrderedDict(), "", [], 0]
+            self.local_info[sp] = [0, 0, OrderedDict(), "", [], 0, 0]
 
         self.founder_flags = [True] * len(self.local_community)
         if verbose:
@@ -812,9 +824,23 @@ class LocalCommunity(object):
         ## process in metacommunity times average lineage lifetime
         trt = np.random.normal(parent_trait, self._hackersonly["trait_rate_local"], 1)[0]
 
+        ## Get internal branch length leading to this speciation event
+        ## and update split_time for the parental
+        split_time = self.local_info[chx]["split_time"]
+        self.local_info[chx]["split_time"] = self.current_time
+
+        ## split_time is an absolute time, so convert it to relative
+        ## time.
+        split_time = self.current_time - split_time
+        ## scale to branch length in Mya
+        ## TODO: This assumes Mya is the right timescale and also
+        ##       implicitly assumes generation time is 1 year.
+        split_time = split_time/1e6
+
         self.region._record_local_speciation(sname=sname,\
-                                            trait_value=trt,
-                                            ancestor=chx)
+                                            trait_value=trt,\
+                                            ancestor=chx,\
+                                            branch_length=split_time)
 
         ## If filtering then update the death probabilities to record
         ## death probability of the new species
@@ -1097,10 +1123,28 @@ class LocalCommunity(object):
         ## went extinct. We need to prune these out of the metacommunity tree.
         all_local_sp = [x for x in self.region.metacommunity.community["ids"] if self.NAME_SEPARATOR in x]
         extinct_local_sp = set(all_local_sp).difference(set(self.local_community))
-        self.extant_meta_tree = self.region.metacommunity.metacommunity_tree.drop_tips(extinct_local_sp)
-        all_non_local = set(self.region.metacommunity.community["ids"]).difference(set(self.local_community))
-        self.extant_local_tree = self.region.metacommunity.metacommunity_tree.drop_tips(all_non_local)
-        meta_tree_newick = self.extant_meta_tree.write(tree_format=TREE_FORMAT)
+        self.extant_meta_toytree = self.region.metacommunity.metacommunity_tree.drop_tips(extinct_local_sp)
+
+        ## We need to update the branch lengths at the tips for extant taxa
+        for node in self.extant_meta_toytree.treenode.traverse():
+            ## Don't update branch lengths for species that didn't speciate
+            ## in the local community
+            if node.is_leaf() and node.dist == 0:
+                try:
+                    node.dist = (self.current_time - self.local_info[node.name]["split_time"])/1e6
+                    print("{} {}".format(node.name, node.dist))
+
+                except KeyError:
+                    ## If not in local_info, then this is a tip from the
+                    ## metacommunity, so the branch length is already fine.
+                    pass
+
+        ## The local toytree is only for debugging purposes, as it will be
+        ## created independently by the calculate_sumstats method.
+        all_non_local = set(self.extant_meta_toytree.get_tip_labels()).difference(set(self.local_community))
+        self.extant_local_toytree = self.extant_meta_toytree.drop_tips(all_non_local)
+
+        meta_tree_newick = self.extant_meta_toytree.write(tree_format=TREE_FORMAT)
 
         ss = calculate_sumstats(dat, sgd_bins=self.region._hackersonly["sgd_bins"],\
                                     sgd_dims=self.region._hackersonly["sgd_dimensions"],\

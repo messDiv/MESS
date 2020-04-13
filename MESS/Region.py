@@ -254,7 +254,7 @@ class Region(object):
             raise
 
 
-    def _record_local_speciation(self, sname, trait_value, ancestor):
+    def _record_local_speciation(self, sname, trait_value, ancestor, branch_length):
         """
         Local speciation events need to be recorded, for example the trait 
         value needs to get added to the metacommunity trait value list. Maybe
@@ -264,8 +264,9 @@ class Region(object):
         :param string sname: The ID of the new species.
         :param float trait_value: The trait value of the new species.
         :param string ancestor: The ID of the parental species
+        :param float branch_length: Length of the branch leading to this split, in Mya
         """
-        self.metacommunity._update_species_pool(sname, trait_value, ancestor)
+        self.metacommunity._update_species_pool(sname, trait_value, ancestor, branch_length)
 
 
     def _reset_local_communities(self):

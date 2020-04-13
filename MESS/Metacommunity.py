@@ -429,7 +429,7 @@ class Metacommunity(object):
         LOGGER.debug("Metacommunity info: shape {}\n[:10] {}".format(self.community.shape, self.community[:10]))
 
 
-    def _update_species_pool(self, sname, trait_value, ancestor):
+    def _update_species_pool(self, sname, trait_value, ancestor, branch_length):
         """
         Add a new species to the species pool. This is on account of speciation
         in the local communities and we need to keep track of the trait values
@@ -443,6 +443,7 @@ class Metacommunity(object):
             metacommunity.
         :param float trait_value: The trait value of the new species.
         :param str ancestor: The ID of the parental species.
+        :param float branch_length:
         """
         try:
             #print("Anc/dec {}/{}".format(sname, ancestor))
@@ -454,11 +455,16 @@ class Metacommunity(object):
             ## Graft new species onto the metacommunity tree
             anc_name = ancestor
             anc_node = self.metacommunity_tree.treenode.get_leaves_by_name(name=anc_name)[0]
+
+            if not anc_node.dist == 0:
+                branch_length += anc_node.dist
+
             sis = anc_node.get_sisters()[0]
             ## Create a new temporary baby tree for parent/child
-            new_tre = toytree.tree(newick="({},{});".format(sname, anc_name))
+            new_tre = toytree.tree(newick="({}:0,{}:0):{};".format(sname, anc_name, branch_length))
             ## First add the new parent/child relationship, then drop the anc_node
-            _ = sis.add_sister(sister=new_tre.treenode)
+            new_node = sis.add_sister(sister=new_tre.treenode)
+            #new_node.dist = anc_node.dist
             _ = sis.remove_sister(sister=anc_node)
 
         except Exception as inst:
