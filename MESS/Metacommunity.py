@@ -235,9 +235,9 @@ class Metacommunity(object):
 
             elif param == "intrasp_competition_a":
                 if newvalue=="*":
-                    mean = MESS.rng.rng.uniform(np.log10(0.01), np.log10(10), size=1)
+                    mean = MESS.rng.rng.uniform(np.log10(0.01), np.log10(1), size=1)
                     mean = np.power(10, mean)
-                    var = MESS.rng.rng.uniform(np.log10(0.01), np.log10(10), size=1)
+                    var = MESS.rng.rng.uniform(np.log10(0.01), np.log10(1), size=1)
                     var = np.power(10, var)
                     beta = var/mean
                     alpha = mean/beta
@@ -258,14 +258,14 @@ class Metacommunity(object):
 
             elif param == "intrasp_competition_b":
                 if newvalue=="*":
-                    mean = MESS.rng.rng.uniform(np.log10(0.01), np.log10(10), size=1)
+                    mean = MESS.rng.rng.uniform(np.log10(0.01), np.log10(1), size=1)
                     mean = np.power(10, mean)
-                    var = MESS.rng.rng.uniform(np.log10(0.01), np.log10(10), size=1)
+                    var = MESS.rng.rng.uniform(np.log10(0.01), np.log10(1), size=1)
                     var = np.power(10, var)
                     beta = var/mean
                     alpha = mean/beta
                     # Aribitrary priors here ! Should be tuneable from parameter file !
-                    tup_a = tuplecheck(beta, dtype=float)
+                    tup_a = tuplecheck(alpha, dtype=float)
                     self.paramsdict["intrasp_competition_a"] = tup_a
                     newvalue = tuplecheck(beta, dtype=float)
                     self.paramsdict[param] = newvalue
@@ -278,9 +278,9 @@ class Metacommunity(object):
 
             elif param == "intersp_competition_a":
                 if newvalue=="*":
-                    mean = MESS.rng.rng.uniform(np.log10(0.01), np.log10(10), size=1)
+                    mean = MESS.rng.rng.uniform(np.log10(0.01), np.log10(1), size=1)
                     mean = np.power(10, mean)
-                    var = MESS.rng.rng.uniform(np.log10(0.01), np.log10(10), size=1)
+                    var = MESS.rng.rng.uniform(np.log10(0.01), np.log10(1), size=1)
                     var = np.power(10, var)
                     beta = var/mean
                     alpha = mean/beta
@@ -302,14 +302,14 @@ class Metacommunity(object):
 
             elif param == "intersp_competition_b":
                 if newvalue=="*":
-                    mean = MESS.rng.rng.uniform(np.log10(0.01), np.log10(10), size=1)
+                    mean = MESS.rng.rng.uniform(np.log10(0.01), np.log10(1), size=1)
                     mean = np.power(10, mean)
-                    var = MESS.rng.rng.uniform(np.log10(0.01), np.log10(10), size=1)
+                    var = MESS.rng.rng.uniform(np.log10(0.01), np.log10(1), size=1)
                     var = np.power(10, var)
                     beta = var/mean
                     alpha = mean/beta
                     # Aribitrary priors here ! Should be tuneable from parameter file !
-                    tup_a = tuplecheck(beta, dtype=float)
+                    tup_a = tuplecheck(alpha, dtype=float)
                     self.paramsdict["intersp_competition_a"] = tup_a
                     newvalue = tuplecheck(beta, dtype=float)
                     self.paramsdict[param] = newvalue
@@ -643,7 +643,8 @@ class Metacommunity(object):
             factors = MESS.rng.rng.binomial(n = 1,
                 p = self.paramsdict["mutualism_proportion"],
                 size =(self.paramsdict["S_m"],self.paramsdict["S_m"]))
-            factors[factors == 0] = -1
+            factors[factors == 1] = -1
+            factors[factors == 0] = 1
             self.interaction_matrix = self.interaction_matrix * factors
             # A positive value is a positive interaction,
             # A negative value is a negative interaction

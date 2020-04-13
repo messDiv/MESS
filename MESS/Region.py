@@ -234,8 +234,7 @@ class Region(object):
             elif param == "community_assembly_model":
                 if newvalue == "*":
                     self._priors[param] = ["neutral", "filtering", "competition","pairwise_competition"]
-                    print(self.paramsdict["seed"])
-                    newvalue = self.paramsdict["seed"].choice(self._priors[param])
+                    newvalue = MESS.rng.rng.choice(self._priors[param])
                 self.paramsdict[param] = newvalue
 
             elif param == "speciation_model":
@@ -660,7 +659,7 @@ class Region(object):
             LOGGER.debug("alpha - {}".format(self.paramsdict["alpha"]))
 
         if self._priors["community_assembly_model"]:
-            self.paramsdict["community_assembly_model"] = self.paramsdict["seed"].choice(self._priors["community_assembly_model"])
+            self.paramsdict["community_assembly_model"] = MESS.rng.rng.choice(self._priors["community_assembly_model"])
 
         if self._priors["generations"]:
             self.paramsdict["generations"] = sample_param_range(self._priors["generations"])[0]
@@ -809,7 +808,8 @@ class Region(object):
                                         island.local_community_through_time)
                 MESS.plotting.plot_traits_repartition(outdir,
                                                     island.local_traits_through_time,
-                                                    island.death_probs_through_time)
+                                                    island.death_probs_through_time,
+                                                    island.species_through_time)
             except Exception as inst:
                 print("    Exception in fancy_plots() - {}".format(inst))
 

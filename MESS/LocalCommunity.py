@@ -296,6 +296,7 @@ class LocalCommunity(object):
 
 
 
+
     ## Update global death probabilities for the filtering model
     def _filtering_update_death_probs(self):
         """
@@ -541,6 +542,7 @@ class LocalCommunity(object):
         if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs()
             self.local_traits_through_time[self.current_time] = self.local_traits.copy()
+            self.species_through_time[self.current_time] = self.species
 
         self._finalize_death(victim,vic_idx)
 
@@ -578,6 +580,7 @@ class LocalCommunity(object):
         if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs(death_probs)
             self.local_traits_through_time[self.current_time] = self.local_traits.copy()
+            self.species_through_time[self.current_time] = self.species
 
 
         self._finalize_death(victim,vic_idx)
@@ -613,6 +616,7 @@ class LocalCommunity(object):
         if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs(death_probs)
             self.local_traits_through_time[self.current_time] = self.local_traits.copy()
+            self.species_through_time[self.current_time] = self.species
 
 
 
@@ -659,6 +663,7 @@ class LocalCommunity(object):
         if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
             self._record_deaths_probs(death_probs)
             self.local_traits_through_time[self.current_time] = self.local_traits.copy()
+            self.species_through_time[self.current_time] = self.species
 
         self._finalize_death(victim, vic_idx)
 
