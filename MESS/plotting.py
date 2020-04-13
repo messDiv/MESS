@@ -975,7 +975,7 @@ def plot_death_probs(death_probs, outdir, model, local_community_record):
 
 
 
-def plot_traits_repartition(outdir, local_traits_through_time, death_probs):
+def plot_traits_repartition(outdir, local_traits_through_time, death_probs, species_through_time):
     """
     local_traits_through_time arg should be a dictionnary of time : local_traits
     This function aims at generating an animated gif of the distribution of traits in the local community through time
@@ -992,48 +992,68 @@ def plot_traits_repartition(outdir, local_traits_through_time, death_probs):
     maxprob = max(np.reshape(values,len(values[0])*len(values)))
     minprob = min(np.reshape(values,len(values[0])*len(values)))
     
+    trait_values = [x for x in np.nan_to_num(local_traits_through_time.values())]
+    maxtrait = max(np.reshape(trait_values,len(trait_values[0])*len(trait_values)))
+    mintrait = min(np.reshape(trait_values,len(trait_values[0])*len(trait_values)))
+
+    maxspecies = max([len(species_through_time[time]) for time in local_traits_through_time.keys()])
     # print(minprob, maxprob)
 
 
     tot_plots = len(local_traits_through_time)
     for i,time in enumerate(local_traits_through_time.keys()):
         progressbar(tot_plots, i+1)
+        try :
+            print(len(species_through_time[time]))
+        except:
+            pass
         fig = plt.figure(figsize=(12,5))
-        ax = fig.add_subplot(111, projection='3d')
-        x = local_traits_through_time[time]
-        y = np.nan_to_num(death_probs[time])
+        # ax = fig.add_subplot(111, projection='3d')
+        # x = local_traits_through_time[time]
+        # y = np.nan_to_num(death_probs[time])
 
-        data_array = np.zeros((100,100))
-        for j in range(len(death_probs[time])):
-            if y[j] != 0:
-                data_array[int((x[j]+10)*5)][int((max(-9.999,np.log10(y[j]))+10))*10] += 1
-            else:
-                #set min death prob
-                data_array[int((x[j]+10)*5)][0] += 1
+        # data_array = np.zeros((100,100))
+        # for j in range(len(death_probs[time])):
+        #     if y[j] != 0:
+        #         data_array[int((x[j]+10)*5)][int((max(-9.999,np.log10(y[j]))+10))*10] += 1
+        #     else:
+        #         #set min death prob
+        #         data_array[int((x[j]+10)*5)][0] += 1
 
 
-        x_data, y_data = np.meshgrid( np.arange(data_array.shape[1]),
-                              np.arange(data_array.shape[0]) )
+        # x_data, y_data = np.meshgrid( np.arange(data_array.shape[1]),
+        #                       np.arange(data_array.shape[0]) )
         
-        x_data = x_data.flatten()
-        y_data = y_data.flatten()
-        z_data = data_array.flatten()
-        ax.bar3d( x_data,
-                  y_data,
-                  np.zeros(len(z_data)),
-                  1, 1, z_data )
-        ax.set_yticklabels(['A',-10,-6,-2,2,6,10])
-        ax.set_xticklabels(['A',0,'','0.001','','',1])
-        ax.set_zlim(0,len(local_traits_through_time[time]))
+        # x_data = x_data.flatten()
+        # y_data = y_data.flatten()
+        # z_data = data_array.flatten()
+        # ax.bar3d( x_data,
+        #           y_data,
+        #           np.zeros(len(z_data)),
+        #           1, 1, z_data )
+        # ax.set_yticklabels(['A',-10,-6,-2,2,6,10])
+        # ax.set_xticklabels(['A',0,'','0.001','','',1])
+        # ax.set_zlim(0,len(local_traits_through_time[time]))
        
 
-        plt.xlabel('death probability')
-        # plt.ylim(minprob-minprob/100,maxprob+maxprob/100)
-        plt.ylabel('trait value')
-        # plt.xlim(mintrait-abs(mintrait)/100,maxtrait+maxtrait/100)
-        plt.title('Death probabilities and trait repartitions t='+str(time))
+        # plt.xlabel('death probability')
+        # # plt.ylim(minprob-minprob/100,maxprob+maxprob/100)
+        # plt.ylabel('trait value')
+        # # plt.xlim(mintrait-abs(mintrait)/100,maxtrait+maxtrait/100)
+        # plt.title('Death probabilities and trait repartitions t='+str(time))
+        # fig.savefig(trait_out+'/'+names[i]+'.png')
+        # plt.close()
+        plt.hist(local_traits_through_time[time], bins=100)
+        plt.xlabel("trait value")
+        plt.ylabel("number of individual")
+        plt.xlim(mintrait-0.5, maxtrait+0.5)
+        plt.ylim(0.5,len(local_traits_through_time[0]))
+        plt.yscale('log')
+        plt.title('Trait values timestep t='+str(time)+'\n'+str(len(species_through_time[time]))+' different species')
         fig.savefig(trait_out+'/'+names[i]+'.png')
-        plt.close()
+        # ADD THE NUMBER OF SPECIES
+
+
 
 
 
