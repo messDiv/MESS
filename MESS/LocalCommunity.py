@@ -1119,7 +1119,7 @@ class LocalCommunity(object):
 
         dat =  self.get_community_data()
 
-        ## Find all species that specieated in the local community and then
+        ## Find all species that speciated in the local community and then
         ## went extinct. We need to prune these out of the metacommunity tree.
         all_local_sp = [x for x in self.region.metacommunity.community["ids"] if self.NAME_SEPARATOR in x]
         extinct_local_sp = set(all_local_sp).difference(set(self.local_community))
