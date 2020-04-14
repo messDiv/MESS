@@ -1086,8 +1086,8 @@ class LocalCommunity(object):
         simulated data that is in the exact format empirical data is required
         to be in. Useful for debugging and experimentation.
 
-        :return: A pandas.DataFrame with 4 columns: "pi", "dxy", "abundance",
-            and "trait", and one row per species.
+        :return: A pandas.DataFrame with 5 columns: "pi", "dxy", "abundance",
+            "trait", and "tree", and one row per species.
         """
         abunds = np.array([x.stats["abundance"] for x in self.species])
         pis = np.array([x.stats["pi_local"] for x in self.species])
@@ -1104,6 +1104,7 @@ class LocalCommunity(object):
 
         return dat
 
+
     def get_stats(self):
         """
         Simulate genetic variation per species in the local community, then
@@ -1119,6 +1120,8 @@ class LocalCommunity(object):
 
         dat =  self.get_community_data()
 
+        ## We have to do a bunch of preprocessing for the phylogenetic data
+
         ## Find all species that speciated in the local community and then
         ## went extinct. We need to prune these out of the metacommunity tree.
         all_local_sp = [x for x in self.region.metacommunity.community["ids"] if self.NAME_SEPARATOR in x]
@@ -1132,7 +1135,6 @@ class LocalCommunity(object):
             if node.is_leaf() and node.dist == 0:
                 try:
                     node.dist = (self.current_time - self.local_info[node.name]["split_time"])/1e6
-                    print("{} {}".format(node.name, node.dist))
 
                 except KeyError:
                     ## If not in local_info, then this is a tip from the
