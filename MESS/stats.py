@@ -6,6 +6,7 @@ import math
 import toytree
 from collections import Counter, OrderedDict
 from itertools import combinations
+from rpy2 import robjects
 from scipy.stats import entropy, kurtosis, hmean, iqr, skew, spearmanr
 from sklearn.metrics import pairwise_distances
 from MESS.SGD import SGD
@@ -482,8 +483,19 @@ def calculate_sumstats(diversity_df,
         list(map(lambda x: loc_sp.extend(toytree.tree(x).get_tip_labels()), clades))
         meta_toytree = toytree.tree(metacommunity_tree)
         meta_sp = set(meta_toytree.get_tip_labels()).difference(set(loc_sp))
-        loc_tree = meta_toytree.drop_tips(meta_sp).write(tree_format=TREE_FORMAT)
+        local_tree = meta_toytree.drop_tips(meta_sp).write(tree_format=TREE_FORMAT)
 
+        tree_sumstats = """
+        library(phyloTop)
+        tree_sumstats <- function(local_newick, meta_newick, normalise=T) {
+          ltree = ape::read.tree(text=local_newick)
+          mtree = ape::read.tree(text=meta_newick)
+
+          res = phyloTop(c(mtree, ltree), normalise=F)
+          return(res)
+        }"""
+        rtree_sumstats = robjects.r(tree_sumstats)
+        res = rtree_sumstats(local_tree, metacommunity_tree, True)
     except KeyError as inst:
         if verbose: print("  No trees present")
 

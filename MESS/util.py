@@ -2,13 +2,16 @@
 import collections
 import glob
 import functools
+import itertools
 import logging
 import numpy as np
 import os
 import pandas as pd
+import random
 import shlex
 import subprocess
 import sys
+import toytree
 
 from .stats import hill_number
 from .SGD import SGD
@@ -234,7 +237,7 @@ class memoize(object):
       return functools.partial(self.__call__, obj)
 
 
-def synthetic_community(model="random", nspecies=10):
+def synthetic_community(model="random", nspecies=10, nspecies_meta=None):
     """
     Generate artificial, toy data in the format required for the
     MESS.stats.calculate_sumstats function. Useful for testing.
@@ -249,6 +252,7 @@ def synthetic_community(model="random", nspecies=10):
         all data axes and scales them to look plausible. Max abundance is
         fixed at 1000.
     :param int nspecies: The number of species to return.
+    :param int nspecies_meta: Number of metacommunity species to return
 
     :return: A pandas.DataFrame with 4 columns (abundance, pi, dxy, trait)
         and `nspecies` rows, populated with toy data.
@@ -273,12 +277,85 @@ def synthetic_community(model="random", nspecies=10):
         trts = np.array([x - abunds.mean() for x in abunds])/10
         pis = np.random.random(nspecies)/10
         dxys = np.random.random(nspecies)/10
-    dat = pd.DataFrame([], columns=["pi", "dxy", "abundance", "trait"])
+    dat = pd.DataFrame([], columns=["pi", "dxy", "abundance", "trait"],)
     dat["pi"] = pis
     dat["dxy"] = dxys
     dat["abundance"] = abunds
     dat["trait"] = trts
-    return dat
+
+    ## Get the random trees. The simulated local species will be
+    ## named l0, l1, l2 ('l' for local). In this way the local
+    ## trees can be pasted on to the metacommunity tree without
+    ## name collisions (toytree random trees are generated with
+    ## species names like r0, r1, r2, r3. Greatly simplifies the
+    ## problem of pruning and grafting the local trees.
+    for clade in _random_ksubset(dat.index.to_list(),
+                                np.random.randint(low=1, high=nspecies)):
+        ids = list(clade)
+        nw = _random_newick(len(clade))
+        nw = _update_newick_names(nw, ["l"+str(x) for x in ids])
+        for idx in ids:
+            dat.loc[idx, "tree"] = nw
+
+    ## Give them names that will be like the names for the randomly
+    ## simulated trees. Plus I think 'ape' will fall over with integer
+    ## species ids.
+    dat.index = ["l"+str(x) for x in range(0, nspecies)]
+
+    if nspecies_meta:
+        mtree = random_metatree(dat["tree"], ntips=nspecies_meta)
+        return dat, mtree
+    else:
+        return dat
+
+
+## Helper functions for building the reandom trees
+def _random_ksubset(ls, k):
+    ls = list(ls)
+    indices = list(range(k))
+    indices.extend([random.choice(list(range(k))) for _ in range(len(ls) - k)])
+    random.shuffle(indices)
+    return [{x[1] for x in xs} for (_, xs) in
+            itertools.groupby(sorted(zip(indices, ls)), lambda x: x[0])]
+
+
+def _random_newick(ntips, treeheight=1, treefunc=toytree.rtree.unittree):
+    if ntips < 2:
+        return "(r0:1);"
+    else:
+        return treefunc(ntips=ntips).write(tree_format=5)
+
+
+def _update_newick_names(nw, names):
+    tre = toytree.tree(nw)
+    leaves = tre.get_tip_labels()
+    nodes = [tre.treenode.search_nodes(name=x)[0] for x in leaves]
+    for node,name in zip(nodes, names):
+        node.name = name
+    return tre.write(tree_format=5)
+
+
+def random_metatree(local_trees, ntips=20, treefunc=toytree.rtree.unittree):
+    metatree = _random_newick(ntips=ntips, treeheight=10, treefunc=treefunc)
+
+    tre = toytree.tree(metatree)
+    tips = tre.get_tip_labels()
+
+    local_trees = list(set(local_trees))
+
+    drop_tips = np.random.choice(tips, len(local_trees), replace=False)
+    for tip, ltree in zip (drop_tips, local_trees):
+        drop_node = tre.treenode.get_leaves_by_name(name=tip)[0]
+        sis = drop_node.get_sisters()[0]
+        ttree = toytree.tree(ltree)
+        _root = ttree.treenode.get_tree_root()
+        height = _root.get_distance(_root.get_farthest_leaf()[0])
+        ttree.treenode.dist = drop_node.dist - height
+        new_node = drop_node.add_sister(sister=ttree.treenode)
+
+        _ = sis.remove_sister(sister=drop_node)
+
+    return tre.write(tree_format=5)
 
 
 ## Error messages
