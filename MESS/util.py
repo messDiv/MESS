@@ -303,8 +303,8 @@ def synthetic_community(model="random", nspecies=10, nspecies_meta=None):
     dat.index = ["l"+str(x) for x in range(0, nspecies)]
 
     if nspecies_meta:
-        mtree = random_metatree(dat["tree"], ntips=nspecies_meta)
-        return dat, mtree
+        mtree, meta_trts = random_metatree(dat["tree"], ntips=nspecies_meta)
+        return dat, mtree, meta_trts
     else:
         return dat
 
@@ -355,7 +355,8 @@ def random_metatree(local_trees, ntips=20, treefunc=toytree.rtree.unittree):
 
         _ = sis.remove_sister(sister=drop_node)
 
-    return tre.write(tree_format=5)
+    trts = np.random.sample(len(tre.get_tip_labels()))*10
+    return tre.write(tree_format=5), trts
 
 
 ## Error messages

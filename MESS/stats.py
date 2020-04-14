@@ -3,10 +3,13 @@
 import numpy as np
 import pandas as pd
 import math
+import rpy2.robjects as ro
 import toytree
 from collections import Counter, OrderedDict
 from itertools import combinations
 from rpy2 import robjects
+from rpy2.robjects import pandas2ri
+from rpy2.robjects.conversion import localconverter
 from scipy.stats import entropy, kurtosis, hmean, iqr, skew, spearmanr
 from sklearn.metrics import pairwise_distances
 from MESS.SGD import SGD
@@ -487,15 +490,28 @@ def calculate_sumstats(diversity_df,
 
         tree_sumstats = """
         library(phyloTop)
-        tree_sumstats <- function(local_newick, meta_newick, normalise=T) {
-          ltree = ape::read.tree(text=local_newick)
+        tree_sumstats <- function(meta_newick, local_newick, normalise=TRUE) {
           mtree = ape::read.tree(text=meta_newick)
+          ltree = ape::read.tree(text=local_newick)
 
-          res = phyloTop(c(mtree, ltree), normalise=F)
+          res = phyloTop(c(mtree, ltree), normalise=normalise)
           return(res)
         }"""
         rtree_sumstats = robjects.r(tree_sumstats)
-        res = rtree_sumstats(local_tree, metacommunity_tree, True)
+        res = rtree_sumstats(metacommunity_tree, local_tree, "TRUE")
+        ## How is anybody every supposed to fucking remember how to do this?
+        ## Convert rpy2 DataFrame to pandas DataFrame
+        with localconverter(ro.default_converter + pandas2ri.converter):
+            res = ro.conversion.rpy2py(res)
+
+        ## Add the tree stats to the stats_dict
+        ## First we have to reindex the series for each row to specify
+        ## whether it is the local or metacommunity stats.
+        for idx, prefix in zip([0, 1], ["meta_", "local_"]):
+            s1 = res.iloc[idx]
+            s1.index = [prefix+x for x in res.columns]
+            stat_dict.update(s1.to_dict())
+
     except KeyError as inst:
         if verbose: print("  No trees present")
 
