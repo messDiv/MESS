@@ -78,12 +78,12 @@ class LocalCommunity(object):
         ##  * mode: Whether to prepopulate the local community as a 'volcanic' or
         ##      'landbridge' style origin.
         self._hackersonly = dict([
-                        ("allow_empty", False),
+                        ("allow_empty", True),
                         ("outdir", []),
                         ("mig_clust_size", 1),
                         ("age", 100000),
                         ("trait_rate_local", 0),
-                        ("mode", "volcanic"),
+                        ("mode", "landbridge"),
         ])
 
         ## pandas Data Frame for storing info about each species in the local community. This is for
@@ -535,30 +535,33 @@ class LocalCommunity(object):
 
     def _neutral_death_step(self):
         victim = MESS.rng.rng.choice(self.local_community)
-        if victim == None:
+        if victim == None or len([x for x in self.local_community if x != None])<2:
+            self._finalize_death(None,None)
             pass
-        vic_idx = MESS.rng.rng.integers(0,self.paramsdict["J"]-1)
-        victim = self.local_community[vic_idx]
-        if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
-            self._record_deaths_probs()
-            self.local_traits_through_time[self.current_time] = self.local_traits.copy()
-            self.species_through_time[self.current_time] = self.species
+        else:
+            vic_idx = MESS.rng.rng.integers(0,self.paramsdict["J"]-1)
+            victim = self.local_community[vic_idx]
+            if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
+                self._record_deaths_probs()
+                self.local_traits_through_time[self.current_time] = self.local_traits.copy()
+                self.species_through_time[self.current_time] = self.species
 
-        self._finalize_death(victim,vic_idx)
+            self._finalize_death(victim,vic_idx)
 
-        if (not self.current_time % (self.paramsdict["J"]*2)):
-            draws = list(MESS.rng.rng.multinomial(100000, [1/self.paramsdict["J"]]*self.paramsdict["J"]))
-            ch, p = chisquare(draws)
-            if p > 0.1:
-                b = 1
-            else:
-                b = 0
-            self.is_neutral += [[self.current_time, b, self._lambda()]]
+            if (not self.current_time % (self.paramsdict["J"]*2)):
+                draws = list(MESS.rng.rng.multinomial(100000, [1/self.paramsdict["J"]]*self.paramsdict["J"]))
+                ch, p = chisquare(draws)
+                if p > 0.1:
+                    b = 1
+                else:
+                    b = 0
+                self.is_neutral += [[self.current_time, b, self._lambda()]]
 
 
     def _competition_death_step(self):
         victim = MESS.rng.rng.choice(self.local_community)
-        if victim == None:
+        if victim == None or len([x for x in self.local_community if x != None])<2:
+            self._finalize_death(None,None)
             pass
         else:
             mean_local_trait = self.region.get_trait_mean(self.local_community)
@@ -577,27 +580,28 @@ class LocalCommunity(object):
             ## vic_idx is nan because of too high values in the exponential
                 vic_idx = MESS.rng.rng.integers(0,self.paramsdict["J"]-1)
             victim = self.local_community[vic_idx]
-        if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
-            self._record_deaths_probs(death_probs)
-            self.local_traits_through_time[self.current_time] = self.local_traits.copy()
-            self.species_through_time[self.current_time] = self.species
+            if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
+                self._record_deaths_probs(death_probs)
+                self.local_traits_through_time[self.current_time] = self.local_traits.copy()
+                self.species_through_time[self.current_time] = self.species
 
 
-        self._finalize_death(victim,vic_idx)
+            self._finalize_death(victim,vic_idx)
 
-        if (not self.current_time % (self.paramsdict["J"]*2)):
-            draws = list(MESS.rng.rng.multinomial(100000, death_probs))
-            ch, p = chisquare(draws)
-            if p > 0.1:
-                b = 1
-            else:
-                b = 0
-            self.is_neutral += [[self.current_time, b, self._lambda()]]
+            if (not self.current_time % (self.paramsdict["J"]*2)):
+                draws = list(MESS.rng.rng.multinomial(100000, death_probs))
+                ch, p = chisquare(draws)
+                if p > 0.1:
+                    b = 1
+                else:
+                    b = 0
+                self.is_neutral += [[self.current_time, b, self._lambda()]]
 
 
     def _pairwise_competition_death_step(self):
         victim = MESS.rng.rng.choice(self.local_community)
-        if victim == None:
+        if victim == None or len([x for x in self.local_community if x != None])<2:
+            self._finalize_death(None,None)
             pass
         else:
             ## Sum all the interaction, exept ones with self
@@ -613,28 +617,28 @@ class LocalCommunity(object):
                 vic_idx = MESS.rng.rng.integers(0,self.paramsdict["J"]-1)
                 raise MESSError
             victim = self.local_community[vic_idx]
-        if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
-            self._record_deaths_probs(death_probs)
-            self.local_traits_through_time[self.current_time] = self.local_traits.copy()
-            self.species_through_time[self.current_time] = self.species
+            if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
+                self._record_deaths_probs(death_probs)
+                self.local_traits_through_time[self.current_time] = self.local_traits.copy()
+                self.species_through_time[self.current_time] = self.species
 
 
 
-        if (not self.current_time % (self.paramsdict["J"]*2)):
-            try:
-                draws = list(MESS.rng.rng.multinomial(100000, death_probs))
-                ch, p = chisquare(draws)
-                if p > 0.1:
-                    b = 1
-                else:
-                    b = 0
-                self.is_neutral += [[self.current_time, b, self._lambda()]]
-            except:
-                self.is_neutral += [[self.current_time, -1, self._lambda()]]
-                # Values too high/low to permit tests : probably neutral in any case !
-                # Happens when both interaction termes are too low
+            if (not self.current_time % (self.paramsdict["J"]*2)):
+                try:
+                    draws = list(MESS.rng.rng.multinomial(100000, death_probs))
+                    ch, p = chisquare(draws)
+                    if p > 0.1:
+                        b = 1
+                    else:
+                        b = 0
+                    self.is_neutral += [[self.current_time, b, self._lambda()]]
+                except:
+                    self.is_neutral += [[self.current_time, -1, self._lambda()]]
+                    # Values too high/low to permit tests : probably neutral in any case !
+                    # Happens when both interaction termes are too low
 
-        self._finalize_death(victim, vic_idx)
+            self._finalize_death(victim, vic_idx)
 
 
     def normalize(self, death_probs):
@@ -648,7 +652,8 @@ class LocalCommunity(object):
 
     def _filtering_death_step(self):
         victim = MESS.rng.rng.choice(self.local_community)
-        if victim == None:
+        if victim == None or len([x for x in self.local_community if x != None])<2:
+            self._finalize_death(None,None)
             pass
         else:
             fo = self.region.metacommunity._hackersonly["filtering_optimum"]
@@ -660,21 +665,21 @@ class LocalCommunity(object):
             ## Get the victim conditioning on unequal death probability
             vic_idx = list(MESS.rng.rng.multinomial(1, death_probs)).index(1)
             victim = self.local_community[vic_idx]
-        if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
-            self._record_deaths_probs(death_probs)
-            self.local_traits_through_time[self.current_time] = self.local_traits.copy()
-            self.species_through_time[self.current_time] = self.species
+            if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
+                self._record_deaths_probs(death_probs)
+                self.local_traits_through_time[self.current_time] = self.local_traits.copy()
+                self.species_through_time[self.current_time] = self.species
 
-        self._finalize_death(victim, vic_idx)
+            self._finalize_death(victim, vic_idx)
 
-        if (not self.current_time % (self.paramsdict["J"]*2)):
-            draws = list(MESS.rng.rng.multinomial(100000, death_probs))
-            ch, p = chisquare(draws)
-            if p > 0.1:
-                b = 1
-            else:
-                b = 0
-            self.is_neutral += [[self.current_time, b, self._lambda()]]
+            if (not self.current_time % (self.paramsdict["J"]*2)):
+                draws = list(MESS.rng.rng.multinomial(100000, death_probs))
+                ch, p = chisquare(draws)
+                if p > 0.1:
+                    b = 1
+                else:
+                    b = 0
+                self.is_neutral += [[self.current_time, b, self._lambda()]]
 
     def _record_deaths_probs(self,death_probs=np.array(())):
         if len(death_probs) == 0: #Neutral
@@ -699,13 +704,17 @@ class LocalCommunity(object):
         ##        self.survived_invasives += 1
         ##        victim = random.choice(self.local_community)
         try:
-            ## Clean up local community list and founder flag list
-            self.local_community[vic_idx] = None
-            self.founder_flags[vic_idx] = None
-            ## If the species of the victim went locally extinct then clean up local_info
-            self._test_local_extinction(victim)
-            ## Record the new empty space
-            self.last_dead_ind = ([vic_idx],[victim]) #Index, species
+            if victim == None:
+                self.last_dead_ind = ([np.argwhere(self.local_community==None)[0][0]],[None])
+                pass
+            else:
+                ## Clean up local community list and founder flag list
+                self.local_community[vic_idx] = None
+                self.founder_flags[vic_idx] = None
+                ## If the species of the victim went locally extinct then clean up local_info
+                self._test_local_extinction(victim)
+                ## Record the new empty space
+                self.last_dead_ind = ([vic_idx],[victim]) #Index, species
 
         except Exception as inst:
             raise MESSError("Error in _finalize_death(): {}".format(inst))
@@ -824,7 +833,7 @@ class LocalCommunity(object):
                     ## This is the fastest way to sample from a list. >4x faster than MESS.rng.rng.choice
                     ## Don't allow empty space to reproduce
                     chx = MESS.rng.rng.choice([x for x in self.local_community if x != None])
-                    dead = self.last_dead_ind[0]
+                    dead = self.last_dead_ind[0] #idx of dead individual
                     idx = np.argwhere(self.local_community==chx)[0][0]
                     ## Record new individual's species
                     self.local_community[dead] = chx
@@ -859,7 +868,6 @@ class LocalCommunity(object):
             if self.region.paramsdict["speciation_model"] != "none" and\
                MESS.rng.rng.uniform(0,1) < self.paramsdict["speciation_prob"] and\
                chx != None:
-               # print("will do speiciation from ", chx)
                self._speciate(chx)
 
 

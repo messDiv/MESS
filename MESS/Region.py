@@ -8,6 +8,7 @@ import tempfile
 from collections import OrderedDict
 
 import MESS
+from MESS import rng
 from .stats import *
 from .util import *
 from mpl_toolkits.mplot3d import axes3d

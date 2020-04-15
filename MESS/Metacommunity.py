@@ -342,7 +342,10 @@ class Metacommunity(object):
 
 
     def _get_interaction_term(self,species1,species2):
-        return self.interaction_matrix[self.species_dict[species1]][self.species_dict[species2]]
+        if species1!=None and species2!=None:
+            return self.interaction_matrix[self.species_dict[species1]][self.species_dict[species2]]
+        else:
+            return 0
 
     def _create_interaction(self,new, parent):
         ## Extend matrix
@@ -715,8 +718,8 @@ class Metacommunity(object):
 
         :return: A tuple of lists of species IDs (str) and trait values (float).
         """
-        migrants = np.array((nmigrants), dtype = object)
-        trait_vals = np.array((nmigrants), dtype = float)
+        migrants = np.zeros((nmigrants), dtype = object)
+        trait_vals = np.zeros((nmigrants), dtype = float)
         for i in range(nmigrants):
             mig, trait = self._get_migrant()
             migrants[i] = mig
