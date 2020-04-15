@@ -1051,6 +1051,7 @@ def plot_traits_repartition(outdir, local_traits_through_time, death_probs, spec
         plt.yscale('log')
         plt.title('Trait values timestep t='+str(time)+'\n'+str(len(species_through_time[time]))+' different species')
         fig.savefig(trait_out+'/'+names[i]+'.png')
+        plt.close()
         # ADD THE NUMBER OF SPECIES
 
 

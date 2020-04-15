@@ -1335,7 +1335,7 @@ def posterior_predictive_check(empirical_df,\
 
     if outfile:
         try:
-            ax.savefig(outfile)
+            fig.savefig(outfile)
         except Exception as inst:
             raise Exception("Failed saving figure: {}".format(inst))
 
