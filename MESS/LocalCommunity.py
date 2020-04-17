@@ -83,7 +83,7 @@ class LocalCommunity(object):
                         ("mig_clust_size", 1),
                         ("age", 100000),
                         ("trait_rate_local", 0),
-                        ("mode", "landbridge"),
+                        ("mode", "volcanic"),
         ])
 
         ## pandas Data Frame for storing info about each species in the local community. This is for

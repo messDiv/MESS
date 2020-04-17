@@ -248,7 +248,7 @@ class Metacommunity(object):
                     self.paramsdict[param] = newvalue
                 elif isinstance(tuplecheck(newvalue, dtype=float), tuple):
                     tup = tuplecheck(newvalue, dtype=float)
-                    self.paramsdict[param] = sample_param_range(tup, loguniform=True)[0]
+                    self.paramsdict[param] = -sample_param_range(tup, loguniform=True)[0]
                 else:
                     newvalue = tuplecheck(newvalue, dtype=float)
                     self.paramsdict[param] = newvalue
@@ -293,7 +293,10 @@ class Metacommunity(object):
                     self.paramsdict[param] = self.paramsdict["intrasp_competition_a"]
                 elif isinstance(tuplecheck(newvalue, dtype=float), tuple):
                     tup = tuplecheck(newvalue, dtype=float)
-                    self.paramsdict[param] = sample_param_range(tup, loguniform=True)[0]
+                    value = sample_param_range(tup, loguniform=True)[0]
+                    while value > abs(self.paramsdict["intrasp_competition_a"]):
+                        value = sample_param_range(tup, loguniform=True)[0]
+                    self.paramsdict[param] = -value
                 else:
                     newvalue = tuplecheck(newvalue, dtype=float)
                     self.paramsdict[param] = newvalue
