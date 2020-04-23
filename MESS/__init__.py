@@ -2,7 +2,7 @@
 Massive Eco-Evolutionary Synthesis Simulations
 """
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 __author__ = "Isaac Overcast, Megan Ruffley, Juliette Luiselli"
 
 ## Possible values for __loglevel__: "DEBUG"  "INFO"  "WARN"  "ERROR"
