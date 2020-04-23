@@ -406,13 +406,15 @@ class Metacommunity(object):
       
 
         # ## Nature of the interaction
-        if self.paramsdict["intrasp_competition_b"] >= 0 and self.paramsdict["intersp_competition_b"] >= 0:
-            factors = MESS.rng.rng.binomial(n = 1,
-                                        p = self.paramsdict["mutualism_proportion"],
-                                        size =(2,len(self.interaction_matrix)))
-            factors[factors == 0] = -1 
-            self.interaction_matrix[-1] = self.interaction_matrix[-1] * factors[0]
-            self.interaction_matrix[:,-1] = self.interaction_matrix[:,-1] * factors[1].T
+        # if self.paramsdict["intrasp_competition_b"] >= 0 and self.paramsdict["intersp_competition_b"] >= 0:
+        factors = MESS.rng.rng.binomial(n = 1,
+                                    p = self.paramsdict["mutualism_proportion"],
+                                    size =(2,len(self.interaction_matrix)))
+        factors[factors == 1] = -1 
+        factors[factors == 0] = 1 
+        self.interaction_matrix[-1] = self.interaction_matrix[-1] * factors[0]
+        self.interaction_matrix[:,-1] = self.interaction_matrix[:,-1] * factors[1].T
+        self.interaction_matrix[-1][-1] = -abs(self.interaction_matrix[-1][-1])
             #     # A positive value is a positive interaction,
             #     # A negative value is a negative interaction
         self.species_dict[new] = len(self.interaction_matrix)-1
@@ -652,6 +654,8 @@ class Metacommunity(object):
             factors[factors == 1] = -1
             factors[factors == 0] = 1
             self.interaction_matrix = self.interaction_matrix * factors
+            for i in range(len(self.interaction_matrix)):
+                self.interaction_matrix[i][i] = -abs(self.interaction_matrix[i][i])
             # A positive value is a positive interaction,
             # A negative value is a negative interaction
         except ValueError as inst:

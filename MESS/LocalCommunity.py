@@ -78,7 +78,7 @@ class LocalCommunity(object):
         ##  * mode: Whether to prepopulate the local community as a 'volcanic' or
         ##      'landbridge' style origin.
         self._hackersonly = dict([
-                        ("allow_empty", True),
+                        ("allow_empty", False),
                         ("outdir", []),
                         ("mig_clust_size", 1),
                         ("age", 100000),
@@ -257,6 +257,7 @@ class LocalCommunity(object):
             [self.region.metacommunity._get_interaction_term(sp1, sp2) for sp2 in self.local_community] for sp1 in self.local_community
             ])
     ## For the pairwise compeition model, a global matrix is used which summarize the competition interactions for all individuals
+
     def _set_distance_matrix(self):
         ## Reshape local_traits for the cdist function
         local_traits = self.local_traits.reshape(len(self.local_traits),1)
@@ -268,7 +269,6 @@ class LocalCommunity(object):
         ## Multiply by -1 so tha
         ## a positive term (mutualisme) decreases the probability of death and 
         ## a negative term (antagonism) increases it
-
 
 
     def _interaction_matrix_update(self):

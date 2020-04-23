@@ -972,6 +972,8 @@ class Regressor(Ensemble):
         super(Regressor, self).cross_val_predict(cv=cv, quick=quick, verbose=verbose)        
 
         ## Calculate mean absolute error and root mean squared error of estimates
+        self.y = self.y.astype(float)
+       
         self.MAE = pd.Series(np.mean(np.abs((self.cv_preds - self.y))), name="MAE")
         self.RMSE = pd.Series(np.sqrt(np.mean((self.cv_preds - self.y)**2)/len(self.y)), name="RMSE")
 
