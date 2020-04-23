@@ -229,7 +229,6 @@ class LocalCommunity(object):
         self._hackersonly["trait_rate_local"] = self._get_trait_rate_local()
     # Copy trait evolution rate for the interaction term, but divided because interaction are mor sensible.
     # To be refine !
-        self._set_death_step()
 
 
     def _set_death_step(self):
@@ -237,17 +236,14 @@ class LocalCommunity(object):
         Set the death step method based on which community assembly model we're
         running.
         """
-        assembly_model = self.region.paramsdict["community_assembly_model"]
-        if assembly_model == "neutral":
-            self.death_step = self._neutral_death_step
-        elif assembly_model == "competition":
-            self.death_step = self._competition_death_step
-        elif assembly_model == "filtering":
+        rd = MESS.rng.rng.random()
+        if rd <= self.region.paramsdict["community_assembly_model"][0]:
             self.death_step = self._filtering_death_step
-        elif assembly_model == "pairwise_competition":
+        elif rd <= self.region.paramsdict["community_assembly_model"][1]+self.region.paramsdict["community_assembly_model"][0]:
             self.death_step = self._pairwise_competition_death_step
         else:
-            raise Exception("unrecognized community assembly model in _set_death_step: {}".format(assembly_model))
+            self.death_step = self._neutral_death_step
+      
 
     def _set_local_interaction_matrix(self):
         """
@@ -524,10 +520,8 @@ class LocalCommunity(object):
             print("      N individuals = {}".format(len(self.local_community)))
         LOGGER.debug("Done prepopulating - {}".format(self))
 
-        ## Initialize distance matrix if we are in pairwise competition
-        if self.region.paramsdict["community_assembly_model"] == "pairwise_competition":
-            self._set_local_interaction_matrix()
-            self._set_distance_matrix()
+        self._set_local_interaction_matrix()
+        self._set_distance_matrix()
 
 
         self.fancy = fancy
@@ -558,44 +552,44 @@ class LocalCommunity(object):
                 self.is_neutral += [[self.current_time, b, self._lambda()]]
 
 
-    def _competition_death_step(self):
-        victim = MESS.rng.rng.choice(self.local_community)
-        if victim == None or len([x for x in self.local_community if x != None])<2:
-            self._finalize_death(None,None)
-            pass
-        else:
-            mean_local_trait = self.region.get_trait_mean(self.local_community)
+    # def _competition_death_step(self):
+    #     victim = MESS.rng.rng.choice(self.local_community)
+    #     if victim == None or len([x for x in self.local_community if x != None])<2:
+    #         self._finalize_death(None,None)
+    #         pass
+    #     else:
+    #         mean_local_trait = self.region.get_trait_mean(self.local_community)
 
-            ## Scale ecological strength for competition to be in the same units
-            ## as for filtering
-            es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
-            ## Apply the competition equation to get fitness per individual
-            death_probs = np.exp(-((self.local_traits - mean_local_trait) ** 2)/es)
-            ## Scale all fitness values to proportions
-            death_probs = np.nan_to_num(death_probs)/np.sum(death_probs)
-            ## Get the victim conditioning on unequal death probability
-            try:
-                vic_idx = list(MESS.rng.rng.multinomial(1, death_probs)).index(1)
-            except: 
-            ## vic_idx is nan because of too high values in the exponential
-                vic_idx = MESS.rng.rng.integers(0,self.paramsdict["J"]-1)
-            victim = self.local_community[vic_idx]
-            if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
-                self._record_deaths_probs(death_probs)
-                self.local_traits_through_time[self.current_time] = self.local_traits.copy()
-                self.species_through_time[self.current_time] = self.species
+    #         ## Scale ecological strength for competition to be in the same units
+    #         ## as for filtering
+    #         es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
+    #         ## Apply the competition equation to get fitness per individual
+    #         death_probs = np.exp(-((self.local_traits - mean_local_trait) ** 2)/es)
+    #         ## Scale all fitness values to proportions
+    #         death_probs = np.nan_to_num(death_probs)/np.sum(death_probs)
+    #         ## Get the victim conditioning on unequal death probability
+    #         try:
+    #             vic_idx = list(MESS.rng.rng.multinomial(1, death_probs)).index(1)
+    #         except: 
+    #         ## vic_idx is nan because of too high values in the exponential
+    #             vic_idx = MESS.rng.rng.integers(0,self.paramsdict["J"]-1)
+    #         victim = self.local_community[vic_idx]
+    #         if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
+    #             self._record_deaths_probs(death_probs)
+    #             self.local_traits_through_time[self.current_time] = self.local_traits.copy()
+    #             self.species_through_time[self.current_time] = self.species
 
 
-            self._finalize_death(victim,vic_idx)
+    #         self._finalize_death(victim,vic_idx)
 
-            if (not self.current_time % (self.paramsdict["J"]*2)):
-                draws = list(MESS.rng.rng.multinomial(100000, death_probs))
-                ch, p = chisquare(draws)
-                if p > 0.1:
-                    b = 1
-                else:
-                    b = 0
-                self.is_neutral += [[self.current_time, b, self._lambda()]]
+    #         if (not self.current_time % (self.paramsdict["J"]*2)):
+    #             draws = list(MESS.rng.rng.multinomial(100000, death_probs))
+    #             ch, p = chisquare(draws)
+    #             if p > 0.1:
+    #                 b = 1
+    #             else:
+    #                 b = 0
+    #             self.is_neutral += [[self.current_time, b, self._lambda()]]
 
 
     def _pairwise_competition_death_step(self):
@@ -787,6 +781,7 @@ class LocalCommunity(object):
         """
         ## Convert time in generations to timesteps (WF -> Moran)
         for step in range(int(nsteps * self.paramsdict["J"]/2.)):
+            self._set_death_step()
             chx = ''
             ## Check probability of an immigration event
             if MESS.rng.rng.uniform(0,1) < self.paramsdict["m"]:
@@ -849,7 +844,7 @@ class LocalCommunity(object):
                     raise inst
 
             ## WARNING : Pairwise competition assumes that "mig_clust_size" is one !
-            if self.region.paramsdict["community_assembly_model"] == "pairwise_competition" and chx != self.last_dead_ind[1][0]:
+            if chx != self.last_dead_ind[1][0]:
                 # print("dead ind : ", self.last_dead_ind[1][0], "; new ind : ",chx)
                 # The matrix are only changing if the new individual has not the same species as the dead one
                 if self._hackersonly["mig_clust_size"] != 1:
@@ -958,15 +953,13 @@ class LocalCommunity(object):
             ## Speciation flips the founder_flag for the new species
             self.founder_flags[idx] = False
 
-            if self.region.paramsdict["community_assembly_model"] == "pairwise_competition":
-                self.region.metacommunity._create_interaction(new = sname, parent = self.last_dead_ind[1][0])
-                self._interaction_matrix_update()
-                self._distance_matrix_update()
+            self.region.metacommunity._create_interaction(new = sname, parent = self.last_dead_ind[1][0])
+            self._interaction_matrix_update()
+            self._distance_matrix_update()
 
         elif self.region.paramsdict["speciation_model"] == "random_fission":
             ## NOT HANDLED WITH PAIRWISE COMPETITION YET
-            if self.region.paramsdict["community_assembly_model"] == "pairwise_competition":
-                raise MESSError("Random fission and pairwise_competition not yet handled together")
+            raise MESSError("Random fission and pairwise_competition not yet handled together")
             ## Add the handling of lists in last_dead_ind to handle both random fission and cluster migration
             ## TODO: This doesn't handle the founder_flag housekeeping AT ALL!
 
@@ -1001,12 +994,11 @@ class LocalCommunity(object):
             ## all the ancestor inheritence logic.
             self._add_local_info(sname = sname, abundances_through_time=parent_abunds , ancestor = ancestor)
 
-            if self.region.paramsdict["community_assembly_model"] == "pairwise_competition":
-                ## Update the values for the death probabilities
-                self.region.metacommunity._create_interaction(new = sname, parent = chx)
-                self._set_local_interaction_matrix()
-                self._set_distance_matrix()
-                # Recompute all values since several changes at the same time
+            ## Update the values for the death probabilities
+            self.region.metacommunity._create_interaction(new = sname, parent = chx)
+            self._set_local_interaction_matrix()
+            self._set_distance_matrix()
+            # Recompute all values since several changes at the same time
 
         elif self.region.paramsdict["speciation_model"] == "protracted":
             pass

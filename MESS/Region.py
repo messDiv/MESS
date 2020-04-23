@@ -75,7 +75,7 @@ class Region(object):
                        ("simulation_name", name),
                        ("project_dir", "./default_MESS"),
                        ("generations", 0),
-                       ("community_assembly_model", "neutral"),
+                       ("community_assembly_model", "0-0"),
                        ("speciation_model", "point_mutation"),
                        ("mutation_rate", 2.2e-8),
                        ("alpha", 2000),
@@ -234,9 +234,14 @@ class Region(object):
 
             elif param == "community_assembly_model":
                 if newvalue == "*":
-                    self._priors[param] = ["neutral", "filtering", "competition","pairwise_competition"]
-                    newvalue = MESS.rng.rng.choice(self._priors[param])
-                self.paramsdict[param] = newvalue
+                    f,pw,n = MESS.rng.rng.random(), MESS.rng.rng.random(), MESS.rng.rng.random()
+                    filtering, pairwise = f/(f+pw+n), pw/(f+pw+n)
+                    self.paramsdict[param] = (filtering, pairwise)
+                else:
+                    tup = tuplecheck(newvalue, dtype=float)
+                    if tup[0]+tup[1]>1:
+                        raise MESSError("Proportion of filtering and pairwise competition higher than 1")
+                    self.paramsdict[param] = tup
 
             elif param == "speciation_model":
                 self.paramsdict[param] = newvalue
@@ -863,7 +868,7 @@ REGION_PARAMS = {
     "simulation_name" : "The name of this simulation scenario",\
     "project_dir" : "Where to save files",\
     "generations" : "Duration of simulations. Values/ranges Int for generations, or float [0-1] for lambda.",\
-    "community_assembly_model" : "Model of Community Assembly: neutral, filtering, competition, pairwise_competition",\
+    "community_assembly_model" : "Model of Community Assembly: Give %  of filtering and pairwise_competition. Rest is neutral. (ex: 0.4-0.2) ",\
     "speciation_model" : "Type of speciation process: none, point_mutation, protracted, random_fission",\
     "mutation_rate" : "Mutation rate scaled per base per generation",\
     "alpha" : "Abundance/Ne scaling factor",\
