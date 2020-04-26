@@ -652,6 +652,10 @@ class Region(object):
         ##    should be set to True, especially on cluster jobs, otherwise it
         ##    floods the stdout pipe
         LOGGER.debug("Entering simulate(): lambda={}, nsteps={}".format(_lambda, nsteps))
+        try:
+            test = MESS.rng.seed
+        except:
+            MESS.rng.init()
         if _lambda > 0 and nsteps > 0:
             LOGGER.error("simulate accepts only one of either lambda or nsteps args")
             return
@@ -701,7 +705,7 @@ class Region(object):
                     island._log(full=log_full)
                     # is_neutral = island.is_neutral
         # t1 = time.time()
-        # filename = 'matrix_time.txt'
+        # filename = 'cont_time.txt'
         # file = open(filename,'a') 
         # file.write(str(t1-t0)+'\n')
         # file.close()

@@ -13,7 +13,6 @@ import MESS
 
 from MESS.util import *
 from MESS.parallel import *
-from MESS.rng import *
 
 LOGGER = logging.getLogger(__name__)
 
@@ -34,7 +33,6 @@ def parse_params(args):
     plines = plines.split("------- ")
     ## Get seed for global simulations
     seed = [i.split("##")[0].strip() for i in plines[0].split("\n")[1:] if not i.strip() == ""][0]
-    MESS.rng.init(seed)
 
     ## Get Region params and make into a dict, ignore all blank lines
     items = [i.split("##")[0].strip() for i in plines[1].split("\n")[1:] if not i.strip() == ""]

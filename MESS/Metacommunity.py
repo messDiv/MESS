@@ -478,6 +478,7 @@ class Metacommunity(object):
         """
         meta_type = self._hackersonly["metacommunity_type"]
         LOGGER.debug("Enter set_metacommunity - {}".format(meta_type))
+        LOGGER.debug("SEED ? {}".format(MESS.rng.seed))
 
         if resample:
             self._resample_priors()

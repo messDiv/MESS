@@ -528,6 +528,7 @@ class LocalCommunity(object):
 
 
     def _neutral_death_step(self):
+        print("neutral")
         victim = MESS.rng.rng.choice(self.local_community)
         if victim == None or len([x for x in self.local_community if x != None])<2:
             self._finalize_death(None,None)
@@ -593,6 +594,7 @@ class LocalCommunity(object):
 
 
     def _pairwise_competition_death_step(self):
+        print("pairwise")
         victim = MESS.rng.rng.choice(self.local_community)
         if victim == None or len([x for x in self.local_community if x != None])<2:
             self._finalize_death(None,None)
@@ -606,7 +608,7 @@ class LocalCommunity(object):
             try:
                 vic_idx = list(MESS.rng.rng.multinomial(1, death_probs)).index(1)
             except Exception as inst:
-                raise MESSError("Error in _deathsteap - {}".format(inst))
+                raise MESSError("Error in _deathstep - {}".format(inst))
             ## vic_idx is nan because of too high values in the exponential
                 vic_idx = MESS.rng.rng.integers(0,self.paramsdict["J"]-1)
                 raise MESSError
@@ -645,6 +647,7 @@ class LocalCommunity(object):
 
 
     def _filtering_death_step(self):
+        print("filtering")
         victim = MESS.rng.rng.choice(self.local_community)
         if victim == None or len([x for x in self.local_community if x != None])<2:
             self._finalize_death(None,None)
