@@ -646,6 +646,11 @@ class Region(object):
         ##  * quiet toggles the more fine grained progress bar and normally
         ##    should be set to True, especially on cluster jobs, otherwise it
         ##    floods the stdout pipe
+        try:
+            test = MESS.rng.seed
+        except:
+            MESS.rng.init()
+
         LOGGER.debug("Entering simulate(): lambda={}, nsteps={}".format(_lambda, nsteps))
         if _lambda > 0 and nsteps > 0:
             LOGGER.error("simulate accepts only one of either lambda or nsteps args")
