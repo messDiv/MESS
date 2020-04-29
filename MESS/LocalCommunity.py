@@ -523,12 +523,10 @@ class LocalCommunity(object):
         self._set_local_interaction_matrix()
         self._set_distance_matrix()
 
-
         self.fancy = fancy
 
 
     def _neutral_death_step(self):
-        print("neutral")
         victim = MESS.rng.rng.choice(self.local_community)
         if victim == None or len([x for x in self.local_community if x != None])<2:
             self._finalize_death(None,None)
@@ -594,7 +592,6 @@ class LocalCommunity(object):
 
 
     def _pairwise_competition_death_step(self):
-        print("pairwise")
         victim = MESS.rng.rng.choice(self.local_community)
         if victim == None or len([x for x in self.local_community if x != None])<2:
             self._finalize_death(None,None)
@@ -617,8 +614,6 @@ class LocalCommunity(object):
                 self._record_deaths_probs(death_probs)
                 self.local_traits_through_time[self.current_time] = self.local_traits.copy()
                 self.species_through_time[self.current_time] = self.species
-
-
 
             if (not self.current_time % (self.paramsdict["J"]*2)):
                 try:
@@ -647,7 +642,6 @@ class LocalCommunity(object):
 
 
     def _filtering_death_step(self):
-        print("filtering")
         victim = MESS.rng.rng.choice(self.local_community)
         if victim == None or len([x for x in self.local_community if x != None])<2:
             self._finalize_death(None,None)
