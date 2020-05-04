@@ -246,7 +246,7 @@ class Metacommunity(object):
                 elif isinstance(tuplecheck(newvalue, dtype=float), tuple):
                     tup = tuplecheck(newvalue, dtype=float)
                     value = sample_param_range(tup, loguniform=True)[0]
-                    if self._hackersonly("intra>inter"):
+                    if self._hackersonly["intra>inter"]:
                         while value > abs(self.paramsdict["intrasp_competition"]):
                             value = sample_param_range(tup, loguniform=True)[0]
                     self.paramsdict[param] = -value

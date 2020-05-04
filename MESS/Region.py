@@ -75,7 +75,8 @@ class Region(object):
                        ("simulation_name", name),
                        ("project_dir", "./default_MESS"),
                        ("generations", 0),
-                       ("community_assembly_model", "0-0"),
+                       ("filtering", 0),
+                       ("competition", 0),
                        ("speciation_model", "point_mutation"),
                        ("mutation_rate", 2.2e-8),
                        ("alpha", 2000),
@@ -85,7 +86,6 @@ class Region(object):
         ## A dictionary for holding prior ranges for values we're interested in
         self._priors = dict([
                         ("alpha", []),
-                        ("community_assembly_model", []),
                         ("generations", []),
         ])
 
@@ -232,14 +232,27 @@ class Region(object):
                         tup = int(tup)
                     self.paramsdict[param] = tup
 
-            elif param == "community_assembly_model":
+            elif param == "filtering":
                 if newvalue == "*":
                     f,pw,n = MESS.rng.rng.random(), MESS.rng.rng.random(), MESS.rng.rng.random()
                     filtering, pairwise = f/(f+pw+n), pw/(f+pw+n)
-                    self.paramsdict[param] = (filtering, pairwise)
+                    self.paramsdict[param] = filtering
+                    self.paramsdict["competition"] = pairwise
                 else:
                     tup = tuplecheck(newvalue, dtype=float)
-                    if tup[0]+tup[1]>1:
+                    if tup>1:
+                        raise MESSError("Proportion of filtering higher than 1")
+                    self.paramsdict[param] = tup
+
+            elif param == "competition":
+                if newvalue == "*":
+                    f,pw,n = MESS.rng.rng.random(), MESS.rng.rng.random(), MESS.rng.rng.random()
+                    filtering, pairwise = f/(f+pw+n), pw/(f+pw+n)
+                    self.paramsdict[param] = pairwise
+                    self.paramsdict["filtering"] = filtering
+                else:
+                    tup = tuplecheck(newvalue, dtype=float)
+                    if tup + self.paramsdict["filtering"]>1:
                         raise MESSError("Proportion of filtering and pairwise competition higher than 1")
                     self.paramsdict[param] = tup
 
@@ -411,10 +424,10 @@ class Region(object):
                     if key in list(self._priors.keys()):
                         ## The prior on community assembly model is a little goofy
                         ## since it's a list, and not a search range
-                        if key == "community_assembly_model" and self._priors[key]:
-                            paramvalue = "*"
-                        elif self._priors[key]:
-                            paramvalue = "-".join([str(i) for i in self._priors[key]])
+                        # if key == "community_assembly_model" and self._priors[key]:
+                        #     paramvalue = "*"
+                        # elif self._priors[key]:
+                        paramvalue = "-".join([str(i) for i in self._priors[key]])
 
                 padding = (" "*(20-len(paramvalue)))
                 paramkey = list(self.paramsdict.keys()).index(key)
@@ -668,9 +681,6 @@ class Region(object):
             self.paramsdict["alpha"] = sample_param_range(self._priors["alpha"])[0]
             LOGGER.debug("alpha - {}".format(self.paramsdict["alpha"]))
 
-        if self._priors["community_assembly_model"]:
-            self.paramsdict["community_assembly_model"] = MESS.rng.rng.choice(self._priors["community_assembly_model"])
-
         if self._priors["generations"]:
             self.paramsdict["generations"] = sample_param_range(self._priors["generations"])[0]
         ## Flip the metacommunity per simulation so we get new draws of trait values.
@@ -814,7 +824,8 @@ class Region(object):
                 MESS.plotting.plot_abundance_vs_colonization_time(outdir,
                                                         island.species_through_time,
                                                         island.lambda_through_time)
-                MESS.plotting.plot_death_probs(island.death_probs_through_time, outdir,                      self.paramsdict["community_assembly_model"],
+                MESS.plotting.plot_death_probs(island.death_probs_through_time, outdir,                      self.paramsdict["filtering"],
+                                        self.paramsdict["competition"],
                                         island.local_community_through_time)
                 MESS.plotting.plot_traits_repartition(outdir,
                                                     island.local_traits_through_time,
@@ -872,7 +883,8 @@ REGION_PARAMS = {
     "simulation_name" : "The name of this simulation scenario",\
     "project_dir" : "Where to save files",\
     "generations" : "Duration of simulations. Values/ranges Int for generations, or float [0-1] for lambda.",\
-    "community_assembly_model" : "Model of Community Assembly: Give %  of filtering and pairwise_competition. Rest is neutral. (ex: 0.4-0.2) ",\
+    "filtering" : "Model of Community Assembly: Give %  of filtering and pairwise_competition. Rest is neutral. ",\
+    "competition" : "Model of Community Assembly: Give %  of filtering and pairwise_competition. Rest is neutral. ",\
     "speciation_model" : "Type of speciation process: none, point_mutation, protracted, random_fission",\
     "mutation_rate" : "Mutation rate scaled per base per generation",\
     "alpha" : "Abundance/Ne scaling factor",\

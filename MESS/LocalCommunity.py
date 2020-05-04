@@ -237,9 +237,9 @@ class LocalCommunity(object):
         running.
         """
         rd = MESS.rng.rng.random()
-        if rd <= self.region.paramsdict["community_assembly_model"][0]:
+        if rd <= self.region.paramsdict["filtering"]:
             self.death_step = self._filtering_death_step
-        elif rd <= self.region.paramsdict["community_assembly_model"][1]+self.region.paramsdict["community_assembly_model"][0]:
+        elif rd <= self.region.paramsdict["filtering"]+self.region.paramsdict["competition"]:
             self.death_step = self._pairwise_competition_death_step
         else:
             self.death_step = self._neutral_death_step
@@ -257,10 +257,11 @@ class LocalCommunity(object):
     def _set_distance_matrix(self):
         ## Reshape local_traits for the cdist function
         local_traits = self.local_traits.reshape(len(self.local_traits),1)
-        es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
+        # es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
 
         dist_matrix = distance.cdist(local_traits,local_traits,'sqeuclidean')
-        self._exp_distance_matrix = np.exp(-(dist_matrix/es))*(-self.local_interaction_matrix)
+        # self._exp_distance_matrix = np.exp(-(dist_matrix/es))*(-self.local_interaction_matrix)
+        self._exp_distance_matrix = np.exp(-dist_matrix)*(-self.local_interaction_matrix)
         ## factors intervene outside the exp because positive/negative values
         ## Multiply by -1 so tha
         ## a positive term (mutualisme) decreases the probability of death and 
@@ -284,11 +285,14 @@ class LocalCommunity(object):
         self.local_traits[idx] = self.region.get_trait(self.local_community[idx])
         ## Reshape local_traits for the cdist function
         local_traits = self.local_traits.reshape(nb_ind,1)
-        es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
+        # es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
 
         new_dist = np.reshape(distance.cdist(local_traits,[local_traits[idx]]),(nb_ind))
-        self._exp_distance_matrix[idx] = np.exp(-(new_dist/es))*(-self.local_interaction_matrix[idx])
-        self._exp_distance_matrix[:,idx] = np.exp(-(new_dist/es))*(-self.local_interaction_matrix[:,idx])
+        # self._exp_distance_matrix[idx] = np.exp(-(new_dist/es))*(-self.local_interaction_matrix[idx])
+        # self._exp_distance_matrix[:,idx] = np.exp(-(new_dist/es))*(-self.local_interaction_matrix[:,idx])
+        self._exp_distance_matrix[idx] = np.exp(-new_dist)*(-self.local_interaction_matrix[idx])
+        self._exp_distance_matrix[:,idx] = np.exp(-new_dist)*(-self.local_interaction_matrix[:,idx])
+
 
 
 
