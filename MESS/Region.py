@@ -234,10 +234,15 @@ class Region(object):
 
             elif param == "filtering":
                 if newvalue == "*":
-                    f,pw,n = MESS.rng.rng.random(), MESS.rng.rng.random(), MESS.rng.rng.random()
-                    filtering, pairwise = f/(f+pw+n), pw/(f+pw+n)
-                    self.paramsdict[param] = filtering
-                    self.paramsdict["competition"] = pairwise
+                    # f,pw,n = MESS.rng.rng.random(), MESS.rng.rng.random(), MESS.rng.rng.random()
+                    # filtering, pairwise = f/(f+pw+n), pw/(f+pw+n)
+                    # self.paramsdict[param] = filtering
+                    # self.paramsdict["competition"] = pairwise
+                    f, pw = MESS.rng.rng.random(), MESS.rng.rng.random()
+                    while f+pw > 1:
+                        f, pw = MESS.rng.rng.random(), MESS.rng.rng.random()
+                    self.paramsdict[param] = f
+                    self.paramsdict["competition"] = pw
                 else:
                     tup = tuplecheck(newvalue, dtype=float)
                     if tup>1:
@@ -246,10 +251,15 @@ class Region(object):
 
             elif param == "competition":
                 if newvalue == "*":
-                    f,pw,n = MESS.rng.rng.random(), MESS.rng.rng.random(), MESS.rng.rng.random()
-                    filtering, pairwise = f/(f+pw+n), pw/(f+pw+n)
-                    self.paramsdict[param] = pairwise
-                    self.paramsdict["filtering"] = filtering
+                    # f,pw,n = MESS.rng.rng.random(), MESS.rng.rng.random(), MESS.rng.rng.random()
+                    # filtering, pairwise = f/(f+pw+n), pw/(f+pw+n)
+                    # self.paramsdict[param] = pairwise
+                    # self.paramsdict["filtering"] = filtering
+                    f, pw = MESS.rng.rng.random(), MESS.rng.rng.random()
+                    while f+pw > 1:
+                        f, pw = MESS.rng.rng.random(), MESS.rng.rng.random()
+                    self.paramsdict["filtering"] = f
+                    self.paramsdict[param] = pw
                 else:
                     tup = tuplecheck(newvalue, dtype=float)
                     if tup + self.paramsdict["filtering"]>1:
