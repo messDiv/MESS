@@ -12,6 +12,7 @@ import joblib
 import numpy as np
 import os
 import pandas as pd
+import math
 import shutil
 
 from boruta import BorutaPy
@@ -264,6 +265,19 @@ class Ensemble(object):
                 tmpX = self.X.values
                 tmpy = self.y[t].values
                 max_iter=100
+
+
+            for i, elt in enumerate(tmpX):
+                for j,el in enumerate(elt):
+                    el=float(el)
+                    if math.isnan(el):
+                        print("X","i",i,elt,"j",j,el)
+            print(i)
+
+            # for i in np.ravel(tmpy):
+            #     i=float(i)
+            #     if math.isnan(j):
+            #             print("Y","i",i)
 
             # define Boruta feature selection method
             feat_selector = BorutaPy(model, max_iter=max_iter, n_estimators='auto', verbose=0, random_state=1)
@@ -777,7 +791,7 @@ class Regressor(Ensemble):
         or if you're *really* curious about the process.
     """
 
-    _default_targets = ["alpha", "S_m", "J_m", "speciation_rate", "death_proportion",\
+    _default_targets = ["filtering", "competition", "alpha", "S_m", "J_m", "speciation_rate", "death_proportion",\
                         "trait_rate_meta", "ecological_strength", "J", "m",\
                         "generation", "speciation_prob", "_lambda"]
 
@@ -909,16 +923,26 @@ class Regressor(Ensemble):
             parameter, and 95% prediction intervals if the ensemble method
             specified for this Regressor supports it.
         """
+        print("doing predict")
         super(Regressor, self).predict(select_features=select_features, param_search=param_search,\
                                         by_target=by_target, quick=quick, verbose=verbose)
-
+        print("done")
         self._by_target = by_target
         if self.algorithm in ["rfq", "gb", "ab"]:
+            print("activate by target")
             self._by_target = True
 
         if self._by_target:
             ## Predict each target independently using it's own trained RF
+            print(self.model_by_target)
+            print("\n")
+            print([self.model_by_target[t] for t in self.targets])
+            print("\n")
+            print([self.model_by_target[t]["model"] for t in self.targets])
+            print("\n")
+            print([self.model_by_target[t]["features"] for t in self.targets])
             preds = [self.model_by_target[t]["model"].predict(self.empirical_sumstats[self.model_by_target[t]["features"]]) for t in self.targets]
+            print(preds)
             self.empirical_pred = pd.DataFrame(np.array(preds).T, columns=self.targets, index=["estimate"])
 
             ## If using one of the algorithms that supports quantile regression then
@@ -926,6 +950,7 @@ class Regressor(Ensemble):
             if self.algorithm in ["rfq", "gb"]:
                 self.empirical_pred = self.prediction_interval(interval=0.95, quick=quick, verbose=verbose)
         else:
+            print("not by target")
             ## Do all targets at once. Also, you don't get prediction intervls
             ## if you don't do by_target
             self.empirical_pred = pd.DataFrame(self.best_model.predict(self.empirical_sumstats),\
