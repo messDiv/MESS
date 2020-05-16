@@ -1118,7 +1118,7 @@ class LocalCommunity(object):
         self._simulate_seqs()
         LOGGER.debug("First 5 species - \n{}".format(self.species[:5]))
 
-        dat =  self.get_community_data()
+        dat = self.get_community_data()
 
         ## We have to do a bunch of preprocessing for the phylogenetic data
 

@@ -456,16 +456,17 @@ class Metacommunity(object):
             anc_name = ancestor
             anc_node = self.metacommunity_tree.treenode.get_leaves_by_name(name=anc_name)[0]
 
-            if not anc_node.dist == 0:
-                branch_length += anc_node.dist
-
             sis = anc_node.get_sisters()[0]
-            ## Create a new temporary baby tree for parent/child
-            new_tre = toytree.tree(newick="({}:0,{}:0):{};".format(sname, anc_name, branch_length))
-            ## First add the new parent/child relationship, then drop the anc_node
-            new_node = sis.add_sister(sister=new_tre.treenode)
-            #new_node.dist = anc_node.dist
-            _ = sis.remove_sister(sister=anc_node)
+            new_node = sis.add_sister(dist=anc_node.dist)
+            new_node.add_child(name=sname, dist=0)
+            new_node.add_child(name=anc_node.name, dist=0)
+            sis.remove_sister(sister=anc_node)
+            self.metacommunity_tree._coords.update()
+
+            # This is slightly hackish, but it preserves species ages
+            tips = self.metacommunity_tree.treenode.get_leaves()
+            for t in tips:
+                t.dist += branch_length
 
         except Exception as inst:
             LOGGER.error("Error in Metacommunity._update_species_pool - {}".format(inst))
