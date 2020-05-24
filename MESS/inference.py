@@ -369,11 +369,15 @@ class Ensemble(object):
                 if verbose: "Model already trained. Use 'force' to retrain."
                 return
         except AttributeError:
+            print("no previous best model")
             pass
 
         ## Select relevant features
         if select_features:
+            print("feature selection")
             self.feature_selection(quick=quick, verbose=verbose)
+        else:
+            print("no feature selection")
 
         ## If using AdaBoost, RFQuantileRegressor, or GradientBoosting, then
         ## we force by_targets to be true, since they'll only do one target at
@@ -1026,7 +1030,7 @@ class Regressor(Ensemble):
     def plot_cv_predictions(self,\
                                 ax='',\
                                 figsize=(10, 5),\
-                                figdims=(2, 3),\
+                                figdims=(3, 3),\
                                 n_cvs=1000,\
                                 title="",\
                                 targets="",\
@@ -1267,7 +1271,8 @@ def posterior_predictive_check(empirical_df,\
                                 outfile='',\
                                 use_lambda=True,\
                                 force=False,\
-                                verbose=False):
+                                verbose=False,\
+                                outdir=''):
     """
     Perform posterior predictive simulations. This function will take
     parameter estimates and perform MESS simulations using these parameter
@@ -1316,7 +1321,10 @@ def posterior_predictive_check(empirical_df,\
                 + "Use `force=True` to overwrite.")
 
     r = MESS.Region("ppc")
-    r.set_param("project_dir", "./ppc")
+    if not outdir:
+        r.set_param("project_dir", "./ppc")
+    else:
+        r.set_param("project_dir", outdir)
 
     for param in parameter_estimates:
         ## Format the parameter for whether it is an exact value or a range
@@ -1340,7 +1348,10 @@ def posterior_predictive_check(empirical_df,\
 
     if verbose: print("\nCalculating PCs and plotting")
 
-    simfile = "./ppc/SIMOUT.txt"
+    if not outdir:
+        simfile = "./ppc/SIMOUT.txt"
+    else:
+        simfile = outdir + '/SIMOUT.txt'
     sim_df = pd.read_csv(simfile, sep="\t", header=0)
 
     ## Chop the sims down to only include ss contained in the observed data
