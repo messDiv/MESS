@@ -233,6 +233,10 @@ class Region(object):
                     self.paramsdict[param] = tup
 
             elif param == "filtering":
+                try:
+                    newvalue = tuplecheck(newvalue, dtype=float)
+                except:
+                    pass
                 if newvalue == "*":
                     # f,pw,n = MESS.rng.rng.random(), MESS.rng.rng.random(), MESS.rng.rng.random()
                     # filtering, pairwise = f/(f+pw+n), pw/(f+pw+n)
@@ -243,6 +247,7 @@ class Region(object):
                         f, pw = MESS.rng.rng.random(), MESS.rng.rng.random()
                     self.paramsdict[param] = f
                     self.paramsdict["competition"] = pw
+                    self._priors[param] = "0-1"
                 else:
                     tup = tuplecheck(newvalue, dtype=float)
                     if tup>1:
@@ -250,6 +255,10 @@ class Region(object):
                     self.paramsdict[param] = tup
 
             elif param == "competition":
+                try:
+                    newvalue = tuplecheck(newvalue, dtype=float)
+                except:
+                    pass
                 if newvalue == "*":
                     # f,pw,n = MESS.rng.rng.random(), MESS.rng.rng.random(), MESS.rng.rng.random()
                     # filtering, pairwise = f/(f+pw+n), pw/(f+pw+n)
@@ -260,6 +269,7 @@ class Region(object):
                         f, pw = MESS.rng.rng.random(), MESS.rng.rng.random()
                     self.paramsdict["filtering"] = f
                     self.paramsdict[param] = pw
+                    self._priors[param] = "0-1"
                 else:
                     tup = tuplecheck(newvalue, dtype=float)
                     if tup + self.paramsdict["filtering"]>1:
@@ -591,6 +601,7 @@ class Region(object):
                     else:
                         res = self.simulate(_lambda=gens[i], quiet=quiet)
                     SIMOUT.write(str(int(MESS.rng.seed))+"\t"+res + "\n")
+                    MESS.rng.init("*")
                     LOGGER.debug("Finished simulation {} stats:\n{}".format(i, res))
             except KeyboardInterrupt as inst:
                 print("\n    Cancelling remaining simulations")
@@ -693,6 +704,13 @@ class Region(object):
 
         if self._priors["generations"]:
             self.paramsdict["generations"] = sample_param_range(self._priors["generations"])[0]
+
+        if self._priors["competition"] or self._priors["filtering"]:
+            f, pw = MESS.rng.rng.random(), MESS.rng.rng.random()
+            while f+pw > 1:
+                f, pw = MESS.rng.rng.random(), MESS.rng.rng.random()
+            self.paramsdict["filtering"] = f
+            self.paramsdict["competition"] = pw
         ## Flip the metacommunity per simulation so we get new draws of trait values.
         ## This is a little slow for logser, and also performance scales with metacommunity size
         self._reset_metacommunity()

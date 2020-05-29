@@ -37,7 +37,9 @@ target_labels = {"mutation_rate":"\u03BC",\
                 "m":r"$m$",\
                 "speciation_prob":"\u03BD",\
                 "_lambda":"\u039B",\
-                "generation":"generations"}
+                "generation":"generations",\
+                "filtering":"filtering",\
+                "competition":"competition"}
 
 ## Defaults
 #model_colors = {"neutral":"blue",\
