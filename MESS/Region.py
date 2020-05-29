@@ -563,6 +563,7 @@ class Region(object):
                     else:
                         res = self.simulate(_lambda=gens[i], quiet=quiet)
                     SIMOUT.write(str(int(MESS.rng.seed))+"\t"+res + "\n")
+                    MESS.rng.init('*')
                     LOGGER.debug("Finished simulation {} stats:\n{}".format(i, res))
             except KeyboardInterrupt as inst:
                 print("\n    Cancelling remaining simulations")
