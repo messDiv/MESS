@@ -234,7 +234,7 @@ class Region(object):
 
             elif param == "community_assembly_model":
                 if newvalue == "*":
-                    self._priors[param] = ["neutral", "filtering", "competition","pairwise_competition"]
+                    self._priors[param] = ["neutral", "filtering", "pairwise_competition"]
                     newvalue = MESS.rng.rng.choice(self._priors[param])
                 self.paramsdict[param] = newvalue
 
