@@ -87,6 +87,8 @@ class Region(object):
         self._priors = dict([
                         ("alpha", []),
                         ("generations", []),
+                        ("competition", []),
+                        ("filtering", [])
         ])
 
         ## elite hackers only internal dictionary, normally you shouldn't mess with this
