@@ -73,6 +73,7 @@ def getregion(args, seed, region_params, meta_params, island_params):
     if not os.path.exists(project_dir):
         os.mkdir(project_dir)
 
+    MESS.rng.init(seed)
     data = MESS.Region(sim_name, quiet=args.quiet, log_files=args.log_files)
 
     ## Populate the parameters of the Region
