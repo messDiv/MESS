@@ -109,6 +109,8 @@ class LocalCommunity(object):
         ## individual for removal. It is set dependent on which type of
         ## assembly model the region specifies, and is also set by _link_local()
         self.death_step = ""
+        self._set_distance_matrix = ""
+        self._distance_matrix_update = ""
 
         self.files = dict({
                 "full_output": [],
@@ -240,12 +242,18 @@ class LocalCommunity(object):
         assembly_model = self.region.paramsdict["community_assembly_model"]
         if assembly_model == "neutral":
             self.death_step = self._neutral_death_step
-        elif assembly_model == "competition":
+        elif assembly_model == "mean_competition":
             self.death_step = self._competition_death_step
         elif assembly_model == "filtering":
             self.death_step = self._filtering_death_step
         elif assembly_model == "pairwise_competition":
             self.death_step = self._pairwise_competition_death_step
+            self._distance_matrix_update = self._distance_matrix_update_pairwise
+            self._set_distance_matrix = self._set_distance_matrix_pairwise
+        elif assembly_model == "interaction_matrix":
+            self.death_step = self._interaction_matrix_death_step
+            self._distance_matrix_update = self._distance_matrix_update_interaction
+            self._set_distance_matrix = self._set_distance_matrix_interaction
         else:
             raise Exception("unrecognized community assembly model in _set_death_step: {}".format(assembly_model))
 
@@ -258,7 +266,7 @@ class LocalCommunity(object):
             ])
     ## For the pairwise compeition model, a global matrix is used which summarize the competition interactions for all individuals
 
-    def _set_distance_matrix(self):
+    def _set_distance_matrix_interaction(self):
         ## Reshape local_traits for the cdist function
         local_traits = self.local_traits.reshape(len(self.local_traits),1)
         es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
@@ -269,6 +277,19 @@ class LocalCommunity(object):
         ## Multiply by -1 so tha
         ## a positive term (mutualisme) decreases the probability of death and 
         ## a negative term (antagonism) increases it
+
+    def _set_distance_matrix_pairwise(self):
+        ## Reshape local_traits for the cdist function
+        local_traits = self.local_traits.reshape(len(self.local_traits),1)
+        es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
+
+        dist_matrix = distance.cdist(local_traits,local_traits,'sqeuclidean')
+        self._exp_distance_matrix = np.exp(-(dist_matrix/es))
+        ## factors intervene outside the exp because positive/negative values
+        ## Multiply by -1 so tha
+        ## a positive term (mutualisme) decreases the probability of death and 
+        ## a negative term (antagonism) increases it
+
 
 
     def _interaction_matrix_update(self):
@@ -282,7 +303,8 @@ class LocalCommunity(object):
 
 
     ## Update the distance matrix using the position of the last dead individual
-    def _distance_matrix_update(self):
+    def _distance_matrix_update_interaction(self):
+        self._interaction_matrix_update()
         nb_ind = self.paramsdict["J"]
         idx = self.last_dead_ind[0][0]
         self.local_traits[idx] = self.region.get_trait(self.local_community[idx])
@@ -293,6 +315,18 @@ class LocalCommunity(object):
         new_dist = np.reshape(distance.cdist(local_traits,[local_traits[idx]]),(nb_ind))
         self._exp_distance_matrix[idx] = np.exp(-(new_dist/es))*(-self.local_interaction_matrix[idx])
         self._exp_distance_matrix[:,idx] = np.exp(-(new_dist/es))*(-self.local_interaction_matrix[:,idx])
+
+    def _distance_matrix_update_pairwise(self):
+        nb_ind = self.paramsdict["J"]
+        idx = self.last_dead_ind[0][0]
+        self.local_traits[idx] = self.region.get_trait(self.local_community[idx])
+        ## Reshape local_traits for the cdist function
+        local_traits = self.local_traits.reshape(nb_ind,1)
+        es = 1./self.region.metacommunity.paramsdict["ecological_strength"]
+
+        new_dist = np.reshape(distance.cdist(local_traits,[local_traits[idx]]),(nb_ind))
+        self._exp_distance_matrix[idx] = np.exp(-(new_dist/es))
+        self._exp_distance_matrix[:,idx] = np.exp(-(new_dist/es))
 
 
 
@@ -525,9 +559,11 @@ class LocalCommunity(object):
         LOGGER.debug("Done prepopulating - {}".format(self))
 
         ## Initialize distance matrix if we are in pairwise competition
-        if self.region.paramsdict["community_assembly_model"] == "pairwise_competition":
+        if self.region.paramsdict["community_assembly_model"] == "pairwise_competition" :
+            self._set_distance_matrix_pairwise()
+        elif self.region.paramsdict["community_assembly_model"] == "interaction_matrix":
             self._set_local_interaction_matrix()
-            self._set_distance_matrix()
+            self._set_distance_matrix_interaction()
 
 
         self.fancy = fancy
@@ -596,6 +632,49 @@ class LocalCommunity(object):
                 else:
                     b = 0
                 self.is_neutral += [[self.current_time, b, self._lambda()]]
+
+
+    def _interaction_matrix_death_step(self):
+        victim = MESS.rng.rng.choice(self.local_community)
+        if victim == None or len([x for x in self.local_community if x != None])<2:
+            self._finalize_death(None,None)
+            pass
+        else:
+            ## Sum all the interaction, exept ones with self
+            death_probs = np.nan_to_num(np.sum(self._exp_distance_matrix,axis=0))-np.nan_to_num(np.diag(self._exp_distance_matrix))
+            ## Scale all fitness values to proportions
+            death_probs = self.normalize(death_probs)
+            ## Get the victim conditioning on unequal death probability
+            try:
+                vic_idx = list(MESS.rng.rng.multinomial(1, death_probs)).index(1)
+            except Exception as inst:
+                raise MESSError("Error in _deathsteap - {}".format(inst))
+            ## vic_idx is nan because of too high values in the exponential
+                vic_idx = MESS.rng.rng.integers(0,self.paramsdict["J"]-1)
+                raise MESSError
+            victim = self.local_community[vic_idx]
+            if (not self.current_time % (self.paramsdict["J"]*2)) and self.fancy:
+                self._record_deaths_probs(death_probs)
+                self.local_traits_through_time[self.current_time] = self.local_traits.copy()
+                self.species_through_time[self.current_time] = self.species
+
+
+
+            if (not self.current_time % (self.paramsdict["J"]*2)):
+                try:
+                    draws = list(MESS.rng.rng.multinomial(100000, death_probs))
+                    ch, p = chisquare(draws)
+                    if p > 0.1:
+                        b = 1
+                    else:
+                        b = 0
+                    self.is_neutral += [[self.current_time, b, self._lambda()]]
+                except:
+                    self.is_neutral += [[self.current_time, -1, self._lambda()]]
+                    # Values too high/low to permit tests : probably neutral in any case !
+                    # Happens when both interaction termes are too low
+
+            self._finalize_death(victim, vic_idx)
 
 
     def _pairwise_competition_death_step(self):
@@ -849,15 +928,15 @@ class LocalCommunity(object):
                     raise inst
 
             ## WARNING : Pairwise competition assumes that "mig_clust_size" is one !
-            if self.region.paramsdict["community_assembly_model"] == "pairwise_competition" and chx != self.last_dead_ind[1][0]:
+            if (self.region.paramsdict["community_assembly_model"] == "pairwise_competition" or self.region.paramsdict["community_assembly_model"] == "interaction_matrix") and chx != self.last_dead_ind[1][0]:
                 # print("dead ind : ", self.last_dead_ind[1][0], "; new ind : ",chx)
                 # The matrix are only changing if the new individual has not the same species as the dead one
                 if self._hackersonly["mig_clust_size"] != 1:
                     self._set_local_interaction_matrix()
                     self._set_distance_matrix()
                     # Recompute all values since several changes at the same time
+                    # OBSOLETE
                 else:
-                    self._interaction_matrix_update()
                     self._distance_matrix_update()
 
             
@@ -960,7 +1039,6 @@ class LocalCommunity(object):
 
             if self.region.paramsdict["community_assembly_model"] == "pairwise_competition":
                 self.region.metacommunity._create_interaction(new = sname, parent = self.last_dead_ind[1][0])
-                self._interaction_matrix_update()
                 self._distance_matrix_update()
 
         elif self.region.paramsdict["speciation_model"] == "random_fission":
@@ -1001,7 +1079,7 @@ class LocalCommunity(object):
             ## all the ancestor inheritence logic.
             self._add_local_info(sname = sname, abundances_through_time=parent_abunds , ancestor = ancestor)
 
-            if self.region.paramsdict["community_assembly_model"] == "pairwise_competition":
+            if self.region.paramsdict["community_assembly_model"] == "pairwise_competition" or self.region.paramsdict["community_assembly_model"] == "interaction_matrix":
                 ## Update the values for the death probabilities
                 self.region.metacommunity._create_interaction(new = sname, parent = chx)
                 self._set_local_interaction_matrix()

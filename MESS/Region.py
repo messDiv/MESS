@@ -234,7 +234,7 @@ class Region(object):
 
             elif param == "community_assembly_model":
                 if newvalue == "*":
-                    self._priors[param] = ["neutral", "filtering", "pairwise_competition"]
+                    self._priors[param] = ["neutral", "filtering", "pairwise_competition", "mean_competition", "interaction_matrix"]
                     newvalue = MESS.rng.rng.choice(self._priors[param])
                 self.paramsdict[param] = newvalue
 
@@ -869,7 +869,7 @@ REGION_PARAMS = {
     "simulation_name" : "The name of this simulation scenario",\
     "project_dir" : "Where to save files",\
     "generations" : "Duration of simulations. Values/ranges Int for generations, or float [0-1] for lambda.",\
-    "community_assembly_model" : "Model of Community Assembly: neutral, filtering, competition, pairwise_competition",\
+    "community_assembly_model" : "Model of Community Assembly: neutral, filtering, competition, pairwise_competition, interaction_matrix",\
     "speciation_model" : "Type of speciation process: none, point_mutation, protracted, random_fission",\
     "mutation_rate" : "Mutation rate scaled per base per generation",\
     "alpha" : "Abundance/Ne scaling factor",\
