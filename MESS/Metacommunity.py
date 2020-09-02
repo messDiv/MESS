@@ -172,8 +172,6 @@ class Metacommunity(object):
     
               return(nn)
           }
-          #abund <- sads::rls(length(trt), length(trt), 0.01)
-          #abund <- meteR::sad(meteR::meteESF(S0 = S, N0 = Jm))$r(S)
           abund <- sad_logseries(S, Jm)
 
           ## return it all in a list
