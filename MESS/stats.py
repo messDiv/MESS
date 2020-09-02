@@ -476,6 +476,7 @@ def calculate_sumstats(diversity_df,
         if verbose: print("  No dxy data present")
 
     try:
+        raise KeyError("phyloTop disabled for now")
         ## Tree stats
         ## Get all tip labels for all clades in the local community, then get
         ## a list of tips unique to the metacommunity, make a toytree object
@@ -514,6 +515,10 @@ def calculate_sumstats(diversity_df,
 
     except KeyError as inst:
         if verbose: print("  No trees present")
+
+    except Exception as inst:
+        ## If phyloTop isn't available don't give up completely
+        print("Tree stats not supported atm: {}".format(inst))
 
     try:
         for order in range(1,5):
