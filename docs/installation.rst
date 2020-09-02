@@ -26,7 +26,7 @@ into:
 
 .. code:: bash
 
-    conda install -c mess -c conda-forge -c anaconda -c r mess
+    conda install -c mess -c conda-forge mess
 
 
 See  `venv <https://docs.python.org/3/tutorial/venv.html>`_ to install into a virtual environment.
