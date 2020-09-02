@@ -19,6 +19,7 @@ checkinstall <-function(package){\n
 checkinstall(\"ape\")\n
 checkinstall(\"TreeSim\")\n
 checkinstall(\"meteR\")
+checkinstall(\"phyloTop\")
 "
 
 echo -e $Rcode > /tmp/rpt.r
