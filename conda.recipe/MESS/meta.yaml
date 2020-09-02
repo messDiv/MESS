@@ -15,8 +15,8 @@ requirements:
     - python
     - setuptools
     - msprime
-    - ipyparallel >=6.0.2
-    - scipy >=0.16
+    - ipyparallel
+    - scipy
     - cython
     - cloudpickle
     - ipython
@@ -29,18 +29,18 @@ requirements:
     - boruta_py
     - scikit-garden
   run:
-    - python >=3.7
+    - python >=3.6
     - cloudpickle
     - setuptools
-    - ipython >=5.0.0
-    - ipyparallel >=6.0.2
+    - ipython
+    - ipyparallel
     - cython
-    - scipy >=0.16
+    - scipy
     - nbconvert
     - joblib
     - jupyter_client
     - jupyter
-    - notebook >=5.0
+    - notebook
     - pandas
     - msprime
     - mpmath
@@ -52,6 +52,7 @@ requirements:
     - matplotlib
     - imagemagick
     - seaborn
+    - toytree
 
   commands:
     - MESS -v
