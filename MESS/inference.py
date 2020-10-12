@@ -344,7 +344,7 @@ class Ensemble(object):
 
 
     ## The magic method to just do-it-all
-    def predict(self, select_features=True, param_search=True, by_target=False, quick=False, force=False, verbose=False):
+    def predict(self, select_features=True, params={}, param_search=True, by_target=False, quick=False, force=False, verbose=False):
         if verbose: print("Predict() started: {}".format(datetime.datetime.now()))
 
         try:
@@ -375,14 +375,14 @@ class Ensemble(object):
             ## if you have run reature selection.
             if self._by_target:
                 for t in self.targets:
-                    self.model_by_target[t]["model"] = self._base_model()
+                    self.model_by_target[t]["model"] = self._base_model(n_jobs=-1).set_params(**params)
                     self.model_by_target[t]["model"].fit(self.X[self.model_by_target[t]["features"]], self.y[t])
                     self.model_by_target[t]["feature_importances"] = self.model_by_target[t]["model"].feature_importances_
                 ## Set the best_model variable just using the model for the first target
                 self.best_model = self.model_by_target[self.targets[0]]["model"]
             else:
                 ## TODO: Make default base_model params smarter
-                self.best_model = self._base_model(n_jobs=-1)
+                self.best_model = self._base_model(n_jobs=-1).set_params(**params)
                 self.best_model.fit(self.X, self.y)
         if verbose: print("Predict() finished: {}".format(datetime.datetime.now()))
 
@@ -573,7 +573,7 @@ class Classifier(Ensemble):
         self._param_grid = _get_param_grid(algorithm)
 
 
-    def predict(self, select_features=True, param_search=True, by_target=False, quick=False, force=False, verbose=False):
+    def predict(self, select_features=True, params={}, param_search=True, by_target=False, quick=False, force=False, verbose=False):
         """
         Predict the community assembly model class probabilities.
 
@@ -599,7 +599,7 @@ class Classifier(Ensemble):
 
         :return: A tuple including the predicted model and the probabilities per model class.
         """
-        super(Classifier, self).predict(select_features=select_features, param_search=param_search,\
+        super(Classifier, self).predict(select_features=select_features, params=params, param_search=param_search,\
                                         by_target=by_target, quick=quick, verbose=verbose)
 
         ## Force by_target to be true for GradientBoosting and AdaBoost
@@ -852,7 +852,7 @@ class Regressor(Ensemble):
         return self.empirical_pred
 
 
-    def predict(self, select_features=True, param_search=True, by_target=False, quick=False, force=True, verbose=False):
+    def predict(self, select_features=True, params={}, param_search=True, by_target=False, quick=False, force=True, verbose=False):
         """
         Predict parameter estimates for selected targets.
 
@@ -882,7 +882,7 @@ class Regressor(Ensemble):
             parameter, and 95% prediction intervals if the ensemble method
             specified for this Regressor supports it.
         """
-        super(Regressor, self).predict(select_features=select_features, param_search=param_search,\
+        super(Regressor, self).predict(select_features=select_features, params=params, param_search=param_search,\
                                         by_target=by_target, quick=quick, verbose=verbose)
 
         self._by_target = by_target
