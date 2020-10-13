@@ -37,7 +37,9 @@ target_labels = {"mutation_rate":"\u03BC",\
                 "m":r"$m$",\
                 "speciation_prob":"\u03BD",\
                 "_lambda":"\u039B",\
-                "generation":"generations"}
+                "generation":"generations",\
+                "intrasp_competition":"intrasp_competition",\
+                "intersp_competition":"intersp_competition"}
 
 ## Defaults
 #model_colors = {"neutral":"blue",\
@@ -68,8 +70,9 @@ target_labels = {"mutation_rate":"\u03BC",\
 ## Primary colors
 model_colors = {"neutral":"#375E97",\
                 "filtering":"#3F681C",\
-                "competition":"#FB6542",\
-                "pairwise_competition":"#FFBB00"}
+                "mean_competition":"#FB6542",\
+                "pairwise_competition":"#FFBB00",
+                "interaction_matrix":"#00A4CC"}
 
 
 def _filter_sims(simfile,\
@@ -192,10 +195,11 @@ def plot_simulations_hist(simfile,\
 
     neut_df = sim_df[labels.values == "neutral"]
     filt_df = sim_df[labels.values == "filtering"]
-    comp_df = sim_df[labels.values == "competition"]
+    comp_df = sim_df[labels.values == "mean_competition"]
     pw_df   = sim_df[labels.values == "pairwise_competition"]
-    if verbose: print("Nsims\n  neutral\t{}\n  filtering\t{}\n  competition\t{}\n pairwise_competition\t{}"\
-                        .format(len(neut_df), len(filt_df), len(comp_df), len(pw_df)))
+    im_df   = sim_df[labels.values == "interaction_matrix"]
+    if verbose: print("Nsims\n  neutral\t{}\n  filtering\t{}\n  mean_competition\t{}\n pairwise_competition\t{}\n interaction_matrix\t{}"\
+                        .format(len(neut_df), len(filt_df), len(comp_df), len(pw_df), len(im_df)))
     
     ## TODO: Would be cool to have an option to plot kde instead of hist.
     ## i.e. neut_df.plot(kind='kde'). Here it is, but it's untested-ish.
@@ -218,10 +222,13 @@ def plot_simulations_hist(simfile,\
     _ = filt_df.hist(ax = axs, label="filtering", alpha=alpha, bins=bins,\
                     color=MESS.plotting.model_colors["filtering"], grid=False)
     _ = comp_df.hist(ax = axs, label="competition", alpha=alpha, bins=bins,\
-                    color=MESS.plotting.model_colors["competition"], grid=False)
+                    color=MESS.plotting.model_colors["mean_competition"], grid=False)
 
     _ = pw_df.hist(ax = axs, label="pairwise competition", alpha=alpha, bins=bins,\
                     color=MESS.plotting.model_colors["pairwise_competition"], grid=False)
+
+    _ = im_df.hist(ax = axs, label="interacton_matrix", alpha=alpha, bins=bins,\
+                    color=MESS.plotting.model_colors["interaction_matrix"], grid=False)
 
     plt.tight_layout()
     return axs
