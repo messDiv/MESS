@@ -539,7 +539,7 @@ def feature_sets(empirical_df=None):
 
     ## Pass in a dummy list of metacommnity traits, or else the call to
     ## _get_sumstats_header won't return metacommunity traits.
-    sumstats = _get_sumstats_header(metacommunity_traits=MESS.rng.rng.rand(10))
+    sumstats = _get_sumstats_header(metacommunity_traits=MESS.rng.rng.random(10))
     feature_sets = OrderedDict({})
     feature_sets["abundance"] = ["S"] + [x for x in sumstats if "abund" in x and "_cor" not in x]
     feature_sets["pi"] = [x for x in sumstats if ("pi" in x or "SGD" in x) and "_cor" not in x]
