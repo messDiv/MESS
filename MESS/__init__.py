@@ -31,6 +31,7 @@ from .Metacommunity import Metacommunity
 from . import util
 from . import plotting
 from . import stats
+from .rng import rng
 
 ## sklearn throws a DeprecationWarning: sklearn.externals.joblib
 ## Will be fixed in 0.23: https://github.com/deephyper/deephyper/issues/12

@@ -2,7 +2,6 @@ import numpy as np
 import logging
 LOGGER = logging.getLogger(__name__)
 
-
 def init(sd=None):
 	if sd == None or sd=="*":
 		sd = str(np.random.randint(2147483647))
@@ -14,3 +13,7 @@ def init(sd=None):
 	
 	global seed
 	seed = sd
+
+@property
+def rng():
+    return rng
