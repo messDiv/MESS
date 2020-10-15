@@ -234,6 +234,106 @@ def plot_simulations_hist(simfile,\
     return axs
 
 
+def plot_simulations_boxplots(simfile,\
+                        ax='',\
+                        figsize=(20, 20),\
+                        feature_set='',\
+                        nsims=1000,\
+                        normalize_hills=False,\
+                        bins=20,\
+                        alpha=0.6,\
+                        select='',\
+                        tol='',\
+                        title='',\
+                        outfile='',\
+                        verbose=False):
+    """
+    Simple histogram for each summary statistic. Useful for inspecting model
+    performance. Invariant summary statistics will be removed.
+
+    :param str simfile: 
+    :param tuple figsize:
+    :param list feature_set:
+    :param int nsims:
+    :param bool normalize_hills: Whether to divide all Hill numbers by `S` to
+        normalize them to a proportion and promote comparison across
+        communities of different sizes.
+    :param int bins: The number of bins per histogram.
+    :param float alpha: Set alpha value to determine transparency [0-1], larger
+        values increase opacity.
+    :param int/float select: 
+    :param int/float tol:
+    :param str title:
+    :param str outfile:
+    :param bool verbose:
+
+    :return: Return a list of `matplotlib.pyplot.axis` on which the simulated
+        summary statistics have been plotted. This list can be _long_ depending
+        on how many statistics you plot.
+    """
+
+    ## Filter and downsample the simulations
+    labels, sim_df = _filter_sims(simfile,\
+                            feature_set=feature_set,\
+                            nsims=nsims,\
+                            normalize_hills=normalize_hills,\
+                            select=select,\
+                            tol=tol,\
+                            verbose=verbose)
+    feature_set = MESS.stats.feature_sets()["all"]
+
+    neut_df = sim_df[labels.values == "neutral"]
+    filt_df = sim_df[labels.values == "filtering"]
+    comp_df = sim_df[labels.values == "mean_competition"]
+    pw_df   = sim_df[labels.values == "pairwise_competition"]
+    im_df   = sim_df[labels.values == "interaction_matrix"]
+    if verbose: print("Nsims\n  neutral\t{}\n  filtering\t{}\n  mean_competition\t{}\n pairwise_competition\t{}\n interaction_matrix\t{}"\
+                        .format(len(neut_df), len(filt_df), len(comp_df), len(pw_df), len(im_df)))
+    
+    ## TODO: Would be cool to have an option to plot kde instead of hist.
+    ## i.e. neut_df.plot(kind='kde'). Here it is, but it's untested-ish.
+    #bw_method=.5
+    #axs = neut_df.plot(kind='kde', figsize=figsize, label="neutral", alpha=alpha,
+    #                color=MESS.plotting.model_colors["neutral"],  grid=False, bw_method=bw_method)
+
+    #axs = axs.flatten()[:len(sim_df.columns)]
+    #_ = filt_df.plot(kind='kde', ax = axs, label="filtering", alpha=alpha,\
+    #                color=MESS.plotting.model_colors["filtering"], grid=False, bw_method=bw_method)
+    #_ = comp_df.plot(kind='kde', ax = axs, label="competition", alpha=alpha,\
+    #                color=MESS.plotting.model_colors["competition"], grid=False, bw_method=bw_method)
+
+    fig, ax = plt.subplots(nrows=8, ncols=8, figsize=(40,40))
+    fig.tight_layout(h_pad=5)
+
+    # the dpi of my monitor is 120
+    my_dpi=120
+    # make a figure with the follwing figsize
+
+    # axs = axs.flatten()[:len(neut_df.columns)]
+    for i,feat in enumerate(feature_set):
+        if not feat=="trees":
+            bplot = ax[i//8][i%8].boxplot([neut_df[feat],filt_df[feat], comp_df[feat], pw_df[feat], im_df[feat]],
+                labels=["neutral","filtering","mean_comp","pairw_comp","interact_mat"],
+
+                patch_artist=True)
+            ax[i//8][i%8].set_title(feat, size=16)
+            colors = MESS.plotting.model_colors.values()
+            for patch, color in zip(bplot['boxes'], colors):
+                patch.set_facecolor(color)
+            _ = plt.setp(ax[i//8][i%8].get_xticklabels(), rotation=45, ha="right",
+            rotation_mode="anchor")
+    ## Flatten the list of axes and trim to make sure there's only exactly the
+    ## right number to match the number of summary stats retained.
+    # axs = axs.flatten()[:len(sim_df.columns)]
+    # _ = filt_df.boxplot(ax = axs,  color=MESS.plotting.model_colors["filtering"], grid=False)
+    # _ = comp_df.boxplot(ax = axs,  color=MESS.plotting.model_colors["mean_competition"], grid=False)
+
+    # _ = pw_df.boxplot(ax = axs,  color=MESS.plotting.model_colors["pairwise_competition"], grid=False)
+
+    # _ = im_df.boxplot(ax = axs,  color=MESS.plotting.model_colors["interaction_matrix"], grid=False)
+    fig.savefig("test.jpg")
+    return ax
+
 def plot_simulations_pca(simfile, ax='',\
                             figsize=(8, 8),\
                             feature_set='',\
