@@ -246,6 +246,8 @@ class LocalCommunity(object):
             self.death_step = self._competition_death_step
         elif assembly_model == "filtering":
             self.death_step = self._filtering_death_step
+        # In the case of pairwise competition or with the interaction matrix, we also need
+        # to initialize the matrix of interaction and distance in the trait space
         elif assembly_model == "pairwise_competition":
             self.death_step = self._pairwise_competition_death_step
             self._distance_matrix_update = self._distance_matrix_update_pairwise
@@ -257,6 +259,7 @@ class LocalCommunity(object):
         else:
             raise Exception("unrecognized community assembly model in _set_death_step: {}".format(assembly_model))
 
+
     def _set_local_interaction_matrix(self):
         """
         Retrieve information from the metacommunity to store the local interaction matrix
@@ -265,6 +268,7 @@ class LocalCommunity(object):
             [self.region.metacommunity._get_interaction_term(sp1, sp2) for sp2 in self.local_community] for sp1 in self.local_community
             ])
     ## For the pairwise compeition model, a global matrix is used which summarize the competition interactions for all individuals
+
 
     def _set_distance_matrix_interaction(self):
         ## Reshape local_traits for the cdist function
@@ -277,6 +281,7 @@ class LocalCommunity(object):
         ## Multiply by -1 so tha
         ## a positive term (mutualisme) decreases the probability of death and 
         ## a negative term (antagonism) increases it
+
 
     def _set_distance_matrix_pairwise(self):
         ## Reshape local_traits for the cdist function
@@ -632,6 +637,8 @@ class LocalCommunity(object):
                 else:
                     b = 0
                 self.is_neutral += [[self.current_time, b, self._lambda()]]
+            # Record the "amount of neutrality" seen in the data.
+            # Used for exploration on emergeant neutrality
 
 
     def _interaction_matrix_death_step(self):
@@ -658,9 +665,9 @@ class LocalCommunity(object):
                 self.local_traits_through_time[self.current_time] = self.local_traits.copy()
                 self.species_through_time[self.current_time] = self.species
 
-
-
             if (not self.current_time % (self.paramsdict["J"]*2)):
+                # Record the "amount of neutrality" seen in the data.
+                # Used for exploration on emergeant neutrality
                 try:
                     draws = list(MESS.rng.rng.multinomial(100000, death_probs))
                     ch, p = chisquare(draws)
@@ -701,9 +708,9 @@ class LocalCommunity(object):
                 self.local_traits_through_time[self.current_time] = self.local_traits.copy()
                 self.species_through_time[self.current_time] = self.species
 
-
-
             if (not self.current_time % (self.paramsdict["J"]*2)):
+                # Record the "amount of neutrality" seen in the data.
+                # Used for exploration on emergeant neutrality
                 try:
                     draws = list(MESS.rng.rng.multinomial(100000, death_probs))
                     ch, p = chisquare(draws)
@@ -721,6 +728,7 @@ class LocalCommunity(object):
 
 
     def normalize(self, death_probs):
+        # Transforms rates into real probabilities
         death_probs = death_probs + abs(np.min(death_probs))
         if np.sum(death_probs)==0:
             return [1/self.paramsdict["J"] for _ in range(self.paramsdict["J"])]
@@ -752,6 +760,8 @@ class LocalCommunity(object):
             self._finalize_death(victim, vic_idx)
 
             if (not self.current_time % (self.paramsdict["J"]*2)):
+                # Record the "amount of neutrality" seen in the data.
+                # Used for exploration on emergeant neutrality
                 draws = list(MESS.rng.rng.multinomial(100000, death_probs))
                 ch, p = chisquare(draws)
                 if p > 0.1:
@@ -901,10 +911,6 @@ class LocalCommunity(object):
                 self.founder_flags[dead] = False
                 self.colonizations += 1
                 self.local_traits[dead] = self.region.get_trait(new_species)
-                # print("migration from species:",new_species)
-                # print("new trait:", self.region.get_trait(new_species))
-                # print(self.local_community)
-                # print(self.local_traits)
             else:
                 try:
                     self.death_step()
@@ -938,8 +944,6 @@ class LocalCommunity(object):
                     # OBSOLETE
                 else:
                     self._distance_matrix_update()
-
-            
 
             ##############################################
             ## Speciation process

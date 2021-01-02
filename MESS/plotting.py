@@ -1,5 +1,4 @@
 
-
 import matplotlib
 import warnings
 with warnings.catch_warnings():
@@ -69,7 +68,7 @@ target_labels = {"mutation_rate":"\u03BC",\
 
 ## Primary colors
 model_colors = {"neutral":"#375E97",\
-                "filtering":"#3F681C",\
+                "filtering":"#4e8321",\
                 "mean_competition":"#FB6542",\
                 "pairwise_competition":"#FFBB00",
                 "interaction_matrix":"#00A4CC"}
@@ -85,7 +84,6 @@ def _filter_sims(simfile,\
     """
     Load simulation data and perform filtering and downsampling that's common
     across many plotting routines. Normally you won't call this directly.
-
     :param str simfile: 
     :param list feature_set:
     :param int nsims:
@@ -95,7 +93,6 @@ def _filter_sims(simfile,\
     :param int/float select: 
     :param int/float tol:
     :param bool verbose: Whether to print progress messages.
-
     :return: Returns a tuple of pd.DataFrame containing the community assembly
         model class labels for retained simulations and a pd.DataFrame of 
         filtered and pruned simulation summary statistics.
@@ -162,7 +159,6 @@ def plot_simulations_hist(simfile,\
     """
     Simple histogram for each summary statistic. Useful for inspecting model
     performance. Invariant summary statistics will be removed.
-
     :param str simfile: 
     :param tuple figsize:
     :param list feature_set:
@@ -178,7 +174,6 @@ def plot_simulations_hist(simfile,\
     :param str title:
     :param str outfile:
     :param bool verbose:
-
     :return: Return a list of `matplotlib.pyplot.axis` on which the simulated
         summary statistics have been plotted. This list can be _long_ depending
         on how many statistics you plot.
@@ -250,7 +245,6 @@ def plot_simulations_boxplots(simfile,\
     """
     Simple histogram for each summary statistic. Useful for inspecting model
     performance. Invariant summary statistics will be removed.
-
     :param str simfile: 
     :param tuple figsize:
     :param list feature_set:
@@ -266,7 +260,6 @@ def plot_simulations_boxplots(simfile,\
     :param str title:
     :param str outfile:
     :param bool verbose:
-
     :return: Return a list of `matplotlib.pyplot.axis` on which the simulated
         summary statistics have been plotted. This list can be _long_ depending
         on how many statistics you plot.
@@ -362,7 +355,6 @@ def plot_simulations_pca(simfile, ax='',\
     :param str title:
     :param str outfile:
     :param bool verbose:
-
     :return: Return the `matplotlib.pyplot.axis` on which the simulations are
         plotted.
     """
@@ -383,9 +375,7 @@ def plot_simulations_pca(simfile, ax='',\
 
     pca = PCA(n_components=2)
     dat = pca.fit_transform(sim_df)
-
-    ax.scatter(dat[:, 0], dat[:, 1], color=[MESS.plotting.model_colors[x] for x in labels])
-
+    ax.scatter(dat[:, 0], dat[:, 1], color=[MESS.plotting.model_colors[x] for x in labels], alpha=0.6, s=12)
     ## Remove a bunch of visual noise
     ax.set_yticklabels([])
     ax.set_xticklabels([])
@@ -481,7 +471,6 @@ def _make_animated_gif(datadir, outfile, delay=50):
     This function will take all png files in a directory and make them
     into an animated gif. The inputs are the directory with all the images
     and the full path including filename of the file to write out
-
     :param str datadir: Directory that contains all the component files
         for the animation. These should be .png, and should be alpha-sorted
         in the order of the animation.
@@ -1172,7 +1161,6 @@ def plot_traits_repartition(outdir, local_traits_through_time, death_probs, spec
 REQUIRE_IMAGEMAGICK_ERROR = """
 The plots_through_time() function requires the image-magick graphics
 processing package which may be installed with conda:
-
     conda install -c conda-forge imagemagick -y
 """
 
@@ -1188,4 +1176,3 @@ if __name__ == "__main__":
     print(loc.species_objects)
     print(SAD([x.abundance for x in loc.species_objects], from_abundances=True))
     print(SAD([x.abundance for x in loc.species_objects], from_abundances=True, octaves=True))
-

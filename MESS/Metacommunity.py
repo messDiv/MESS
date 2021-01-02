@@ -316,8 +316,8 @@ class Metacommunity(object):
         self.interaction_matrix[-1] = self.interaction_matrix[-1] * factors[0]
         self.interaction_matrix[:,-1] = self.interaction_matrix[:,-1] * factors[1].T
         self.interaction_matrix[-1][-1] = -abs(self.interaction_matrix[-1][-1])
-            #     # A positive value is a positive interaction,
-            #     # A negative value is a negative interaction
+            # A positive value is a positive interaction,
+            # A negative value is a negative interaction
         self.species_dict[new] = len(self.interaction_matrix)-1
 
 
