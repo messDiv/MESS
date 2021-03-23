@@ -246,7 +246,7 @@ class Region(object):
                     self.paramsdict[param] = tup
 
             elif param == "sequence_length":
-                self.paramsdict[param] = float(newvalue)
+                self.paramsdict[param] = int(newvalue)
             else:
                 self.paramsdict[param] = newvalue
         except Exception as inst:

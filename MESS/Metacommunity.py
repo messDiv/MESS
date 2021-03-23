@@ -337,8 +337,8 @@ class Metacommunity(object):
             abundances = abunds
             ## One of the R tree modules can't deal with int names so we paste
             ## on a random character here to force it to play nice.
-            ids = np.array(["t"+x for x in traits["name"].values.astype(int).astype(str)])
-            trait_values = traits["value"].values
+            ids = traits["name"].values
+            trait_values = np.array([float(x) for x in traits["value"].values])
 
             self._hackersonly["filtering_optimum"] = np.random.normal(loc=np.mean(trait_values), scale=np.std(trait_values), size=1)[0]
 

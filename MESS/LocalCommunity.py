@@ -1157,17 +1157,75 @@ class LocalCommunity(object):
 
         ## If you don't actually want all the intermediate files then we won't make them
         if self.region._log_files:
-            megalog = os.path.join(self._hackersonly["outdir"],
-                                self.paramsdict["name"] + "-{}-megalog.txt".format(self._lambda()))
-
-            ## concatenate all species results and transpose the data frame so rows are species
-            fullstats = pd.concat([sp.stats for sp in self.species] , axis=1).T
-            fullstats.to_csv(megalog, index_label=False)
+            self._log_files()
 
         ## paste on the local parameters and pseudo-parameters
         params = self._get_params_values()
 
         return params.append(ss.T)
+
+
+    def _log_files(self):
+        """
+        Write a gigantic file of all the simulation to megalog.txt. This is
+        mostly used for fancy plotting. Also dump the simulated data to the
+        outdir in a form appropriate for MESS.util.import_empirical().
+        """
+        megalog = os.path.join(self._hackersonly["outdir"],
+                            self.paramsdict["name"] + "-{}-megalog.txt".format(self._lambda()))
+
+        ## concatenate all species results and transpose the data frame so rows are species
+        fullstats = pd.concat([sp.stats for sp in self.species] , axis=1).T
+        fullstats.to_csv(megalog, index_label=False)
+
+        outdir = os.path.join(self._hackersonly["outdir"],
+                            self.paramsdict["name"] + "-{}-data".format(self._lambda()))
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+
+        meta_tree_newick = self.extant_meta_toytree.write(tree_format=TREE_FORMAT)
+        with open(os.path.join(outdir, "{}-metacommunity.tre".format(self.paramsdict["name"])), 'w') as treefile:
+            treefile.write(meta_tree_newick)
+
+        dat = self.get_community_data()
+        dat = dat.drop("pi", axis=1)
+        dat = dat.drop("dxy", axis=1)
+        dat = dat.drop("tree", axis=1)
+        dat = pd.concat([pd.DataFrame([x.name for x in self.species], columns=["name"]), dat], axis=1)
+        datfile = os.path.join(outdir, "{}.csv".format(self.paramsdict["name"]))
+        dat.to_csv(datfile, sep=",", index=False)
+
+        fastadir = os.path.join(outdir, self.paramsdict["name"] + "-fastas")
+        if not os.path.exists(fastadir):
+            os.mkdir(fastadir)
+
+        # Generate synthetic fastq data per species
+        for sp in self.species:
+            haps = list(sp.tree_sequence.haplotypes())[:sp.paramsdict["sample_size_local"]]
+
+            length = self.region.paramsdict["sequence_length"]
+            nsnps = len(haps[0])
+
+            seq = np.random.choice(["C", "A", "T", "G"], length-nsnps)
+            ref_dat = "".join(np.random.choice(["C", "A", "T", "G"], nsnps))
+            alt_dat = "".join(np.random.choice(["C", "A", "T", "G"], nsnps))
+
+            idxs = np.random.choice(list(range(0, length-nsnps)), nsnps, replace=False)
+
+            fastas = []
+            for sample_idx, hap in enumerate(haps):
+                fastas.append(">Sample-{}".format(sample_idx))
+
+                snps = np.array([int(x) for x in list(hap)])
+
+                ref_idxs = idxs[snps==0]
+                alt_idxs = idxs[snps==1]
+                tmpseq = np.insert(seq, ref_idxs, ref_dat)
+                tmpseq = np.insert(tmpseq, alt_idxs, alt_dat)
+                fastas.append("".join(tmpseq))
+
+                with open(os.path.join(fastadir, "Species-{}.fasta".format(sp.name)), 'w') as fasta_file:
+                    fasta_file.write("\n".join(fastas))
 
 
 #############################
