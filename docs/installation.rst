@@ -4,7 +4,7 @@
 Installation
 ============
 
-``MESS`` requires Python >= 3.5. Binaries can be downloaded with `conda <https://conda.io/docs/>`_ or built with `pip <https://pip.readthedocs.io/en/stable/>`_.
+``MESS`` requires Python >= 3.8. Binaries can be downloaded with `conda <https://conda.io/docs/>`_ (recommended) or built with `pip <https://pip.readthedocs.io/en/stable/>`_.
 
 ---------------------------------------------
 Method 1: Install pre-built binary from conda
@@ -19,8 +19,8 @@ into:
 
 .. code:: bash
 
-    conda create -n mess-env
-    source activate mess-env
+    conda create -n mess-env python=3.8
+    conda activate mess-env
 
 3. Install:
 
