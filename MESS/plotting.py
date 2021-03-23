@@ -97,7 +97,7 @@ def _filter_sims(simfile,\
 
     ## Wether to select only specific timepoints bracketed by `tol` or
     ## just plot everything.
-    if select is '':
+    if select == '':
         pass
     else:
         ## Switch on whether to plot based on lambda or based on generations
