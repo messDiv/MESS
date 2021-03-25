@@ -24,7 +24,9 @@ checkinstall(\"nleqslv\")\n
 "
 
 echo -e $Rcode > /tmp/rpt.r
+chmod 777 /tmp/rpt.r
 ## Not sure how i feel about this, messages.txt gets piped to stdout
 ## in the event nothing bad happens so it shits all over the screen,
 ## somewhat annoying.
 Rscript /tmp/rpt.r >> $PREFIX/.messages.txt 2>&1 
+rm /tmp/rpt.r
