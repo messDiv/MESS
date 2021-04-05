@@ -645,7 +645,6 @@ class LocalCommunity(object):
                 ## Remove the species from the local_info array
                 self.extinction_times.append(self.current_time - self.local_info[victim]["colonization_times"])
                 vic_info = self.local_info.pop(victim)
-                offspring = self.local_info.columns[self.local_info.loc["ancestor"] == victim]
                 #LOGGER.debug("\nExtinction victim info \n{}\n{}\nOffspring {}".format(victim, vic_info, offspring))
 
                 ## Speciation process nonsense
@@ -653,10 +652,16 @@ class LocalCommunity(object):
                 ## direct ancestor
                 ancestor = vic_info["ancestor"]
                 anc_size_changes = vic_info["abundances_through_time"]
-                self.local_info.loc["ancestor"][self.local_info.loc["ancestor"] == victim] = ancestor
+                ## Get all species in the local community with victim as ancestor
+                offspring = self.local_info.loc["ancestor"] == victim
+                ## species identities for only the relevant species
+                oidx = offspring.index[offspring]
+                self.local_info.loc["ancestor", oidx] = ancestor
+                # This 'works' but gives the copy of slice pandas warning
+                #self.local_info.loc["ancestor"][self.local_info.loc["ancestor"] == victim] = ancestor
                 ## I don't think you can vectorize the update
 
-                for o in offspring:
+                for o in oidx:
                     LOGGER.debug("offspring {} {}".format(o, self.local_info[o]["abundances_through_time"]))
                     self.local_info[o]["abundances_through_time"].update(anc_size_changes)
                     LOGGER.debug("offspring {} {}".format(o, self.local_info[o]["abundances_through_time"]))
