@@ -133,7 +133,7 @@ class Metacommunity(object):
 
           ## the traits
           trt <- ape::rTraitCont(tre, sigma = sqrt(sigma2))
-          trt <- data.frame(name = names(trt), value = as.numeric(trt))
+          trt <- data.frame(name = names(trt), value = as.numeric(trt), stringsAsFactors=FALSE)
 
           ## parameters for the log-series
           nBar <- Jm / S

@@ -552,7 +552,7 @@ class Region(object):
                     LOGGER.debug("Finished simulation {} stats:\n{}".format(i, res))
             except KeyboardInterrupt as inst:
                 print("\n    Cancelling remaining simulations")
-            if not quiet: progressbar(100, 100, " Finished {} simulations\n".format(i))
+            if not quiet: progressbar(100, 100, " Finished {} simulations\n".format(sims))
 
         ## Parallelize
         else:
