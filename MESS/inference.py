@@ -275,7 +275,7 @@ class Ensemble(object):
             features = list(self.features[feat_selector.support_])
             if verbose: print("{}".format(features))
             if not features:
-                print("  NB: No features found relevant for target {}\n      Fall back to using all parameters.".format(t))
+                print("  NB: No features found relevant for target {}\n      Fall back to using all features.".format(t))
                 feat_selector.support_ = feat_selector.support_ | True
                 features = self.features
             ## Remember the relevant features for this target, for later prediction
