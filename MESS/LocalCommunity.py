@@ -665,7 +665,7 @@ class LocalCommunity(object):
                 LOGGER.debug(self.local_info)
                 raise MESSError("Exception during recording extinction - {}".format(inst))
             ## If the invasive prematurely goes extinct just pick a new one
-            if victim[0] == self.invasive:
+            if victim == self.invasive:
                 LOGGER.info("invasive went extinct")
                 self.invasive = -1
         return ancestor
