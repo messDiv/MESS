@@ -1,4 +1,4 @@
-name: MESS
+name: MESS_py38
 channels:
   - MESS
   - conda-forge
@@ -246,4 +246,3 @@ dependencies:
   - zlib=1.2.11=h166bdaf_1014
   - zstd=1.4.9=ha95c52a_0
 prefix: /home/isaac/miniconda3/envs/MESS
-
