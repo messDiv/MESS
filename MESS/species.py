@@ -45,7 +45,7 @@ class species(object):
                     "abundance",
                     "Ne_local",
                     "Ne_meta",
-                    "tdiv"], dtype=np.object).astype(np.object)
+                    "tdiv"], dtype=object).astype(object)
 
         self.stats["name"] = name
         self.stats["trait"] = trait_value
