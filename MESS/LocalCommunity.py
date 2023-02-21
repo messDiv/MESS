@@ -1166,8 +1166,7 @@ class LocalCommunity(object):
 
         ## paste on the local parameters and pseudo-parameters
         params = self._get_params_values()
-
-        return params.append(ss.T)
+        return pd.concat([params, ss.T], axis=0)
 
 
     def _log_files(self):
