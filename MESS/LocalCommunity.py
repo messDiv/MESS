@@ -165,7 +165,7 @@ class LocalCommunity(object):
         new._set_region(self.region)
         new._priors = self._priors
 
-        new.paramsdict = self.paramsdict
+        new.paramsdict = self.paramsdict.copy()
         ## Get sample from prior range on params that may have priors
         for param in ["J", "m", "speciation_prob"]:
             ## if _priors is empty then this param is fixed
